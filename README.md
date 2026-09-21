@@ -1,0 +1,3 @@
+A personal budget manager for Android, built as a learning project to explore modern Android development with Kotlin. Track accounts, transactions and category budgets, get alerts before overspending, and convert foreign currencies using live exchange rates.
+
+The project follows a hexagonal architecture: a pure Kotlin domain module (no Android dependencies) defines the business rules and ports, while adapters handle the UI (Jetpack Compose), local storage (Room), and remote APIs (Retrofit).
