@@ -6,6 +6,7 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -73,6 +74,32 @@ class ListAccountRepositoryTest
         assertThat(repository.existsByName(AccountName("Livret A"))).isFalse()
         assertThat(repository.existsByName(AccountName("Compte courant"))).isTrue()
         assertThat(repository.findAll()).hasSize(1)
+    }
+
+    @Test
+    fun `no longer finds an account once it has been deleted`()
+    {
+        // GIVEN
+        val repository = ListAccountRepository()
+        val account = anAccount(name = AccountName("Livret A"))
+        repository.save(account)
+
+        // WHEN
+        repository.deleteById(account.id)
+
+        // THEN
+        assertThat(repository.findAll()).isEmpty()
+    }
+
+    @Test
+    fun `does not throw when deleting an account that does not exist`()
+    {
+        // GIVEN
+        val repository = ListAccountRepository()
+
+        // WHEN / THEN
+        assertThatCode { repository.deleteById(AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))) }
+            .doesNotThrowAnyException()
     }
 
     private fun anAccount(name: AccountName): Account

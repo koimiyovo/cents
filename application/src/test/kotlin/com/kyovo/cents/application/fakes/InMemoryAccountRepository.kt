@@ -29,4 +29,9 @@ class InMemoryAccountRepository : AccountRepository
     {
         return saved.toList()
     }
+
+    override fun deleteById(id: AccountId)
+    {
+        saved.removeAll { it.id == id }
+    }
 }

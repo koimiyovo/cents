@@ -10,4 +10,5 @@ interface AccountRepository
     fun existsByName(name: AccountName): Boolean
     fun findById(id: AccountId): Account?
     fun findAll(): List<Account>
+    fun deleteById(id: AccountId)
 }

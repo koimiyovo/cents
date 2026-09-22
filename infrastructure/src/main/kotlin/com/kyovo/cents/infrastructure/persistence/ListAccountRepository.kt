@@ -29,4 +29,9 @@ class ListAccountRepository : AccountRepository
     {
         return accounts.toList()
     }
+
+    override fun deleteById(id: AccountId)
+    {
+        accounts.removeAll { it.id == id }
+    }
 }
