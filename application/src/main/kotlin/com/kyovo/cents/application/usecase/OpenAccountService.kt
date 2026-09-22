@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
@@ -15,6 +16,11 @@ class OpenAccountService(
 {
     override fun open(command: OpenAccountCommand): Account
     {
+        if (accountRepository.existsByName(command.name))
+        {
+            throw DuplicateAccountNameException()
+        }
+
         val account = command.toAccount(accountIdGenerator.generate(), clock.instant())
         accountRepository.save(account)
         return account
