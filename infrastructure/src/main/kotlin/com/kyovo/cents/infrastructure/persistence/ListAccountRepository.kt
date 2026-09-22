@@ -1,6 +1,7 @@
 package com.kyovo.cents.infrastructure.persistence
 
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.port.output.AccountRepository
 
@@ -16,5 +17,15 @@ class ListAccountRepository : AccountRepository
     override fun existsByName(name: AccountName): Boolean
     {
         return accounts.any { it.name.matches(name) }
+    }
+
+    override fun findById(id: AccountId): Account?
+    {
+        return accounts.find { it.id == id }
+    }
+
+    override fun findAll(): List<Account>
+    {
+        return accounts.toList()
     }
 }
