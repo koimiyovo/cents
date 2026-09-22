@@ -10,6 +10,7 @@ class ListTransactionRepository : TransactionRepository
 
     override fun save(transaction: Transaction)
     {
+        transactions.removeAll { it.id == transaction.id }
         transactions.add(transaction)
     }
 

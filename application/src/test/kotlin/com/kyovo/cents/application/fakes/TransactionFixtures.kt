@@ -9,6 +9,7 @@ import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
+import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import java.time.Instant
 import kotlin.uuid.Uuid
 
@@ -71,4 +72,16 @@ fun aRecordTransactionCommand(
 ): RecordTransactionCommand
 {
     return RecordTransactionCommand(accountId, amount, category, subcategory, description, date)
+}
+
+fun anUpdateTransactionCommand(
+    id: TransactionId = aTransactionId(),
+    amount: Money = aMoney(1_000),
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
+    date: Instant = anInstant(),
+    subcategory: TransactionSubcategory? = null,
+    description: TransactionDescription? = null
+): UpdateTransactionCommand
+{
+    return UpdateTransactionCommand(id, amount, category, subcategory, description, date)
 }
