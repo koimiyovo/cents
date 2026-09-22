@@ -52,6 +52,35 @@ class ListAccountsServiceTest
     }
 
     @Test
+    fun `returns every account matching the filter when several accounts match`()
+    {
+        // GIVEN
+        val repository = InMemoryAccountRepository()
+        val livretA = anAccount(
+            id = anAccountId("11111111-1111-1111-1111-111111111111"),
+            name = AccountName("Livret A")
+        )
+        val livretB = anAccount(
+            id = anAccountId("22222222-2222-2222-2222-222222222222"),
+            name = AccountName("Livret B")
+        )
+        val compteCourant = anAccount(
+            id = anAccountId("33333333-3333-3333-3333-333333333333"),
+            name = AccountName("Compte courant")
+        )
+        repository.save(livretA)
+        repository.save(livretB)
+        repository.save(compteCourant)
+        val service = ListAccountsService(repository)
+
+        // WHEN
+        val result = service.list("livret")
+
+        // THEN
+        assertThat(result).containsExactly(livretA, livretB)
+    }
+
+    @Test
     fun `returns an empty list when no account matches the filter`()
     {
         // GIVEN

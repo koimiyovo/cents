@@ -1,8 +1,10 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountName
@@ -15,12 +17,22 @@ import org.junit.jupiter.api.Test
 class UpdateAccountServiceTest
 {
     @Test
-    fun `updates the name and type of an existing account`()
+    fun `updates the name and type of an existing account while keeping its currency and creation instant`()
     {
         // GIVEN
         val id = anAccountId()
+        val currency = aCurrency("USD")
+        val createdAt = anInstant("2025-03-10T08:00:00Z")
         val repository = InMemoryAccountRepository()
-        repository.save(anAccount(id = id, name = AccountName("Livret A"), type = AccountType.CHECKING))
+        repository.save(
+            anAccount(
+                id = id,
+                name = AccountName("Livret A"),
+                type = AccountType.CHECKING,
+                currency = currency,
+                createdAt = createdAt
+            )
+        )
         val service = UpdateAccountService(repository)
         val command = UpdateAccountCommand(id = id, name = AccountName("Livret B"), type = AccountType.SAVINGS)
 
@@ -29,7 +41,13 @@ class UpdateAccountServiceTest
 
         // THEN
         assertThat(result).isEqualTo(
-            anAccount(id = id, name = AccountName("Livret B"), type = AccountType.SAVINGS)
+            anAccount(
+                id = id,
+                name = AccountName("Livret B"),
+                type = AccountType.SAVINGS,
+                currency = currency,
+                createdAt = createdAt
+            )
         )
         assertThat(repository.saved).containsExactly(result)
     }
