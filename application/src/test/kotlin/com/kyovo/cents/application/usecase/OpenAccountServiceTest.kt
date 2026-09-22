@@ -124,4 +124,26 @@ class OpenAccountServiceTest
         // THEN
         assertThat(repository.saved).hasSize(2)
     }
+
+    @Test
+    fun `opens an account whose name was used by another account that has since been deleted`()
+    {
+        // GIVEN
+        val repository = InMemoryAccountRepository()
+        val deletedAccountId = anAccountId()
+        repository.save(anAccount(id = deletedAccountId, name = AccountName("Livret A")))
+        DeleteAccountService(repository).delete(deletedAccountId)
+        val service = OpenAccountService(
+            repository,
+            FixedAccountIdGenerator(anAccountId("22222222-2222-2222-2222-222222222222")),
+            aClock()
+        )
+        val command = anOpenAccountCommand(name = AccountName("Livret A"))
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(repository.saved).hasSize(1)
+    }
 }
