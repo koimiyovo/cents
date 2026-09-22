@@ -84,6 +84,41 @@ class OpenAccountServiceTest
         // WHEN / THEN
         assertThatThrownBy { service.open(command) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
+    }
+
+    @Test
+    fun `does not save an account whose name is already used by an existing account`()
+    {
+        // GIVEN
+        val name = AccountName("Livret A")
+        val repository = InMemoryAccountRepository()
+        repository.save(anAccount(name = name))
+        val service =
+            OpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
+        val command = anOpenAccountCommand(name = name)
+
+        // WHEN
+        assertThatThrownBy { service.open(command) }
+            .isInstanceOf(DuplicateAccountNameException::class.java)
+
+        // THEN
         assertThat(repository.saved).hasSize(1)
+    }
+
+    @Test
+    fun `opens a second account when its name differs from an existing account's name`()
+    {
+        // GIVEN
+        val repository = InMemoryAccountRepository()
+        val service =
+            OpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
+        service.open(anOpenAccountCommand(name = AccountName("Livret A")))
+        val command = anOpenAccountCommand(name = AccountName("Compte courant"))
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(repository.saved).hasSize(2)
     }
 }

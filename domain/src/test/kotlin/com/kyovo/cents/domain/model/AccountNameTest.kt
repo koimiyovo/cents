@@ -27,4 +27,36 @@ class AccountNameTest
         // THEN
         assertThat(name.value).isEqualTo("Livret A")
     }
+
+    @Test
+    fun `trims surrounding whitespace from the name`()
+    {
+        // WHEN
+        val name = AccountName("  Livret A  ")
+
+        // THEN
+        assertThat(name.value).isEqualTo("Livret A")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Livret A", "livret a", "LIVRET A", "  Livret A  "])
+    fun `matches a name that only differs by case or surrounding whitespace`(other: String)
+    {
+        // GIVEN
+        val name = AccountName("Livret A")
+
+        // WHEN / THEN
+        assertThat(name.matches(AccountName(other))).isTrue()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Livret B", "Livret", "Livret AA", "Compte courant"])
+    fun `does not match a different name`(other: String)
+    {
+        // GIVEN
+        val name = AccountName("Livret A")
+
+        // WHEN / THEN
+        assertThat(name.matches(AccountName(other))).isFalse()
+    }
 }
