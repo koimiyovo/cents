@@ -110,9 +110,12 @@ class OpenAccountServiceTest
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
-        val service =
-            OpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
-        service.open(anOpenAccountCommand(name = AccountName("Livret A")))
+        repository.save(anAccount(name = AccountName("Livret A")))
+        val service = OpenAccountService(
+            repository,
+            FixedAccountIdGenerator(anAccountId("22222222-2222-2222-2222-222222222222")),
+            aClock()
+        )
         val command = anOpenAccountCommand(name = AccountName("Compte courant"))
 
         // WHEN

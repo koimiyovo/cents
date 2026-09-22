@@ -11,6 +11,7 @@ class ListAccountRepository : AccountRepository
 
     override fun save(account: Account)
     {
+        accounts.removeAll { it.id == account.id }
         accounts.add(account)
     }
 

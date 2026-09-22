@@ -59,6 +59,22 @@ class ListAccountRepositoryTest
         assertThat(repository.existsByName(AccountName("Compte courant"))).isFalse()
     }
 
+    @Test
+    fun `replaces an existing account when saving another account with the same id`()
+    {
+        // GIVEN
+        val repository = ListAccountRepository()
+        repository.save(anAccount(name = AccountName("Livret A")))
+
+        // WHEN
+        repository.save(anAccount(name = AccountName("Compte courant")))
+
+        // THEN
+        assertThat(repository.existsByName(AccountName("Livret A"))).isFalse()
+        assertThat(repository.existsByName(AccountName("Compte courant"))).isTrue()
+        assertThat(repository.findAll()).hasSize(1)
+    }
+
     private fun anAccount(name: AccountName): Account
     {
         return Account(
