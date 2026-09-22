@@ -34,4 +34,15 @@ class ListAccountRepository : AccountRepository
     {
         accounts.removeAll { it.id == id }
     }
+
+    internal fun snapshot(): List<Account>
+    {
+        return accounts.toList()
+    }
+
+    internal fun restore(snapshot: List<Account>)
+    {
+        accounts.clear()
+        accounts.addAll(snapshot)
+    }
 }

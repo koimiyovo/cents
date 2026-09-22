@@ -9,6 +9,7 @@ import com.kyovo.cents.domain.port.output.AccountIdGenerator
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.TransactionIdGenerator
 import com.kyovo.cents.domain.port.output.TransactionRepository
+import com.kyovo.cents.domain.port.output.UnitOfWork
 import java.time.Clock
 
 class OpenAccountService(
@@ -16,6 +17,7 @@ class OpenAccountService(
     private val accountIdGenerator: AccountIdGenerator,
     private val transactionRepository: TransactionRepository,
     private val transactionIdGenerator: TransactionIdGenerator,
+    private val unitOfWork: UnitOfWork,
     private val clock: Clock
 ) : OpenAccountUseCase
 {
@@ -26,19 +28,21 @@ class OpenAccountService(
             throw DuplicateAccountNameException()
         }
 
-        val now = clock.instant()
-        val account = command.toAccount(accountIdGenerator.generate(), now)
-        accountRepository.save(account)
-        if (command.initialAmount.value != 0L)
-        {
-            val transaction = Transaction.openingDeposit(
-                transactionIdGenerator.generate(),
-                account.id,
-                command.initialAmount,
-                now
-            )
-            transactionRepository.save(transaction)
+        return unitOfWork.execute {
+            val now = clock.instant()
+            val account = command.toAccount(accountIdGenerator.generate(), now)
+            accountRepository.save(account)
+            if (command.initialAmount.value != 0L)
+            {
+                val transaction = Transaction.openingDeposit(
+                    transactionIdGenerator.generate(),
+                    account.id,
+                    command.initialAmount,
+                    now
+                )
+                transactionRepository.save(transaction)
+            }
+            account
         }
-        return account
     }
 }
