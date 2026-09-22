@@ -1,0 +1,25 @@
+package com.kyovo.cents.infrastructure.persistence
+
+import com.kyovo.cents.domain.port.output.UnitOfWork
+
+class ListUnitOfWork(
+    private val accountRepository: ListAccountRepository,
+    private val transactionRepository: ListTransactionRepository
+) : UnitOfWork
+{
+    override fun <T> execute(block: () -> T): T
+    {
+        val accountsSnapshot = accountRepository.snapshot()
+        val transactionsSnapshot = transactionRepository.snapshot()
+        return try
+        {
+            block()
+        }
+        catch (e: Exception)
+        {
+            accountRepository.restore(accountsSnapshot)
+            transactionRepository.restore(transactionsSnapshot)
+            throw e
+        }
+    }
+}
