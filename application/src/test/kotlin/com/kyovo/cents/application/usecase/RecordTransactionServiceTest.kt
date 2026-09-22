@@ -4,15 +4,19 @@ import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
-import com.kyovo.cents.application.fakes.anAccount
-import com.kyovo.cents.application.fakes.anAccountId
-import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.application.fakes.aRecordTransactionCommand
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
+import com.kyovo.cents.application.fakes.anAccount
+import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
-import com.kyovo.cents.domain.model.RecordableTransactionType
-import com.kyovo.cents.domain.model.TransactionType
+import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
+import com.kyovo.cents.domain.model.ExpenseSubcategory
+import com.kyovo.cents.domain.model.IncomeSubcategory
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.TransactionCategory
+import com.kyovo.cents.domain.model.TransactionDescription
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -37,7 +41,7 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(
             accountId = accountId,
             amount = aMoney(2_000),
-            type = RecordableTransactionType.EXPENSE,
+            category = RecordableTransactionCategory.EXPENSE,
             date = date
         )
 
@@ -51,7 +55,7 @@ class RecordTransactionServiceTest
                 accountId = accountId,
                 amount = aMoney(2_000),
                 date = date,
-                type = TransactionType.EXPENSE
+                category = TransactionCategory.EXPENSE
             )
         )
         assertThat(transactionRepository.saved).containsExactly(result)
@@ -75,7 +79,7 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(
             accountId = accountId,
             amount = aMoney(50_000),
-            type = RecordableTransactionType.INCOME,
+            category = RecordableTransactionCategory.INCOME,
             date = date
         )
 
@@ -89,7 +93,7 @@ class RecordTransactionServiceTest
                 accountId = accountId,
                 amount = aMoney(50_000),
                 date = date,
-                type = TransactionType.INCOME
+                category = TransactionCategory.INCOME
             )
         )
     }
@@ -131,5 +135,95 @@ class RecordTransactionServiceTest
 
         // THEN
         assertThat(transactionRepository.saved).isEmpty()
+    }
+
+    @Test
+    fun `records an expense transaction with a subcategory and a description`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val generatedTransactionId = aTransactionId()
+        val date = anInstant()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(generatedTransactionId)
+        )
+        val command = aRecordTransactionCommand(
+            accountId = accountId,
+            amount = aMoney(2_000),
+            category = RecordableTransactionCategory.EXPENSE,
+            date = date,
+            subcategory = ExpenseSubcategory.GROCERIES,
+            description = TransactionDescription.of("Courses de la semaine")
+        )
+
+        // WHEN
+        val result = service.record(command)
+
+        // THEN
+        assertThat(result).isEqualTo(
+            aTransaction(
+                id = generatedTransactionId,
+                accountId = accountId,
+                amount = aMoney(2_000),
+                date = date,
+                category = TransactionCategory.EXPENSE,
+                subcategory = ExpenseSubcategory.GROCERIES,
+                description = TransactionDescription.of("Courses de la semaine")
+            )
+        )
+    }
+
+    @Test
+    fun `throws when the subcategory does not belong to the given category`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(aTransactionId())
+        )
+        val command = aRecordTransactionCommand(
+            accountId = accountId,
+            category = RecordableTransactionCategory.EXPENSE,
+            subcategory = IncomeSubcategory.SALARY
+        )
+
+        // WHEN / THEN
+        assertThatThrownBy { service.record(command) }
+            .isInstanceOf(InvalidTransactionSubcategoryException::class.java)
+    }
+
+    @Test
+    fun `records a transaction with no description when given a blank description`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(aTransactionId())
+        )
+        val command = aRecordTransactionCommand(
+            accountId = accountId,
+            description = TransactionDescription.of("   ")
+        )
+
+        // WHEN
+        val result = service.record(command)
+
+        // THEN
+        assertThat(result.description).isNull()
     }
 }
