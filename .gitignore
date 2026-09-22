@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Personal Claude context (never versioned)
+CLAUDE.local.md
