@@ -10,6 +10,7 @@ class InMemoryTransactionRepository : TransactionRepository
 
     override fun save(transaction: Transaction)
     {
+        saved.removeAll { it.id == transaction.id }
         saved.add(transaction)
     }
 
