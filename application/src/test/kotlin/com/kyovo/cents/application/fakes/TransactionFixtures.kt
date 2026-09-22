@@ -2,10 +2,12 @@ package com.kyovo.cents.application.fakes
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
-import com.kyovo.cents.domain.model.RecordableTransactionType
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionCategory
+import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
-import com.kyovo.cents.domain.model.TransactionType
+import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import java.time.Instant
 import kotlin.uuid.Uuid
@@ -25,25 +27,48 @@ fun aTransaction(
     accountId: AccountId = anAccountId(),
     amount: Money = aMoney(),
     date: Instant = anInstant(),
-    type: TransactionType = TransactionType.INITIAL_DEPOSIT
+    category: TransactionCategory = TransactionCategory.INITIAL_DEPOSIT,
+    subcategory: TransactionSubcategory? = null,
+    description: TransactionDescription? = null
 ): Transaction
 {
-    return when (type)
+    return when (category)
     {
-        TransactionType.INITIAL_DEPOSIT -> Transaction.openingDeposit(id, accountId, amount, date)
-        TransactionType.EXPENSE ->
-            Transaction.recorded(id, accountId, amount, RecordableTransactionType.EXPENSE, date)
-        TransactionType.INCOME ->
-            Transaction.recorded(id, accountId, amount, RecordableTransactionType.INCOME, date)
+        TransactionCategory.INITIAL_DEPOSIT ->
+            Transaction.openingDeposit(id, accountId, amount, date)
+
+        TransactionCategory.EXPENSE         ->
+            Transaction.recorded(
+                id,
+                accountId,
+                amount,
+                RecordableTransactionCategory.EXPENSE,
+                subcategory,
+                description,
+                date
+            )
+
+        TransactionCategory.INCOME          ->
+            Transaction.recorded(
+                id,
+                accountId,
+                amount,
+                RecordableTransactionCategory.INCOME,
+                subcategory,
+                description,
+                date
+            )
     }
 }
 
 fun aRecordTransactionCommand(
     accountId: AccountId = anAccountId(),
     amount: Money = aMoney(1_000),
-    type: RecordableTransactionType = RecordableTransactionType.EXPENSE,
-    date: Instant = anInstant()
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
+    date: Instant = anInstant(),
+    subcategory: TransactionSubcategory? = null,
+    description: TransactionDescription? = null
 ): RecordTransactionCommand
 {
-    return RecordTransactionCommand(accountId, amount, type, date)
+    return RecordTransactionCommand(accountId, amount, category, subcategory, description, date)
 }

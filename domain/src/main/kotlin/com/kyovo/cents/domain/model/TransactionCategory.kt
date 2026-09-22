@@ -1,6 +1,6 @@
 package com.kyovo.cents.domain.model
 
-enum class TransactionType
+enum class TransactionCategory
 {
     INCOME,
     EXPENSE,
