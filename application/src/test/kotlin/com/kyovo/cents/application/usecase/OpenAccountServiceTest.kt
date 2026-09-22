@@ -4,6 +4,7 @@ import com.kyovo.cents.application.fakes.FixedAccountIdGenerator
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
+import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.aClock
 import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.aMoney
@@ -205,6 +206,25 @@ class OpenAccountServiceTest
         assertThat(transactionRepository.saved).isEmpty()
     }
 
+    @Test
+    fun `wraps the account and transaction creation in a single unit of work`()
+    {
+        // GIVEN
+        val unitOfWork = InMemoryUnitOfWork()
+        val service = anOpenAccountService(
+            repository = InMemoryAccountRepository(),
+            accountIdGenerator = FixedAccountIdGenerator(anAccountId()),
+            unitOfWork = unitOfWork
+        )
+        val command = anOpenAccountCommand()
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(unitOfWork.executionCount).isEqualTo(1)
+    }
+
     private fun anOpenAccountService(
         repository: InMemoryAccountRepository,
         accountIdGenerator: FixedAccountIdGenerator,
@@ -212,7 +232,8 @@ class OpenAccountServiceTest
         transactionRepository: InMemoryTransactionRepository = InMemoryTransactionRepository(),
         transactionIdGenerator: FixedTransactionIdGenerator = FixedTransactionIdGenerator(
             aTransactionId()
-        )
+        ),
+        unitOfWork: InMemoryUnitOfWork = InMemoryUnitOfWork()
     ): OpenAccountService
     {
         return OpenAccountService(
@@ -220,6 +241,7 @@ class OpenAccountServiceTest
             accountIdGenerator,
             transactionRepository,
             transactionIdGenerator,
+            unitOfWork,
             clock
         )
     }
