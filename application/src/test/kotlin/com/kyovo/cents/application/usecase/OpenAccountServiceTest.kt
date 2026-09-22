@@ -1,9 +1,14 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.FixedAccountIdGenerator
+import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aClock
 import com.kyovo.cents.application.fakes.aCurrency
+import com.kyovo.cents.application.fakes.aMoney
+import com.kyovo.cents.application.fakes.aTransaction
+import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
@@ -11,11 +16,13 @@ import com.kyovo.cents.application.fakes.anOpenAccountCommand
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.TransactionType
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.time.Clock
 
 class OpenAccountServiceTest
 {
@@ -27,7 +34,7 @@ class OpenAccountServiceTest
         val now = anInstant()
         val repository = InMemoryAccountRepository()
         val service =
-            OpenAccountService(repository, FixedAccountIdGenerator(generatedId), aClock(now))
+            anOpenAccountService(repository, FixedAccountIdGenerator(generatedId), aClock(now))
         val command = anOpenAccountCommand()
         val expected = anAccount(id = generatedId, createdAt = now)
 
@@ -46,7 +53,7 @@ class OpenAccountServiceTest
         val now = anInstant("2027-01-15T18:30:00Z")
         val repository = InMemoryAccountRepository()
         val service =
-            OpenAccountService(repository, FixedAccountIdGenerator(generatedId), aClock(now))
+            anOpenAccountService(repository, FixedAccountIdGenerator(generatedId), aClock(now))
         val command = anOpenAccountCommand(
             name = AccountName("Compte courant"),
             type = AccountType.SAVINGS,
@@ -78,7 +85,7 @@ class OpenAccountServiceTest
         val repository = InMemoryAccountRepository()
         repository.save(anAccount(name = name))
         val service =
-            OpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
+            anOpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
         val command = anOpenAccountCommand(name = AccountName(duplicateNameVariant))
 
         // WHEN / THEN
@@ -94,7 +101,7 @@ class OpenAccountServiceTest
         val repository = InMemoryAccountRepository()
         repository.save(anAccount(name = name))
         val service =
-            OpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
+            anOpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock())
         val command = anOpenAccountCommand(name = name)
 
         // WHEN
@@ -111,7 +118,7 @@ class OpenAccountServiceTest
         // GIVEN
         val repository = InMemoryAccountRepository()
         repository.save(anAccount(name = AccountName("Livret A")))
-        val service = OpenAccountService(
+        val service = anOpenAccountService(
             repository,
             FixedAccountIdGenerator(anAccountId("22222222-2222-2222-2222-222222222222")),
             aClock()
@@ -133,7 +140,7 @@ class OpenAccountServiceTest
         val deletedAccountId = anAccountId()
         repository.save(anAccount(id = deletedAccountId, name = AccountName("Livret A")))
         DeleteAccountService(repository).delete(deletedAccountId)
-        val service = OpenAccountService(
+        val service = anOpenAccountService(
             repository,
             FixedAccountIdGenerator(anAccountId("22222222-2222-2222-2222-222222222222")),
             aClock()
@@ -145,5 +152,75 @@ class OpenAccountServiceTest
 
         // THEN
         assertThat(repository.saved).hasSize(1)
+    }
+
+    @Test
+    fun `records the initial amount as a transaction when opening an account`()
+    {
+        // GIVEN
+        val generatedAccountId = anAccountId()
+        val generatedTransactionId = aTransactionId()
+        val now = anInstant()
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = anOpenAccountService(
+            repository = InMemoryAccountRepository(),
+            accountIdGenerator = FixedAccountIdGenerator(generatedAccountId),
+            clock = aClock(now),
+            transactionRepository = transactionRepository,
+            transactionIdGenerator = FixedTransactionIdGenerator(generatedTransactionId)
+        )
+        val command = anOpenAccountCommand(initialAmount = aMoney(15_000))
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(transactionRepository.saved).containsExactly(
+            aTransaction(
+                id = generatedTransactionId,
+                accountId = generatedAccountId,
+                amount = aMoney(15_000),
+                date = now,
+                type = TransactionType.INITIAL_DEPOSIT
+            )
+        )
+    }
+
+    @Test
+    fun `does not record any transaction when opening an account with no initial amount`()
+    {
+        // GIVEN
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = anOpenAccountService(
+            repository = InMemoryAccountRepository(),
+            accountIdGenerator = FixedAccountIdGenerator(anAccountId()),
+            transactionRepository = transactionRepository
+        )
+        val command = anOpenAccountCommand(initialAmount = aMoney(0))
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(transactionRepository.saved).isEmpty()
+    }
+
+    private fun anOpenAccountService(
+        repository: InMemoryAccountRepository,
+        accountIdGenerator: FixedAccountIdGenerator,
+        clock: Clock = aClock(),
+        transactionRepository: InMemoryTransactionRepository = InMemoryTransactionRepository(),
+        transactionIdGenerator: FixedTransactionIdGenerator = FixedTransactionIdGenerator(
+            aTransactionId()
+        )
+    ): OpenAccountService
+    {
+        return OpenAccountService(
+            repository,
+            accountIdGenerator,
+            transactionRepository,
+            transactionIdGenerator,
+            clock
+        )
     }
 }

@@ -2,15 +2,21 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionType
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.output.AccountIdGenerator
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.TransactionIdGenerator
+import com.kyovo.cents.domain.port.output.TransactionRepository
 import java.time.Clock
 
 class OpenAccountService(
     private val accountRepository: AccountRepository,
     private val accountIdGenerator: AccountIdGenerator,
+    private val transactionRepository: TransactionRepository,
+    private val transactionIdGenerator: TransactionIdGenerator,
     private val clock: Clock
 ) : OpenAccountUseCase
 {
@@ -21,8 +27,20 @@ class OpenAccountService(
             throw DuplicateAccountNameException()
         }
 
-        val account = command.toAccount(accountIdGenerator.generate(), clock.instant())
+        val now = clock.instant()
+        val account = command.toAccount(accountIdGenerator.generate(), now)
         accountRepository.save(account)
+        if (command.initialAmount.value != 0L)
+        {
+            val transaction = Transaction(
+                transactionIdGenerator.generate(),
+                account.id,
+                command.initialAmount,
+                TransactionType.INITIAL_DEPOSIT,
+                now
+            )
+            transactionRepository.save(transaction)
+        }
         return account
     }
 }
