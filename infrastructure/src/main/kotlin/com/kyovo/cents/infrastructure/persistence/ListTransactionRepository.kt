@@ -1,6 +1,7 @@
 package com.kyovo.cents.infrastructure.persistence
 
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.port.output.TransactionRepository
 
 class ListTransactionRepository : TransactionRepository
@@ -21,5 +22,10 @@ class ListTransactionRepository : TransactionRepository
     {
         transactions.clear()
         transactions.addAll(snapshot)
+    }
+
+    override fun findById(id: TransactionId): Transaction?
+    {
+        return transactions.find { it.id == id }
     }
 }
