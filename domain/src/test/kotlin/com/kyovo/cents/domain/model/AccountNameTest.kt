@@ -59,4 +59,25 @@ class AccountNameTest
         // WHEN / THEN
         assertThat(name.matches(AccountName(other))).isFalse()
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Livret", "livret", "LIVRET", "vret A", ""])
+    fun `contains a matching substring regardless of case`(query: String)
+    {
+        // GIVEN
+        val name = AccountName("Livret A")
+
+        // WHEN / THEN
+        assertThat(name.contains(query)).isTrue()
+    }
+
+    @Test
+    fun `does not contain an unrelated substring`()
+    {
+        // GIVEN
+        val name = AccountName("Livret A")
+
+        // WHEN / THEN
+        assertThat(name.contains("Compte")).isFalse()
+    }
 }

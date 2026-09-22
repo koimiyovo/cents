@@ -23,4 +23,9 @@ value class AccountName private constructor(val value: String)
         return value.equals(other.value, ignoreCase = true)
     }
 
+    fun contains(query: String): Boolean
+    {
+        return value.contains(query, ignoreCase = true)
+    }
+
 }
