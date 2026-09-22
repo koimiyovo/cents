@@ -11,6 +11,7 @@ class InMemoryAccountRepository : AccountRepository
 
     override fun save(account: Account)
     {
+        saved.removeAll { it.id == account.id }
         saved.add(account)
     }
 
