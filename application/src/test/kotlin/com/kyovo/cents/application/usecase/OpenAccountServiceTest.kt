@@ -17,7 +17,7 @@ import com.kyovo.cents.application.fakes.anOpenAccountCommand
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
-import com.kyovo.cents.domain.model.TransactionType
+import com.kyovo.cents.domain.model.TransactionCategory
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -182,7 +182,7 @@ class OpenAccountServiceTest
                 accountId = generatedAccountId,
                 amount = aMoney(15_000),
                 date = now,
-                type = TransactionType.INITIAL_DEPOSIT
+                category = TransactionCategory.INITIAL_DEPOSIT
             )
         )
     }
