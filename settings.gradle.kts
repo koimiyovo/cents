@@ -26,3 +26,4 @@ rootProject.name = "Cents"
 include(":app")
 include(":domain")
 include(":application")
+include(":infrastructure")
