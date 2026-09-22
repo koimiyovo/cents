@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.fakes
 
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.port.output.TransactionRepository
 
 class InMemoryTransactionRepository : TransactionRepository
@@ -10,5 +11,10 @@ class InMemoryTransactionRepository : TransactionRepository
     override fun save(transaction: Transaction)
     {
         saved.add(transaction)
+    }
+
+    override fun findById(id: TransactionId): Transaction?
+    {
+        return saved.find { it.id == id }
     }
 }
