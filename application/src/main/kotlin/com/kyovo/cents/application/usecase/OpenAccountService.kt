@@ -3,7 +3,6 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.Transaction
-import com.kyovo.cents.domain.model.TransactionType
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.output.AccountIdGenerator
@@ -32,11 +31,10 @@ class OpenAccountService(
         accountRepository.save(account)
         if (command.initialAmount.value != 0L)
         {
-            val transaction = Transaction(
+            val transaction = Transaction.openingDeposit(
                 transactionIdGenerator.generate(),
                 account.id,
                 command.initialAmount,
-                TransactionType.INITIAL_DEPOSIT,
                 now
             )
             transactionRepository.save(transaction)
