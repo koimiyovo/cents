@@ -8,6 +8,7 @@ class ListAccountsService(private val accountRepository: AccountRepository) : Li
 {
     override fun list(nameFilter: String): List<Account>
     {
-        return accountRepository.findAll().filter { it.name.contains(nameFilter) }
+        return accountRepository.findAll()
+            .filter { it.archivedAt == null && it.name.contains(nameFilter) }
     }
 }

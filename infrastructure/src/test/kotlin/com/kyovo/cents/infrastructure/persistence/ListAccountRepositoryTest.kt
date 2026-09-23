@@ -102,14 +102,28 @@ class ListAccountRepositoryTest
             .doesNotThrowAnyException()
     }
 
-    private fun anAccount(name: AccountName): Account
+    @Test
+    fun `does not consider a name used by an archived account`()
+    {
+        // GIVEN
+        val repository = ListAccountRepository()
+        repository.save(
+            anAccount(name = AccountName("Livret A"), archivedAt = Instant.parse("2026-09-23T09:00:00Z"))
+        )
+
+        // WHEN / THEN
+        assertThat(repository.existsByName(AccountName("Livret A"))).isFalse()
+    }
+
+    private fun anAccount(name: AccountName, archivedAt: Instant? = null): Account
     {
         return Account(
             id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
             name = name,
             type = AccountType.CHECKING,
             currency = AccountCurrency(Currency.getInstance("EUR")),
-            createdAt = Instant.parse("2026-09-22T10:00:00Z")
+            createdAt = Instant.parse("2026-09-22T10:00:00Z"),
+            archivedAt = archivedAt
         )
     }
 }
