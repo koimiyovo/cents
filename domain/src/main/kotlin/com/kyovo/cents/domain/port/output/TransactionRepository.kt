@@ -8,4 +8,5 @@ interface TransactionRepository
     fun save(transaction: Transaction)
     fun findById(id: TransactionId): Transaction?
     fun deleteById(id: TransactionId)
+    fun findAll(): List<Transaction>
 }

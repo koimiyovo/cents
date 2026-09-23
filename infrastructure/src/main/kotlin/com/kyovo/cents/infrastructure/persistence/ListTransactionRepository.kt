@@ -34,4 +34,9 @@ class ListTransactionRepository : TransactionRepository
     {
         transactions.removeAll { it.id == id }
     }
+
+    override fun findAll(): List<Transaction>
+    {
+        return transactions.toList()
+    }
 }
