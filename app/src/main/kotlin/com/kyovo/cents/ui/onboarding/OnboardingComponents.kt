@@ -26,8 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
-
-enum class IconTone { Green, Gold, Mint }
+import com.kyovo.cents.ui.common.IconTone
 
 private fun OnboardingPalette.toneBackground(tone: IconTone): Color =
     when (tone) {
