@@ -11,6 +11,7 @@ import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
+import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import com.kyovo.cents.domain.model.ExpenseSubcategory
 import com.kyovo.cents.domain.model.IncomeSubcategory
@@ -225,5 +226,48 @@ class RecordTransactionServiceTest
 
         // THEN
         assertThat(result.description).isNull()
+    }
+
+    @Test
+    fun `throws when trying to record a transaction on an archived account`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId, archivedAt = anInstant()))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(aTransactionId())
+        )
+        val command = aRecordTransactionCommand(accountId = accountId)
+
+        // WHEN / THEN
+        assertThatThrownBy { service.record(command) }
+            .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+    }
+
+    @Test
+    fun `does not save a transaction when trying to record it on an archived account`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId, archivedAt = anInstant()))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(aTransactionId())
+        )
+        val command = aRecordTransactionCommand(accountId = accountId)
+
+        // WHEN
+        assertThatThrownBy { service.record(command) }
+            .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+
+        // THEN
+        assertThat(transactionRepository.saved).isEmpty()
     }
 }

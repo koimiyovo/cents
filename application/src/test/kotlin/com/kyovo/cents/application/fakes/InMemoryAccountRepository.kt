@@ -17,7 +17,7 @@ class InMemoryAccountRepository : AccountRepository
 
     override fun existsByName(name: AccountName): Boolean
     {
-        return saved.any { it.name.matches(name) }
+        return saved.any { it.archivedAt == null && it.name.matches(name) }
     }
 
     override fun findById(id: AccountId): Account?

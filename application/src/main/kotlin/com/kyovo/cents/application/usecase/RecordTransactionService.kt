@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.domain.exception.AccountNotFoundException
+import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
@@ -16,7 +17,14 @@ class RecordTransactionService(
 {
     override fun record(command: RecordTransactionCommand): Transaction
     {
-        accountRepository.findById(command.accountId) ?: throw AccountNotFoundException()
+        val account =
+            accountRepository.findById(command.accountId) ?: throw AccountNotFoundException()
+
+        if (account.archivedAt != null)
+        {
+            throw CannotRecordTransactionOnArchivedAccountException()
+        }
+        
         val transaction = command.toTransaction(transactionIdGenerator.generate())
         transactionRepository.save(transaction)
         return transaction
