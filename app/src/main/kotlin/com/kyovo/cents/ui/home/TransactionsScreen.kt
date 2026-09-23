@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -77,14 +78,15 @@ import java.util.Locale
 fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
+    revision: Int,
     modifier: Modifier = Modifier,
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
 
-    val accounts = remember { listAccounts.list() }
+    val accounts = remember(revision) { listAccounts.list() }
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
-    val allTransactions = remember { listTransactions.list() }
+    val allTransactions = remember(revision) { listTransactions.list() }
 
     // Filter selection isn't saved across configuration changes: AccountId/TransactionSubcategory
     // aren't trivially Saveable, and losing a filter on rotation is a minor, acceptable trade-off.
@@ -120,7 +122,7 @@ fun TransactionsScreen(
     }
 
     val filteredTransactions =
-        remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        remember(revision, selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
             listTransactions.list(
                 accountId = selectedAccountId,
                 subcategory = selectedSubcategory,
@@ -136,7 +138,7 @@ fun TransactionsScreen(
             .fillMaxSize()
             .background(palette.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HomeTopBar(palette, stringResource(R.string.transactions_title))
@@ -304,26 +306,7 @@ internal fun CustomDateRangePickerDialog(
                 utcTimeMillis <= System.currentTimeMillis()
         },
     )
-    // The "day in range" fill uses secondaryContainer, not primaryContainer (M3's DatePickerColors
-    // default), so both need overriding — otherwise the range highlight stays M3's baseline purple
-    // while only the start/end anchor circles pick up the palette color.
-    val colorScheme = lightColorScheme(
-        primary = palette.iconToneGreen,
-        onPrimary = palette.heroOnCardPrimary,
-        primaryContainer = palette.iconToneGreen,
-        onPrimaryContainer = palette.heroOnCardPrimary,
-        secondary = palette.iconToneGreen,
-        onSecondary = palette.heroOnCardPrimary,
-        secondaryContainer = palette.iconToneGreen,
-        onSecondaryContainer = palette.heroOnCardPrimary,
-        surface = palette.surface,
-        onSurface = palette.textPrimary,
-        onSurfaceVariant = palette.textSecondary,
-        surfaceContainerHigh = palette.surface,
-        outline = palette.divider,
-        background = palette.background,
-        onBackground = palette.textPrimary,
-    )
+    val colorScheme = datePickerColorScheme(palette)
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -406,10 +389,37 @@ internal fun CustomDateRangePickerDialog(
     }
 }
 
-private fun LocalDate.toEpochMillisUtc(): Long =
+/**
+ * Material 3 color scheme for the date pickers, built from [palette]. The "day in range" fill uses
+ * secondaryContainer, not primaryContainer (M3's DatePickerColors default), so both need overriding
+ * — otherwise the range highlight stays M3's baseline purple while only the start/end anchor
+ * circles pick up the palette color.
+ */
+internal fun datePickerColorScheme(palette: AccountsPalette): ColorScheme
+{
+    return lightColorScheme(
+        primary = palette.iconToneGreen,
+        onPrimary = palette.heroOnCardPrimary,
+        primaryContainer = palette.iconToneGreen,
+        onPrimaryContainer = palette.heroOnCardPrimary,
+        secondary = palette.iconToneGreen,
+        onSecondary = palette.heroOnCardPrimary,
+        secondaryContainer = palette.iconToneGreen,
+        onSecondaryContainer = palette.heroOnCardPrimary,
+        surface = palette.surface,
+        onSurface = palette.textPrimary,
+        onSurfaceVariant = palette.textSecondary,
+        surfaceContainerHigh = palette.surface,
+        outline = palette.divider,
+        background = palette.background,
+        onBackground = palette.textPrimary,
+    )
+}
+
+internal fun LocalDate.toEpochMillisUtc(): Long =
     atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
-private fun Long.toLocalDateUtc(): LocalDate =
+internal fun Long.toLocalDateUtc(): LocalDate =
     Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
 
 @Composable
@@ -709,7 +719,7 @@ internal fun SubcategoryChipsRow(
 }
 
 @Composable
-private fun SubcategoryChip(
+internal fun SubcategoryChip(
     label: String,
     selected: Boolean,
     palette: AccountsPalette,
@@ -874,7 +884,7 @@ internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
 private fun timeLabel(date: Instant): String =
     date.atZone(ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
 
-private fun subcategoryLabel(subcategory: TransactionSubcategory): String = when (subcategory)
+internal fun subcategoryLabel(subcategory: TransactionSubcategory): String = when (subcategory)
 {
     ExpenseSubcategory.GROCERIES   -> "Alimentation"
     ExpenseSubcategory.FUEL        -> "Transport"

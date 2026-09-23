@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,12 +33,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
+import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.ui.transaction.AddTransactionFab
+import com.kyovo.cents.ui.transaction.TransactionFormSheet
+import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 
@@ -54,11 +61,17 @@ fun HomeScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    dataRevision: DataRevision,
+    formViewModel: TransactionFormViewModel,
     modifier: Modifier = Modifier,
 ) {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
+    // Bumped after every write: re-reading on change is how the lists notice a new transaction.
+    val revision by dataRevision.value.collectAsStateWithLifecycle()
+    val formState by formViewModel.uiState.collectAsStateWithLifecycle()
+    val accounts = remember(revision) { listAccounts.list() }
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -79,29 +92,56 @@ fun HomeScreen(
         // drill-down so far. Worth revisiting (Navigation Compose) once there are more destinations.
         if (openedAccountId != null)
         {
-            AccountDetailsScreen(
-                accountId = openedAccountId,
-                getAccount = getAccount,
-                getAccountBalance = getAccountBalance,
-                listTransactions = listTransactions,
-                onBack = { openedAccountUuid = null },
-                modifier = Modifier.weight(1f),
-            )
+            // An archived account can't receive transactions (domain rule): no button rather than
+            // a button leading to an error.
+            val canAddTransaction = remember(openedAccountId, revision) {
+                getAccount.get(openedAccountId)?.let { it.archivedAt == null } ?: false
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                AccountDetailsScreen(
+                    accountId = openedAccountId,
+                    getAccount = getAccount,
+                    getAccountBalance = getAccountBalance,
+                    listTransactions = listTransactions,
+                    revision = revision,
+                    onBack = { openedAccountUuid = null },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (canAddTransaction)
+                {
+                    AddTransactionFab(
+                        onClick = { formViewModel.open(accounts, openedAccountId) },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                    )
+                }
+            }
         } else
         {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.weight(1f),
-            ) { page ->
-                when (HomeTab.entries[page]) {
-                    HomeTab.Accounts -> AccountsScreen(
-                        listAccounts,
-                        getAccountBalance,
-                        listTransactions,
-                        onAccountClick = { openedAccountUuid = it.value.toString() },
-                    )
-                    HomeTab.Transactions -> TransactionsScreen(listAccounts, listTransactions)
+            Box(modifier = Modifier.weight(1f)) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                ) { page ->
+                    when (HomeTab.entries[page]) {
+                        HomeTab.Accounts -> AccountsScreen(
+                            listAccounts,
+                            getAccountBalance,
+                            listTransactions,
+                            onAccountClick = { openedAccountUuid = it.value.toString() },
+                            revision = revision,
+                        )
+                        HomeTab.Transactions ->
+                            TransactionsScreen(listAccounts, listTransactions, revision = revision)
+                    }
                 }
+                AddTransactionFab(
+                    onClick = { formViewModel.open(accounts, preselectedAccountId = null) },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                )
             }
             BottomNavBar(
                 palette = palette,
@@ -111,6 +151,19 @@ fun HomeScreen(
                 },
             )
         }
+    }
+
+    // Outside the Column: the sheet floats over whichever screen (tabs or account details) is shown.
+    formState.form?.let { form ->
+        TransactionFormSheet(
+            accounts = accounts,
+            form = form,
+            showErrors = formState.showErrors,
+            failure = formState.failure,
+            onFormChange = formViewModel::update,
+            onSubmit = formViewModel::submit,
+            onDismiss = formViewModel::close,
+        )
     }
 }
 
