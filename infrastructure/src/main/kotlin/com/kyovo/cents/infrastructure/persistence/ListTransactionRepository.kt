@@ -29,4 +29,9 @@ class ListTransactionRepository : TransactionRepository
     {
         return transactions.find { it.id == id }
     }
+
+    override fun deleteById(id: TransactionId)
+    {
+        transactions.removeAll { it.id == id }
+    }
 }

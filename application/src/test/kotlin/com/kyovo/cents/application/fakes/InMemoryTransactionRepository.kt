@@ -18,4 +18,9 @@ class InMemoryTransactionRepository : TransactionRepository
     {
         return saved.find { it.id == id }
     }
+
+    override fun deleteById(id: TransactionId)
+    {
+        saved.removeAll { it.id == id }
+    }
 }
