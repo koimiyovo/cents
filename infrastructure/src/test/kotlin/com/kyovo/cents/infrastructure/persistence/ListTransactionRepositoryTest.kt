@@ -5,6 +5,7 @@ import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.uuid.Uuid
@@ -41,5 +42,29 @@ class ListTransactionRepositoryTest
         // THEN
         assertThat(repository.findById(id)).isEqualTo(updated)
         assertThat(repository.snapshot()).hasSize(1)
+    }
+
+    @Test
+    fun `no longer finds a transaction once it has been deleted`()
+    {
+        // GIVEN
+        val repository = ListTransactionRepository()
+        repository.save(Transaction.openingDeposit(id, accountId, Money(1_000), date))
+
+        // WHEN
+        repository.deleteById(id)
+
+        // THEN
+        assertThat(repository.findById(id)).isNull()
+    }
+
+    @Test
+    fun `does not throw when deleting a transaction that does not exist`()
+    {
+        // GIVEN
+        val repository = ListTransactionRepository()
+
+        // WHEN / THEN
+        assertThatCode { repository.deleteById(id) }.doesNotThrowAnyException()
     }
 }
