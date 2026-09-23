@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
@@ -57,6 +58,7 @@ fun AccountsScreen(
     listAccounts: ListAccountsUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    onAccountClick: (AccountId) -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -113,6 +115,7 @@ fun AccountsScreen(
                     visible = balancesVisible,
                     tone = IconTone.entries[index % IconTone.entries.size],
                     palette = palette,
+                    onClick = { onAccountClick(account.id) },
                 )
             }
         }
@@ -395,6 +398,7 @@ private fun AccountRow(
     visible: Boolean,
     tone: IconTone,
     palette: AccountsPalette,
+    onClick: () -> Unit,
 )
 {
     Row(
@@ -402,6 +406,7 @@ private fun AccountRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

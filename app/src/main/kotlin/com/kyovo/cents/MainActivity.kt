@@ -18,7 +18,7 @@ import com.kyovo.cents.ui.onboarding.OnboardingScreen
 private enum class AppScreen { Splash, Onboarding, Home }
 
 class MainActivity : ComponentActivity() {
-    private val appContainer = AppContainer()
+    private val appContainer by lazy { (application as CentsApplication).appContainer }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
                 AppScreen.Onboarding -> OnboardingScreen(onFinished = { screen = AppScreen.Home })
                 AppScreen.Home -> HomeScreen(
                     listAccounts = appContainer.listAccounts,
+                    getAccount = appContainer.getAccount,
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
                 )

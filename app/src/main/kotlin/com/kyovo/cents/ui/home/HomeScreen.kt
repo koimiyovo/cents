@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -17,6 +18,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,10 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
+import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import kotlinx.coroutines.launch
+import kotlin.uuid.Uuid
 
 private enum class HomeTab { Accounts, Transactions }
 
@@ -43,6 +51,7 @@ private enum class HomeTab { Accounts, Transactions }
 @Composable
 fun HomeScreen(
     listAccounts: ListAccountsUseCase,
+    getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     modifier: Modifier = Modifier,
@@ -50,6 +59,15 @@ fun HomeScreen(
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
+    // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
+    // isn't Saveable, whereas a String is, so the details screen survives rotation.
+    var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
+
+    // Back closes the details screen instead of leaving the app. In the old View system this was
+    // onBackPressed() overridden in the Activity; here it's declarative and only active while
+    // there is something to close.
+    BackHandler(enabled = openedAccountId != null) { openedAccountUuid = null }
 
     Column(
         modifier = modifier
@@ -57,22 +75,42 @@ fun HomeScreen(
             .background(palette.background)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-        ) { page ->
-            when (HomeTab.entries[page]) {
-                HomeTab.Accounts -> AccountsScreen(listAccounts, getAccountBalance, listTransactions)
-                HomeTab.Transactions -> TransactionsScreen(listAccounts, listTransactions)
+        // A simple state-driven switch rather than a Navigation library: there is a single
+        // drill-down so far. Worth revisiting (Navigation Compose) once there are more destinations.
+        if (openedAccountId != null)
+        {
+            AccountDetailsScreen(
+                accountId = openedAccountId,
+                getAccount = getAccount,
+                getAccountBalance = getAccountBalance,
+                listTransactions = listTransactions,
+                onBack = { openedAccountUuid = null },
+                modifier = Modifier.weight(1f),
+            )
+        } else
+        {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f),
+            ) { page ->
+                when (HomeTab.entries[page]) {
+                    HomeTab.Accounts -> AccountsScreen(
+                        listAccounts,
+                        getAccountBalance,
+                        listTransactions,
+                        onAccountClick = { openedAccountUuid = it.value.toString() },
+                    )
+                    HomeTab.Transactions -> TransactionsScreen(listAccounts, listTransactions)
+                }
             }
+            BottomNavBar(
+                palette = palette,
+                selected = HomeTab.entries[pagerState.currentPage],
+                onSelect = { tab ->
+                    coroutineScope.launch { pagerState.animateScrollToPage(tab.ordinal) }
+                },
+            )
         }
-        BottomNavBar(
-            palette = palette,
-            selected = HomeTab.entries[pagerState.currentPage],
-            onSelect = { tab ->
-                coroutineScope.launch { pagerState.animateScrollToPage(tab.ordinal) }
-            },
-        )
     }
 }
 
