@@ -37,8 +37,6 @@
     <string name="onboarding_page2_account2_subtitle">Enveloppe liquide</string>
     <string name="onboarding_page2_account2_amount">85,50 €</string>
     <string name="onboarding_page2_account2_note">Prêt à dépenser</string>
-    <string name="onboarding_page2_feature1_title">Multi-devises sans prise de tête</string>
-    <string name="onboarding_page2_feature1_description">Voyagez ou épargnez en devises étrangères sans calculatrice ni frais masqués.</string>
     <string name="onboarding_page2_feature2_title">Zéro identifiant bancaire requis</string>
     <string name="onboarding_page2_feature2_description">Saisie manuelle ou import rapide, sans jamais confier vos accès à un intermédiaire.</string>
     <string name="onboarding_page2_button">Suivant →</string>
@@ -66,6 +64,29 @@
     <string name="onboarding_page3_button">Commencer l\'expérience Cents →</string>
     <string name="onboarding_page3_caption">🛡 Prêt en 30 secondes • Sans compte • Zéro publicité</string>
 
-    <!-- Home — temporary placeholder, replaced once the real dashboard exists -->
-    <string name="home_placeholder">Accueil — à construire</string>
+    <!-- Accounts (home) screen -->
+    <string name="accounts_kicker">CENTS</string>
+    <string name="accounts_title">Comptes</string>
+    <string name="accounts_greeting_day">Bonjour 👋</string>
+    <string name="accounts_greeting_evening">Bonsoir 👋</string>
+    <string name="accounts_greeting_subtitle">Données locales synchronisées</string>
+    <string name="accounts_vault_badge">🔒 Coffre local</string>
+    <string name="accounts_hero_label">SOLDE TOTAL CONSOLIDÉ</string>
+    <string name="accounts_income_label">↓ Revenus</string>
+    <string name="accounts_expense_label">↑ Dépenses</string>
+    <string name="accounts_hidden_balance">••••••</string>
+    <string name="accounts_new_account_button">⊕ Nouveau compte</string>
+    <string name="accounts_section_title">Mes Comptes</string>
+    <string name="accounts_manage_link">Gérer</string>
+    <string name="accounts_status_active">✓ Actif</string>
+    <string name="accounts_status_archived">Archivé</string>
+    <string name="accounts_tip_title">💡 Astuce d\'autonomie</string>
+    <string name="accounts_tip_body">Vos sauvegardes restent chiffrées sur votre appareil. Vous pouvez synchroniser un fichier exporté en toute liberté sans compte distant.</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_accounts">Comptes</string>
+    <string name="nav_transactions">Transactions</string>
+
+    <!-- Transactions tab — temporary placeholder, no mockup provided for this screen yet -->
+    <string name="transactions_placeholder">Transactions — à construire</string>
 </resources>

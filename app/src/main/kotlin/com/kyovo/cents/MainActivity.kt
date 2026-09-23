@@ -6,31 +6,36 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
 
-private sealed interface AppScreen {
-    data object Splash : AppScreen
-    data object Onboarding : AppScreen
-    data object Home : AppScreen
-}
+// A plain enum (rather than a sealed interface of data objects) so rememberSaveable can persist
+// it across configuration changes — Kotlin enums are Serializable for free, sealed-interface
+// singletons aren't.
+private enum class AppScreen { Splash, Onboarding, Home }
 
 class MainActivity : ComponentActivity() {
+    private val appContainer = AppContainer()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var screen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
+            var screen by rememberSaveable { mutableStateOf(AppScreen.Splash) }
 
             when (screen) {
                 AppScreen.Splash -> SplashScreen(onFinished = { screen = AppScreen.Onboarding })
                 // Onboarding is shown on every launch for now — there is no "seen it already"
                 // flag persisted yet.
                 AppScreen.Onboarding -> OnboardingScreen(onFinished = { screen = AppScreen.Home })
-                AppScreen.Home -> HomeScreen()
+                AppScreen.Home -> HomeScreen(
+                    listAccounts = appContainer.listAccounts,
+                    getAccountBalance = appContainer.getAccountBalance,
+                    listTransactions = appContainer.listTransactions,
+                )
             }
         }
     }

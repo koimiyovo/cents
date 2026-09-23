@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.ui.common.IconTone
 
 @Composable
 fun OnboardingPage1(palette: OnboardingPalette, modifier: Modifier = Modifier) {
@@ -84,20 +85,12 @@ fun OnboardingPage2(palette: OnboardingPalette, modifier: Modifier = Modifier) {
             fontSize = 15.sp,
         )
         AccountsPreviewCard(palette)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FeatureRow(
-                tone = IconTone.Mint,
-                title = stringResource(R.string.onboarding_page2_feature1_title),
-                description = stringResource(R.string.onboarding_page2_feature1_description),
-                palette = palette,
-            )
-            FeatureRow(
-                tone = IconTone.Gold,
-                title = stringResource(R.string.onboarding_page2_feature2_title),
-                description = stringResource(R.string.onboarding_page2_feature2_description),
-                palette = palette,
-            )
-        }
+        FeatureRow(
+            tone = IconTone.Gold,
+            title = stringResource(R.string.onboarding_page2_feature2_title),
+            description = stringResource(R.string.onboarding_page2_feature2_description),
+            palette = palette,
+        )
     }
 }
 
