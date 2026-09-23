@@ -3,6 +3,7 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
+import com.kyovo.cents.application.fakes.aTransactionTitle
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -228,5 +229,31 @@ class ListTransactionsServiceTest
 
         // THEN
         assertThat(result).containsExactly(matching)
+    }
+
+    @Test
+    fun `returns only transactions whose title contains the given text, case-insensitively`()
+    {
+        // GIVEN
+        val repository = InMemoryTransactionRepository()
+        val groceries = aTransaction(
+            id = aTransactionId("11111111-1111-1111-1111-111111111111"),
+            category = TransactionCategory.EXPENSE,
+            title = aTransactionTitle("Courses de la semaine")
+        )
+        val salary = aTransaction(
+            id = aTransactionId("22222222-2222-2222-2222-222222222222"),
+            category = TransactionCategory.INCOME,
+            title = aTransactionTitle("Salaire")
+        )
+        repository.save(groceries)
+        repository.save(salary)
+        val service = ListTransactionsService(repository)
+
+        // WHEN
+        val result = service.list(titleFilter = "courses")
+
+        // THEN
+        assertThat(result).containsExactly(groceries)
     }
 }

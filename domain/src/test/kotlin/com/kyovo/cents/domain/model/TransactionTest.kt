@@ -12,6 +12,7 @@ class TransactionTest
     private val id = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
     private val accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
     private val amount = Money(1_000)
+    private val title = TransactionTitle("Courses de la semaine")
     private val date = Instant.parse("2026-09-22T10:00:00Z")
 
     @Test
@@ -52,6 +53,16 @@ class TransactionTest
     }
 
     @Test
+    fun `an opening deposit has a default title`()
+    {
+        // WHEN
+        val transaction = Transaction.openingDeposit(id, accountId, amount, date)
+
+        // THEN
+        assertThat(transaction.title.value).isEqualTo("Initial deposit")
+    }
+
+    @Test
     fun `a recorded expense is of category EXPENSE`()
     {
         // WHEN
@@ -59,6 +70,7 @@ class TransactionTest
             id,
             accountId,
             amount,
+            title,
             RecordableTransactionCategory.EXPENSE,
             subcategory = null,
             description = null,
@@ -77,6 +89,7 @@ class TransactionTest
             id,
             accountId,
             amount,
+            title,
             RecordableTransactionCategory.INCOME,
             subcategory = null,
             description = null,
@@ -88,6 +101,25 @@ class TransactionTest
     }
 
     @Test
+    fun `a recorded transaction has the given title`()
+    {
+        // WHEN
+        val transaction = Transaction.recorded(
+            id,
+            accountId,
+            amount,
+            title,
+            RecordableTransactionCategory.EXPENSE,
+            subcategory = null,
+            description = null,
+            date = date
+        )
+
+        // THEN
+        assertThat(transaction.title).isEqualTo(title)
+    }
+
+    @Test
     fun `a recorded transaction can have a description`()
     {
         // WHEN
@@ -95,6 +127,7 @@ class TransactionTest
             id,
             accountId,
             amount,
+            title,
             RecordableTransactionCategory.EXPENSE,
             ExpenseSubcategory.GROCERIES,
             TransactionDescription.of("Courses de la semaine"),
@@ -113,6 +146,7 @@ class TransactionTest
             id = id,
             accountId = accountId,
             amount = amount,
+            title = title,
             category = RecordableTransactionCategory.EXPENSE,
             subcategory = ExpenseSubcategory.FUEL,
             description = null,
@@ -131,6 +165,7 @@ class TransactionTest
             id = id,
             accountId = accountId,
             amount = amount,
+            title = title,
             category = RecordableTransactionCategory.INCOME,
             subcategory = IncomeSubcategory.SALARY,
             description = null,
@@ -150,6 +185,7 @@ class TransactionTest
                 id = id,
                 accountId = accountId,
                 amount = amount,
+                title = title,
                 category = RecordableTransactionCategory.EXPENSE,
                 subcategory = IncomeSubcategory.SALARY,
                 description = null,
@@ -167,6 +203,7 @@ class TransactionTest
                 id = id,
                 accountId = accountId,
                 amount = amount,
+                title = title,
                 category = RecordableTransactionCategory.INCOME,
                 subcategory = ExpenseSubcategory.GROCERIES,
                 description = null,
@@ -193,6 +230,7 @@ class TransactionTest
             id,
             accountId,
             amount,
+            title,
             RecordableTransactionCategory.INCOME,
             subcategory = null,
             description = null,
@@ -211,6 +249,7 @@ class TransactionTest
             id,
             accountId,
             amount,
+            title,
             RecordableTransactionCategory.EXPENSE,
             subcategory = null,
             description = null,

@@ -14,7 +14,8 @@ class ListTransactionsService(private val transactionRepository: TransactionRepo
         accountId: AccountId?,
         category: TransactionCategory?,
         from: Instant?,
-        to: Instant?
+        to: Instant?,
+        titleFilter: String
     ): List<Transaction>
     {
         return transactionRepository.findAll()
@@ -22,7 +23,8 @@ class ListTransactionsService(private val transactionRepository: TransactionRepo
                 (accountId == null || transaction.accountId == accountId) &&
                         (category == null || transaction.category == category) &&
                         (from == null || !transaction.date.isBefore(from)) &&
-                        (to == null || !transaction.date.isAfter(to))
+                        (to == null || !transaction.date.isAfter(to)) &&
+                        transaction.title.contains(titleFilter)
             }
     }
 }

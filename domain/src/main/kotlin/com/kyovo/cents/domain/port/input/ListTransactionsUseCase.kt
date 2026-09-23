@@ -11,6 +11,7 @@ interface ListTransactionsUseCase
         accountId: AccountId? = null,
         category: TransactionCategory? = null,
         from: Instant? = null,
-        to: Instant? = null
+        to: Instant? = null,
+        titleFilter: String = ""
     ): List<Transaction>
 }
