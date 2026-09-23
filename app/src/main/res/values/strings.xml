@@ -87,6 +87,21 @@
     <string name="nav_accounts">Comptes</string>
     <string name="nav_transactions">Transactions</string>
 
-    <!-- Transactions tab — temporary placeholder, no mockup provided for this screen yet -->
-    <string name="transactions_placeholder">Transactions — à construire</string>
+    <!-- Transactions screen -->
+    <string name="transactions_title">Transactions</string>
+    <string name="transactions_subtitle">Historique de vos dépenses &amp; revenus</string>
+    <string name="transactions_expense_label">↘ Dépenses</string>
+    <string name="transactions_income_label">↗ Revenus</string>
+    <string name="transactions_net_label">🐷 Solde net</string>
+    <string name="transactions_search_placeholder">Rechercher une transaction…</string>
+    <string name="transactions_all_accounts">Tous les comptes</string>
+    <string name="transactions_filter_all">Toutes</string>
+    <string name="transactions_period_7_days">7 derniers jours</string>
+    <string name="transactions_period_30_days">30 derniers jours</string>
+    <string name="transactions_period_all_time">Tout l\'historique</string>
+    <string name="transactions_period_custom">Personnalisée</string>
+    <string name="transactions_today">Aujourd\'hui</string>
+    <string name="transactions_yesterday">Hier</string>
+    <string name="transactions_empty">Aucune transaction ne correspond à ces filtres.</string>
+    <string name="transactions_privacy_footer">🛡 Stockage local chiffré • 0 donnée partagée</string>
 </resources>
