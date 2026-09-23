@@ -113,4 +113,35 @@
     <string name="account_details_type_checking">Compte courant</string>
     <string name="account_details_type_savings">Épargne</string>
     <string name="account_details_type_cash">Espèces</string>
+
+    <!-- Transaction form -->
+    <string name="transaction_form_title">Nouvelle transaction</string>
+    <string name="transaction_form_type_expense">Dépense</string>
+    <string name="transaction_form_type_income">Revenu</string>
+    <string name="transaction_form_type_transfer">Virement</string>
+    <string name="transaction_form_amount_placeholder">0,00</string>
+    <string name="transaction_form_title_placeholder">Titre (ex. Courses)</string>
+    <string name="transaction_form_account_label">Compte</string>
+    <string name="transaction_form_account_from_label">Depuis</string>
+    <string name="transaction_form_account_to_label">Vers</string>
+    <string name="transaction_form_no_active_account">Aucun compte actif : créez d\'abord un compte.</string>
+    <string name="transaction_form_more_details">Plus de détails</string>
+    <string name="transaction_form_less_details">Moins de détails</string>
+    <string name="transaction_form_subcategory_label">Sous-catégorie</string>
+    <string name="transaction_form_subcategory_none">Aucune</string>
+    <string name="transaction_form_description_placeholder">Description (facultatif)</string>
+    <string name="transaction_form_submit">Enregistrer</string>
+    <string name="transaction_form_error_amount">Saisissez un montant supérieur à 0 (2 décimales maximum).</string>
+    <string name="transaction_form_error_title">Le titre est obligatoire.</string>
+    <string name="transaction_form_error_account">Choisissez un compte.</string>
+    <string name="transaction_form_error_destination">Choisissez le compte de destination.</string>
+    <string name="transaction_form_error_same_account">Les deux comptes doivent être différents.</string>
+    <string name="transaction_form_error_subcategory">Cette sous-catégorie ne correspond pas au type choisi.</string>
+    <string name="transaction_form_date_other">📅 Autre date</string>
+    <string name="transaction_form_date_title">Sélectionnez une date</string>
+    <string name="transaction_form_date_ok">OK</string>
+    <string name="transaction_form_date_cancel">Annuler</string>
+    <string name="transaction_form_failure_account_not_found">Ce compte n\'existe plus.</string>
+    <string name="transaction_form_failure_archived">Ce compte est archivé : il ne peut plus recevoir de transaction.</string>
+    <string name="transaction_form_add_content_description">Ajouter une transaction</string>
 </resources>

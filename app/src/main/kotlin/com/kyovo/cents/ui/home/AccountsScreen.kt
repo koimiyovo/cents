@@ -53,12 +53,16 @@ import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import java.time.LocalTime
 
+/** Bottom padding of the scrolling screens, so the last item can scroll clear of the floating "+" button. */
+internal val FAB_CLEARANCE = 88.dp
+
 @Composable
 fun AccountsScreen(
     listAccounts: ListAccountsUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     onAccountClick: (AccountId) -> Unit,
+    revision: Int,
     modifier: Modifier = Modifier,
 )
 {
@@ -69,14 +73,14 @@ fun AccountsScreen(
     // needing a scroll just to see the balance.
     val isCompact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val accounts = remember { listAccounts.list() }
-    val balanceByAccountId = remember(accounts) {
+    val accounts = remember(revision) { listAccounts.list() }
+    val balanceByAccountId = remember(accounts, revision) {
         accounts.associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
     }
     val totalCents = remember(balanceByAccountId) { balanceByAccountId.values.sum() }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
-    val allTransactions = remember { listTransactions.list() }
+    val allTransactions = remember(revision) { listTransactions.list() }
     val incomeCents = remember(allTransactions) {
         allTransactions.filter { it.category == TransactionCategory.INCOME }
             .sumOf { it.amount.value }
@@ -91,7 +95,7 @@ fun AccountsScreen(
             .fillMaxSize()
             .background(palette.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = if (isCompact) 10.dp else 16.dp),
+            .padding(start = 16.dp, end = 16.dp, top = if (isCompact) 10.dp else 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 20.dp),
     ) {
         HomeTopBar(palette, stringResource(R.string.accounts_title))

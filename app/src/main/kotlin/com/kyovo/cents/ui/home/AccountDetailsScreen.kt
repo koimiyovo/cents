@@ -61,12 +61,13 @@ fun AccountDetailsScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    revision: Int,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
-    val account = remember(accountId) { getAccount.get(accountId) }
+    val account = remember(accountId, revision) { getAccount.get(accountId) }
 
     if (account == null)
     {
@@ -87,8 +88,8 @@ fun AccountDetailsScreen(
         return
     }
 
-    val balanceCents = remember(accountId) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
-    val accountTransactions = remember(accountId) { listTransactions.list(accountId = accountId) }
+    val balanceCents = remember(accountId, revision) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
+    val accountTransactions = remember(accountId, revision) { listTransactions.list(accountId = accountId) }
 
     // Unlike the global tab (30 days by default), an account's page opens on its full history:
     // the opening deposit is often far in the past and would otherwise be hidden at first glance.
@@ -120,7 +121,7 @@ fun AccountDetailsScreen(
     }
 
     val filteredTransactions =
-        remember(accountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        remember(accountId, revision, selectedSubcategory, searchQuery, periodFrom, periodTo) {
             listTransactions.list(
                 accountId = accountId,
                 subcategory = selectedSubcategory,
@@ -136,7 +137,7 @@ fun AccountDetailsScreen(
             .fillMaxSize()
             .background(palette.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -33,6 +33,7 @@ data class AccountsPalette(
     val tipBackground: Color,
     val tipIconTone: Color,
     val divider: Color,
+    val error: Color,
 )
 
 val LightAccountsPalette = AccountsPalette(
@@ -60,6 +61,7 @@ val LightAccountsPalette = AccountsPalette(
     tipBackground = Color(0xFFF0F5F1),
     tipIconTone = Color(0xFFD6982E),
     divider = Color(0xFFCBD9D0),
+    error = Color(0xFFB3261E),
 )
 
 val DarkAccountsPalette = AccountsPalette(
@@ -87,4 +89,5 @@ val DarkAccountsPalette = AccountsPalette(
     tipBackground = Color(0xFF17281F),
     tipIconTone = Color(0xFFE3A83E),
     divider = Color(0xFF23352C),
+    error = Color(0xFFF2B8B5),
 )
