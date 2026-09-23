@@ -60,4 +60,11 @@ data class Transaction private constructor(
             )
         }
     }
+
+    val signedAmount: Long
+        get() = when (category)
+        {
+            TransactionCategory.EXPENSE                                     -> -amount.value
+            TransactionCategory.INCOME, TransactionCategory.INITIAL_DEPOSIT -> amount.value
+        }
 }

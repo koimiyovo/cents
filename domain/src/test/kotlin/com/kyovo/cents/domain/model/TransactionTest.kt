@@ -174,4 +174,50 @@ class TransactionTest
             )
         }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
     }
+
+    @Test
+    fun `an opening deposit contributes its full amount to the balance`()
+    {
+        // WHEN
+        val transaction = Transaction.openingDeposit(id, accountId, amount, date)
+
+        // THEN
+        assertThat(transaction.signedAmount).isEqualTo(1_000L)
+    }
+
+    @Test
+    fun `a recorded income contributes its full amount to the balance`()
+    {
+        // WHEN
+        val transaction = Transaction.recorded(
+            id,
+            accountId,
+            amount,
+            RecordableTransactionCategory.INCOME,
+            subcategory = null,
+            description = null,
+            date = date
+        )
+
+        // THEN
+        assertThat(transaction.signedAmount).isEqualTo(1_000L)
+    }
+
+    @Test
+    fun `a recorded expense contributes its negated amount to the balance`()
+    {
+        // WHEN
+        val transaction = Transaction.recorded(
+            id,
+            accountId,
+            amount,
+            RecordableTransactionCategory.EXPENSE,
+            subcategory = null,
+            description = null,
+            date = date
+        )
+
+        // THEN
+        assertThat(transaction.signedAmount).isEqualTo(-1_000L)
+    }
 }
