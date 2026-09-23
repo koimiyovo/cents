@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Cents</string>
+
+    <string name="splash_tagline">Your money, simply tracked</string>
+    <string name="splash_privacy_badge">100% On-Device &amp; Private</string>
+    <string name="splash_status">Initializing secure vault</string>
+    <string name="splash_version">v%1$s</string>
 </resources>
