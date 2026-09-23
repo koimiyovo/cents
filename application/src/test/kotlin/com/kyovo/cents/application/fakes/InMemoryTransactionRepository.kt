@@ -23,4 +23,9 @@ class InMemoryTransactionRepository : TransactionRepository
     {
         saved.removeAll { it.id == id }
     }
+
+    override fun findAll(): List<Transaction>
+    {
+        return saved.toList()
+    }
 }
