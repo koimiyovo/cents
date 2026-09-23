@@ -262,7 +262,7 @@ internal fun transactionsWithinRange(
     }
 
 @Composable
-private fun periodLabel(
+internal fun periodLabel(
     period: TransactionsPeriod,
     customFrom: LocalDate?,
     customTo: LocalDate?
@@ -286,7 +286,7 @@ private fun periodLabel(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CustomDateRangePickerDialog(
+internal fun CustomDateRangePickerDialog(
     palette: AccountsPalette,
     initialFrom: LocalDate?,
     initialTo: LocalDate?,
@@ -413,7 +413,7 @@ private fun Long.toLocalDateUtc(): LocalDate =
     Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
 
 @Composable
-private fun StatsRow(
+internal fun StatsRow(
     palette: AccountsPalette,
     expenseCents: Long,
     incomeCents: Long,
@@ -472,7 +472,7 @@ private fun StatPill(
 }
 
 @Composable
-private fun SearchField(palette: AccountsPalette, query: String, onQueryChange: (String) -> Unit)
+internal fun SearchField(palette: AccountsPalette, query: String, onQueryChange: (String) -> Unit)
 {
     Row(
         modifier = Modifier
@@ -506,7 +506,7 @@ private fun SearchField(palette: AccountsPalette, query: String, onQueryChange: 
 }
 
 @Composable
-private fun PeriodFilterRow(
+internal fun PeriodFilterRow(
     palette: AccountsPalette,
     selected: TransactionsPeriod,
     label: String,
@@ -680,7 +680,7 @@ private fun SelectableOptionRow(
 }
 
 @Composable
-private fun SubcategoryChipsRow(
+internal fun SubcategoryChipsRow(
     palette: AccountsPalette,
     subcategories: List<TransactionSubcategory>,
     selected: TransactionSubcategory?,
@@ -735,7 +735,7 @@ private fun SubcategoryChip(
 }
 
 @Composable
-private fun DayGroup(
+internal fun DayGroup(
     palette: AccountsPalette,
     date: LocalDate,
     transactions: List<Transaction>,
@@ -839,7 +839,7 @@ private fun TransactionRow(palette: AccountsPalette, transaction: Transaction, a
     }
 }
 
-private fun groupByDay(transactions: List<Transaction>): List<Pair<LocalDate, List<Transaction>>>
+internal fun groupByDay(transactions: List<Transaction>): List<Pair<LocalDate, List<Transaction>>>
 {
     val zone = ZoneId.systemDefault()
     return transactions
@@ -857,8 +857,18 @@ private fun dayLabel(date: LocalDate): String
     {
         today              -> stringResource(R.string.transactions_today)
         today.minusDays(1) -> stringResource(R.string.transactions_yesterday)
-        else               -> date.format(DateTimeFormatter.ofPattern("d MMMM", Locale.FRENCH))
+        else               -> formatDayHeader(date, today)
     }
+}
+
+/**
+ * "d MMMM" for recent dates, "d MMMM yyyy" once the date is a year or more before [today]: an
+ * account's full history can reach back far enough that "19 août" alone would be ambiguous.
+ */
+internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
+{
+    val pattern = if (date.isAfter(today.minusYears(1))) "d MMMM" else "d MMMM yyyy"
+    return date.format(DateTimeFormatter.ofPattern(pattern, Locale.FRENCH))
 }
 
 private fun timeLabel(date: Instant): String =
@@ -893,5 +903,5 @@ private fun categoryEmoji(category: TransactionCategory): String = when (categor
     TransactionCategory.TRANSFER_IN     -> "📥"
 }
 
-private fun movementsCountLabel(count: Int): String =
+internal fun movementsCountLabel(count: Int): String =
     "$count mouvement${if (count > 1) "s" else ""}"
