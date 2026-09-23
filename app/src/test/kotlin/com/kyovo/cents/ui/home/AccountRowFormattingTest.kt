@@ -19,6 +19,13 @@ class AccountEmojiTest
         // WHEN / THEN
         assertThat(accountEmoji(AccountType.SAVINGS)).isEqualTo("🐷")
     }
+
+    @Test
+    fun `uses a banknote emoji for a cash account`()
+    {
+        // WHEN / THEN
+        assertThat(accountEmoji(AccountType.CASH)).isEqualTo("💵")
+    }
 }
 
 class TruncatedDescriptionTest

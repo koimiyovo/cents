@@ -259,4 +259,78 @@ class TransactionTest
         // THEN
         assertThat(transaction.signedAmount).isEqualTo(-1_000L)
     }
+
+    @Test
+    fun `a transfer-out leg is of category TRANSFER_OUT and has no subcategory`()
+    {
+        // WHEN
+        val transaction = Transaction.transferOut(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.category).isEqualTo(TransactionCategory.TRANSFER_OUT)
+        assertThat(transaction.subcategory).isNull()
+    }
+
+    @Test
+    fun `a transfer-in leg is of category TRANSFER_IN and has no subcategory`()
+    {
+        // WHEN
+        val transaction = Transaction.transferIn(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.category).isEqualTo(TransactionCategory.TRANSFER_IN)
+        assertThat(transaction.subcategory).isNull()
+    }
+
+    @Test
+    fun `a transfer-out leg has no description`()
+    {
+        // WHEN
+        val transaction = Transaction.transferOut(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.description).isNull()
+    }
+
+    @Test
+    fun `a transfer-in leg has no description`()
+    {
+        // WHEN
+        val transaction = Transaction.transferIn(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.description).isNull()
+    }
+
+    @Test
+    fun `a transfer leg has the given title`()
+    {
+        // WHEN
+        val outTransaction = Transaction.transferOut(id, accountId, amount, title, date)
+        val inTransaction = Transaction.transferIn(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(outTransaction.title).isEqualTo(title)
+        assertThat(inTransaction.title).isEqualTo(title)
+    }
+
+    @Test
+    fun `a transfer-out leg contributes its negated amount to the balance`()
+    {
+        // WHEN
+        val transaction = Transaction.transferOut(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.signedAmount).isEqualTo(-1_000L)
+    }
+
+    @Test
+    fun `a transfer-in leg contributes its full amount to the balance`()
+    {
+        // WHEN
+        val transaction = Transaction.transferIn(id, accountId, amount, title, date)
+
+        // THEN
+        assertThat(transaction.signedAmount).isEqualTo(1_000L)
+    }
 }

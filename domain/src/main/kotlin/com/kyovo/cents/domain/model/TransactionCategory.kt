@@ -4,5 +4,7 @@ enum class TransactionCategory
 {
     INCOME,
     EXPENSE,
-    INITIAL_DEPOSIT
+    INITIAL_DEPOSIT,
+    TRANSFER_OUT,
+    TRANSFER_IN
 }
