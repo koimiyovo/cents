@@ -72,11 +72,14 @@ fun AccountsScreen(
         accounts.associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
     }
     val totalCents = remember(balanceByAccountId) { balanceByAccountId.values.sum() }
-    val incomeCents = remember {
-        listTransactions.list(category = TransactionCategory.INCOME).sumOf { it.amount.value }
+    // The use case only filters by subcategory now, so category-level aggregates are computed
+    // here from the full list rather than via a query parameter.
+    val allTransactions = remember { listTransactions.list() }
+    val incomeCents = remember(allTransactions) {
+        allTransactions.filter { it.category == TransactionCategory.INCOME }.sumOf { it.amount.value }
     }
-    val expenseCents = remember {
-        listTransactions.list(category = TransactionCategory.EXPENSE).sumOf { it.amount.value }
+    val expenseCents = remember(allTransactions) {
+        allTransactions.filter { it.category == TransactionCategory.EXPENSE }.sumOf { it.amount.value }
     }
 
     Column(
