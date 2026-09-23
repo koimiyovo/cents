@@ -39,7 +39,7 @@ fun OnboardingScreen(onFinished: () -> Unit, modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(palette.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         OnboardingTopBar(palette = palette, onSkip = onFinished)
         Spacer(Modifier.height(16.dp))
