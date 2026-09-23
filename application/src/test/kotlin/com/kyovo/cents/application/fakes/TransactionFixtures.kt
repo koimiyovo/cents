@@ -10,6 +10,7 @@ import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
+import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import java.time.Instant
 import kotlin.uuid.Uuid
@@ -68,6 +69,12 @@ fun aTransaction(
                 description,
                 date
             )
+
+        TransactionCategory.TRANSFER_OUT    ->
+            Transaction.transferOut(id, accountId, amount, title, date)
+
+        TransactionCategory.TRANSFER_IN      ->
+            Transaction.transferIn(id, accountId, amount, title, date)
     }
 }
 
@@ -82,6 +89,17 @@ fun aRecordTransactionCommand(
 ): RecordTransactionCommand
 {
     return RecordTransactionCommand(accountId, amount, title, category, subcategory, description, date)
+}
+
+fun aRecordTransferCommand(
+    fromAccountId: AccountId = anAccountId("11111111-1111-1111-1111-111111111111"),
+    toAccountId: AccountId = anAccountId("22222222-2222-2222-2222-222222222222"),
+    amount: Money = aMoney(1_000),
+    title: TransactionTitle = aTransactionTitle(),
+    date: Instant = anInstant()
+): RecordTransferCommand
+{
+    return RecordTransferCommand(fromAccountId, toAccountId, amount, title, date)
 }
 
 fun anUpdateTransactionCommand(

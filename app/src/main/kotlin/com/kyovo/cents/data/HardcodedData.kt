@@ -55,7 +55,7 @@ fun seedHardcodedData(
     val cash = Account(
         id = AccountId(Uuid.random()),
         name = AccountName("Portefeuille Espèces"),
-        type = AccountType.CHECKING,
+        type = AccountType.CASH,
         currency = eur,
         createdAt = now.minus(200, ChronoUnit.DAYS),
     )
@@ -105,6 +105,26 @@ fun seedHardcodedData(
         )
     }
 
+    // A transfer is two independent legs, not a single Transaction.recorded call: it doesn't
+    // count as an expense or income on either side (see Transaction.transferOut/transferIn).
+    fun transferred(
+        fromAccountId: AccountId,
+        toAccountId: AccountId,
+        amountCents: Long,
+        title: String,
+        date: Instant,
+    )
+    {
+        val amount = Money(amountCents)
+        val transferTitle = TransactionTitle(title)
+        transactionRepository.save(
+            Transaction.transferOut(TransactionId(Uuid.random()), fromAccountId, amount, transferTitle, date),
+        )
+        transactionRepository.save(
+            Transaction.transferIn(TransactionId(Uuid.random()), toAccountId, amount, transferTitle, date),
+        )
+    }
+
     // Compte Courant: balance built entirely from its recent recorded activity (no opening
     // deposit), so it doubles as the "recent transactions" example on the accounts screen.
     recorded(
@@ -144,13 +164,13 @@ fun seedHardcodedData(
     deposit(savings.id, 240000, now.minus(400, ChronoUnit.DAYS))
     deposit(envelope.id, 35000, now.minus(90, ChronoUnit.DAYS))
 
-    // Portefeuille Espèces: an opening float plus a recent withdrawal.
+    // Portefeuille Espèces: an opening float plus a recent cash withdrawal from Compte Courant,
+    // modeled as a transfer (not an expense — the money isn't spent, just moved).
     deposit(cash.id, 10550, now.minus(200, ChronoUnit.DAYS))
-    recorded(
+    transferred(
+        checking.id,
         cash.id,
         2000,
-        RecordableTransactionCategory.EXPENSE,
-        ExpenseSubcategory.CASH_WITHDRAWAL,
         "Retrait espèces",
         now.minus(1, ChronoUnit.DAYS)
     )

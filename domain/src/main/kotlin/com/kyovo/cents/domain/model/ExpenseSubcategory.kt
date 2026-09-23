@@ -4,6 +4,5 @@ enum class ExpenseSubcategory : TransactionSubcategory
 {
     GROCERIES,
     HAIRDRESSER,
-    FUEL,
-    CASH_WITHDRAWAL
+    FUEL
 }

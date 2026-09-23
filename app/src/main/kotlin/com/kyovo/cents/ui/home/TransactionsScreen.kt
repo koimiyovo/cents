@@ -107,25 +107,28 @@ fun TransactionsScreen(
         transactionsWithinRange(allTransactions, periodFrom, periodTo)
     }
     val totalIncomeCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.INCOME }.sumOf { it.amount.value }
+        transactionsInPeriod.filter { it.category == TransactionCategory.INCOME }
+            .sumOf { it.amount.value }
     }
     val totalExpenseCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.EXPENSE }.sumOf { it.amount.value }
+        transactionsInPeriod.filter { it.category == TransactionCategory.EXPENSE }
+            .sumOf { it.amount.value }
     }
     val netCents = totalIncomeCents - totalExpenseCents
     val availableSubcategories = remember(transactionsInPeriod) {
         transactionsInPeriod.mapNotNull { it.subcategory }.distinct()
     }
 
-    val filteredTransactions = remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
-        listTransactions.list(
-            accountId = selectedAccountId,
-            subcategory = selectedSubcategory,
-            titleFilter = searchQuery,
-            from = periodFrom,
-            to = periodTo,
-        )
-    }
+    val filteredTransactions =
+        remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+            listTransactions.list(
+                accountId = selectedAccountId,
+                subcategory = selectedSubcategory,
+                titleFilter = searchQuery,
+                from = periodFrom,
+                to = periodTo,
+            )
+        }
     val groupedByDay = remember(filteredTransactions) { groupByDay(filteredTransactions) }
 
     Column(
@@ -151,7 +154,12 @@ fun TransactionsScreen(
             onSelectPreset = { periodMenuExpanded = false; selectedPeriod = it },
             onSelectCustom = { periodMenuExpanded = false; showCustomRangePicker = true },
         )
-        StatsRow(palette, expenseCents = totalExpenseCents, incomeCents = totalIncomeCents, netCents = netCents)
+        StatsRow(
+            palette,
+            expenseCents = totalExpenseCents,
+            incomeCents = totalIncomeCents,
+            netCents = netCents
+        )
         SearchField(palette, searchQuery) { searchQuery = it }
         AccountFilterRow(
             palette = palette,
@@ -176,8 +184,7 @@ fun TransactionsScreen(
                 fontSize = 13.sp,
                 modifier = Modifier.padding(vertical = 24.dp),
             )
-        }
-        else
+        } else
         {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 groupedByDay.forEach { (date, dayTransactions) ->
@@ -243,11 +250,23 @@ internal fun periodRange(
 }
 
 /** Same boundary semantics as [com.kyovo.cents.application.usecase.ListTransactionsService]: inclusive on both ends. */
-internal fun transactionsWithinRange(transactions: List<Transaction>, from: Instant?, to: Instant?): List<Transaction> =
-    transactions.filter { (from == null || !it.date.isBefore(from)) && (to == null || !it.date.isAfter(to)) }
+internal fun transactionsWithinRange(
+    transactions: List<Transaction>,
+    from: Instant?,
+    to: Instant?
+): List<Transaction> =
+    transactions.filter {
+        (from == null || !it.date.isBefore(from)) && (to == null || !it.date.isAfter(
+            to
+        ))
+    }
 
 @Composable
-private fun periodLabel(period: TransactionsPeriod, customFrom: LocalDate?, customTo: LocalDate?): String
+private fun periodLabel(
+    period: TransactionsPeriod,
+    customFrom: LocalDate?,
+    customTo: LocalDate?
+): String
 {
     if (period == TransactionsPeriod.CUSTOM && customFrom != null && customTo != null)
     {
@@ -281,7 +300,8 @@ private fun CustomDateRangePickerDialog(
         initialSelectedEndDateMillis = (initialTo ?: today).toEpochMillisUtc(),
         selectableDates = object : SelectableDates
         {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= System.currentTimeMillis()
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                utcTimeMillis <= System.currentTimeMillis()
         },
     )
     // The "day in range" fill uses secondaryContainer, not primaryContainer (M3's DatePickerColors
@@ -304,7 +324,10 @@ private fun CustomDateRangePickerDialog(
         background = palette.background,
         onBackground = palette.textPrimary,
     )
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         MaterialTheme(colorScheme = colorScheme) {
             Surface(
                 modifier = Modifier
@@ -320,7 +343,11 @@ private fun CustomDateRangePickerDialog(
                         title = {
                             Text(
                                 text = "Sélectionnez une période",
-                                modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                                modifier = Modifier.padding(
+                                    start = 24.dp,
+                                    end = 12.dp,
+                                    top = 16.dp
+                                ),
                             )
                         },
                         // The default headline uses headlineLarge — sized for a full-screen
@@ -328,7 +355,12 @@ private fun CustomDateRangePickerDialog(
                         // it's replaced outright with a smaller one, matched to our compact
                         // Surface (and in French, consistent with the rest of the app).
                         headline = {
-                            val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
+                            val formatter = remember {
+                                DateTimeFormatter.ofPattern(
+                                    "d MMM yyyy",
+                                    Locale.FRENCH
+                                )
+                            }
                             val startText = state.selectedStartDateMillis
                                 ?.let { it.toLocalDateUtc().format(formatter) } ?: "Début"
                             val endText = state.selectedEndDateMillis
@@ -336,7 +368,11 @@ private fun CustomDateRangePickerDialog(
                             Text(
                                 text = "$startText – $endText",
                                 fontSize = 16.sp,
-                                modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
+                                modifier = Modifier.padding(
+                                    start = 24.dp,
+                                    end = 12.dp,
+                                    bottom = 12.dp
+                                ),
                             )
                         },
                     )
@@ -370,12 +406,19 @@ private fun CustomDateRangePickerDialog(
     }
 }
 
-private fun LocalDate.toEpochMillisUtc(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+private fun LocalDate.toEpochMillisUtc(): Long =
+    atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
-private fun Long.toLocalDateUtc(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
+private fun Long.toLocalDateUtc(): LocalDate =
+    Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
 
 @Composable
-private fun StatsRow(palette: AccountsPalette, expenseCents: Long, incomeCents: Long, netCents: Long)
+private fun StatsRow(
+    palette: AccountsPalette,
+    expenseCents: Long,
+    incomeCents: Long,
+    netCents: Long
+)
 {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatPill(
@@ -403,7 +446,13 @@ private fun StatsRow(palette: AccountsPalette, expenseCents: Long, incomeCents: 
 }
 
 @Composable
-private fun StatPill(modifier: Modifier, label: String, amount: String, accent: Color, palette: AccountsPalette)
+private fun StatPill(
+    modifier: Modifier,
+    label: String,
+    amount: String,
+    accent: Color,
+    palette: AccountsPalette
+)
 {
     Column(
         modifier = modifier
@@ -413,7 +462,12 @@ private fun StatPill(modifier: Modifier, label: String, amount: String, accent: 
     ) {
         Text(text = label, color = accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(4.dp))
-        Text(text = amount, color = palette.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = amount,
+            color = palette.textPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -477,7 +531,11 @@ private fun PeriodFilterRow(
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.surface),
             ) {
-                listOf(TransactionsPeriod.LAST_7_DAYS, TransactionsPeriod.LAST_30_DAYS, TransactionsPeriod.ALL_TIME)
+                listOf(
+                    TransactionsPeriod.LAST_7_DAYS,
+                    TransactionsPeriod.LAST_30_DAYS,
+                    TransactionsPeriod.ALL_TIME
+                )
                     .forEach { period ->
                         SelectableOptionRow(
                             label = stringResource(period.labelRes),
@@ -568,7 +626,12 @@ private fun DropdownPill(label: String, palette: AccountsPalette, modifier: Modi
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = palette.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text = label,
+            color = palette.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
         Spacer(Modifier.width(6.dp))
         ChevronDownIcon(tint = palette.textSecondary, modifier = Modifier.size(12.dp))
     }
@@ -596,7 +659,12 @@ private fun ChevronDownIcon(tint: Color, modifier: Modifier = Modifier)
 /** Same treatment as the subcategory chips: a solid fill, not just a text color change, so the
  *  current choice in the period/account dropdowns is unambiguous at a glance. */
 @Composable
-private fun SelectableOptionRow(label: String, selected: Boolean, palette: AccountsPalette, onClick: () -> Unit)
+private fun SelectableOptionRow(
+    label: String,
+    selected: Boolean,
+    palette: AccountsPalette,
+    onClick: () -> Unit
+)
 {
     Text(
         text = label,
@@ -641,7 +709,12 @@ private fun SubcategoryChipsRow(
 }
 
 @Composable
-private fun SubcategoryChip(label: String, selected: Boolean, palette: AccountsPalette, onClick: () -> Unit)
+private fun SubcategoryChip(
+    label: String,
+    selected: Boolean,
+    palette: AccountsPalette,
+    onClick: () -> Unit
+)
 {
     // Not palette.primaryButtonBackground: in light mode that's an outlined white button, which
     // is indistinguishable from an unselected chip's own (also white) surface background.
@@ -674,9 +747,18 @@ private fun DayGroup(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(text = dayLabel(date), color = palette.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = dayLabel(date),
+                color = palette.textPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
             val dayNetCents = transactions.sumOf { it.signedAmount }
-            Text(text = formatSignedEuroCents(dayNetCents), color = palette.textMuted, fontSize = 13.sp)
+            Text(
+                text = formatSignedEuroCents(dayNetCents),
+                color = palette.textMuted,
+                fontSize = 13.sp
+            )
         }
         Column(
             modifier = Modifier
@@ -709,12 +791,14 @@ private fun TransactionRow(palette: AccountsPalette, transaction: Transaction, a
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val emoji = transaction.subcategory?.let { subcategoryEmoji(it) } ?: categoryEmoji(transaction.category)
+        val emoji = transaction.subcategory?.let { subcategoryEmoji(it) } ?: categoryEmoji(
+            transaction.category
+        )
         val tone = when (transaction.category)
         {
-            TransactionCategory.EXPENSE         -> IconTone.Gold
-            TransactionCategory.INCOME          -> IconTone.Green
-            TransactionCategory.INITIAL_DEPOSIT -> IconTone.Mint
+            TransactionCategory.EXPENSE, TransactionCategory.TRANSFER_OUT -> IconTone.Gold
+            TransactionCategory.INCOME, TransactionCategory.TRANSFER_IN   -> IconTone.Green
+            TransactionCategory.INITIAL_DEPOSIT                           -> IconTone.Mint
         }
         Box(
             modifier = Modifier
@@ -782,24 +866,22 @@ private fun timeLabel(date: Instant): String =
 
 private fun subcategoryLabel(subcategory: TransactionSubcategory): String = when (subcategory)
 {
-    ExpenseSubcategory.GROCERIES       -> "Alimentation"
-    ExpenseSubcategory.FUEL            -> "Transport"
-    ExpenseSubcategory.HAIRDRESSER     -> "Coiffeur"
-    ExpenseSubcategory.CASH_WITHDRAWAL -> "Retrait espèces"
-    IncomeSubcategory.SALARY           -> "Salaire"
-    IncomeSubcategory.GIFT             -> "Cadeau"
-    IncomeSubcategory.REFUND           -> "Remboursement"
+    ExpenseSubcategory.GROCERIES   -> "Alimentation"
+    ExpenseSubcategory.FUEL        -> "Transport"
+    ExpenseSubcategory.HAIRDRESSER -> "Coiffeur"
+    IncomeSubcategory.SALARY       -> "Salaire"
+    IncomeSubcategory.GIFT         -> "Cadeau"
+    IncomeSubcategory.REFUND       -> "Remboursement"
 }
 
 private fun subcategoryEmoji(subcategory: TransactionSubcategory): String = when (subcategory)
 {
-    ExpenseSubcategory.GROCERIES       -> "🛒"
-    ExpenseSubcategory.FUEL            -> "⛽"
-    ExpenseSubcategory.HAIRDRESSER     -> "💇"
-    ExpenseSubcategory.CASH_WITHDRAWAL -> "🏧"
-    IncomeSubcategory.SALARY           -> "💰"
-    IncomeSubcategory.GIFT             -> "🎁"
-    IncomeSubcategory.REFUND           -> "💸"
+    ExpenseSubcategory.GROCERIES   -> "🛒"
+    ExpenseSubcategory.FUEL        -> "⛽"
+    ExpenseSubcategory.HAIRDRESSER -> "💇"
+    IncomeSubcategory.SALARY       -> "💰"
+    IncomeSubcategory.GIFT         -> "🎁"
+    IncomeSubcategory.REFUND       -> "💸"
 }
 
 private fun categoryEmoji(category: TransactionCategory): String = when (category)
@@ -807,6 +889,9 @@ private fun categoryEmoji(category: TransactionCategory): String = when (categor
     TransactionCategory.INCOME          -> "💰"
     TransactionCategory.EXPENSE         -> "💳"
     TransactionCategory.INITIAL_DEPOSIT -> "🏦"
+    TransactionCategory.TRANSFER_OUT    -> "📤"
+    TransactionCategory.TRANSFER_IN     -> "📥"
 }
 
-private fun movementsCountLabel(count: Int): String = "$count mouvement${if (count > 1) "s" else ""}"
+private fun movementsCountLabel(count: Int): String =
+    "$count mouvement${if (count > 1) "s" else ""}"
