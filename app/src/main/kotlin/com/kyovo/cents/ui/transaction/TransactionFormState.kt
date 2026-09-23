@@ -9,6 +9,7 @@ import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
+import com.kyovo.cents.ui.common.parseAmountToCents
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -142,35 +143,6 @@ private fun TransactionFormType.recordableCategory(): RecordableTransactionCateg
     TransactionFormType.TRANSFER -> null
 }
 
-private val AMOUNT_PATTERN = Regex("""\d+([.,]\d{0,2})?""")
-
-/**
- * "12,50" / "12.50" / "12" / "12," → cents, or null when the text isn't a strictly positive amount with at
- * most two decimals. Parsed from the digits directly, never through Double (binary rounding), and a
- * third decimal is refused rather than rounded away. Zero is refused too: [Money] allows it, but a
- * zero-amount transaction is never what the user meant.
- */
-internal fun parseAmountToCents(text: String): Long?
-{
-    val trimmed = text.trim()
-    if (!AMOUNT_PATTERN.matches(trimmed)) return null
-
-    val separatorIndex = trimmed.indexOfFirst { it == ',' || it == '.' }
-    val wholePart = if (separatorIndex == -1) trimmed else trimmed.substring(0, separatorIndex)
-    val fractionPart = if (separatorIndex == -1) "" else trimmed.substring(separatorIndex + 1)
-
-    val whole = wholePart.toLongOrNull() ?: return null
-    val fraction = fractionPart.padEnd(2, '0').toLong()
-    val cents = try
-    {
-        Math.addExact(Math.multiplyExact(whole, 100L), fraction)
-    } catch (_: ArithmeticException)
-    {
-        return null
-    }
-    return cents.takeIf { it > 0 }
-}
-
 /**
  * Today keeps the exact instant; any other day gets the current time of day, so an entry recorded
  * "for yesterday" sorts naturally among that day's others instead of all landing at midnight.
@@ -181,13 +153,3 @@ internal fun dateOnDay(day: LocalDate, now: Instant, zone: ZoneId): Instant
     if (day == nowLocal.toLocalDate()) return now
     return day.atTime(nowLocal.toLocalTime()).atZone(zone).toInstant()
 }
-
-private val AMOUNT_INPUT_PATTERN = Regex("""(\d{1,9}([.,]\d{0,2})?)?""")
-
-/**
- * Whether [text] is an acceptable state of the amount field while typing: digits, then optionally
- * one separator and up to two decimals ("12", "12,", "12,5", "12,50"). The field ignores any edit
- * that would leave this shape, so letters, a second separator or a third decimal can't be typed at
- * all. Nine integer digits at most keeps the amount well inside a Long of cents.
- */
-internal fun acceptsAmountInput(text: String): Boolean = AMOUNT_INPUT_PATTERN.matches(text)

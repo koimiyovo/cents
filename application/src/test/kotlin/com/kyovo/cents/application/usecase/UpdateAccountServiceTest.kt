@@ -7,6 +7,7 @@ import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
+import com.kyovo.cents.domain.model.AccountDescription
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.port.input.UpdateAccountCommand
@@ -34,7 +35,7 @@ class UpdateAccountServiceTest
             )
         )
         val service = UpdateAccountService(repository)
-        val command = UpdateAccountCommand(id = id, name = AccountName("Livret B"), type = AccountType.SAVINGS)
+        val command = UpdateAccountCommand(id = id, name = AccountName("Livret B"), type = AccountType.SAVINGS, description = null)
 
         // WHEN
         val result = service.update(command)
@@ -61,7 +62,8 @@ class UpdateAccountServiceTest
         val command = UpdateAccountCommand(
             id = anAccountId(),
             name = AccountName("Livret A"),
-            type = AccountType.CHECKING
+            type = AccountType.CHECKING,
+            description = null
         )
 
         // WHEN / THEN
@@ -82,7 +84,8 @@ class UpdateAccountServiceTest
         val command = UpdateAccountCommand(
             id = idToUpdate,
             name = AccountName("Compte courant"),
-            type = AccountType.CHECKING
+            type = AccountType.CHECKING,
+            description = null
         )
 
         // WHEN / THEN
@@ -104,7 +107,8 @@ class UpdateAccountServiceTest
         val command = UpdateAccountCommand(
             id = idToUpdate,
             name = AccountName("Compte courant"),
-            type = AccountType.CHECKING
+            type = AccountType.CHECKING,
+            description = null
         )
 
         // WHEN
@@ -123,12 +127,70 @@ class UpdateAccountServiceTest
         val repository = InMemoryAccountRepository()
         repository.save(anAccount(id = id, name = AccountName("Livret A"), type = AccountType.CHECKING))
         val service = UpdateAccountService(repository)
-        val command = UpdateAccountCommand(id = id, name = AccountName("livret a"), type = AccountType.SAVINGS)
+        val command = UpdateAccountCommand(id = id, name = AccountName("livret a"), type = AccountType.SAVINGS, description = null)
 
         // WHEN
         val result = service.update(command)
 
         // THEN
         assertThat(result.type).isEqualTo(AccountType.SAVINGS)
+    }
+
+    @Test
+    fun `sets the description of an account that had none`()
+    {
+        // GIVEN
+        val id = anAccountId()
+        val repository = InMemoryAccountRepository()
+        repository.save(anAccount(id = id, name = AccountName("Livret A")))
+        val service = UpdateAccountService(repository)
+        val description = AccountDescription.of("Épargne de précaution")
+        val command = UpdateAccountCommand(id, AccountName("Livret A"), AccountType.CHECKING, description)
+
+        // WHEN
+        val result = service.update(command)
+
+        // THEN
+        assertThat(result.description).isEqualTo(description)
+        assertThat(repository.saved).containsExactly(result)
+    }
+
+    @Test
+    fun `replaces an existing description`()
+    {
+        // GIVEN
+        val id = anAccountId()
+        val repository = InMemoryAccountRepository()
+        repository.save(
+            anAccount(id = id, name = AccountName("Livret A")).copy(description = AccountDescription.of("Ancienne"))
+        )
+        val service = UpdateAccountService(repository)
+        val newDescription = AccountDescription.of("Nouvelle")
+        val command = UpdateAccountCommand(id, AccountName("Livret A"), AccountType.CHECKING, newDescription)
+
+        // WHEN
+        val result = service.update(command)
+
+        // THEN
+        assertThat(result.description).isEqualTo(newDescription)
+    }
+
+    @Test
+    fun `clears the description when the command carries none`()
+    {
+        // GIVEN
+        val id = anAccountId()
+        val repository = InMemoryAccountRepository()
+        repository.save(
+            anAccount(id = id, name = AccountName("Livret A")).copy(description = AccountDescription.of("À effacer"))
+        )
+        val service = UpdateAccountService(repository)
+        val command = UpdateAccountCommand(id, AccountName("Livret A"), AccountType.CHECKING, description = null)
+
+        // WHEN
+        val result = service.update(command)
+
+        // THEN
+        assertThat(result.description).isNull()
     }
 }

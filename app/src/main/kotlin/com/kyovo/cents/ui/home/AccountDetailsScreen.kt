@@ -272,7 +272,7 @@ private fun AccountSummaryCard(palette: AccountsPalette, account: Account, balan
     }
 }
 
-private fun accountTypeLabelRes(type: AccountType): Int = when (type)
+internal fun accountTypeLabelRes(type: AccountType): Int = when (type)
 {
     AccountType.CHECKING -> R.string.account_details_type_checking
     AccountType.SAVINGS  -> R.string.account_details_type_savings

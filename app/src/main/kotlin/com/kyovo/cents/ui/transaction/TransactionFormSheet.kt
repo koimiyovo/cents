@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -56,6 +59,12 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.ExpenseSubcategory
 import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.TransactionSubcategory
+import com.kyovo.cents.ui.common.AmountField
+import com.kyovo.cents.ui.common.ErrorText
+import com.kyovo.cents.ui.common.FormTextField
+import com.kyovo.cents.ui.common.SectionLabel
+import com.kyovo.cents.ui.common.SubmitButton
+import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.LightAccountsPalette
@@ -242,7 +251,8 @@ fun TransactionFormSheet(
             }
 
             failure?.let {
-                Text(
+                ErrorText(
+                    palette = palette,
                     text = stringResource(
                         when (it)
                         {
@@ -251,12 +261,10 @@ fun TransactionFormSheet(
                             SubmitFailure.SAME_ACCOUNT      -> R.string.transaction_form_error_same_account
                         },
                     ),
-                    color = palette.error,
-                    fontSize = 13.sp,
                 )
             }
 
-            SubmitButton(palette, onSubmit)
+            SubmitButton(palette, stringResource(R.string.transaction_form_submit), onSubmit)
         }
     }
 
@@ -308,91 +316,6 @@ private fun TypeSelector(
 }
 
 @Composable
-private fun AmountField(
-    palette: AccountsPalette,
-    value: String,
-    onValueChange: (String) -> Unit,
-    error: Boolean,
-    focusRequester: FocusRequester,
-)
-{
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(palette.surface)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(
-                color = if (error) palette.error else palette.textPrimary,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-            cursorBrush = SolidColor(palette.textPrimary),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-            modifier = Modifier
-                .weight(1f)
-                .focusRequester(focusRequester),
-            decorationBox = { innerField ->
-                Box {
-                    if (value.isEmpty())
-                    {
-                        Text(
-                            text = stringResource(R.string.transaction_form_amount_placeholder),
-                            color = palette.textMuted,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    innerField()
-                }
-            },
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(text = "€", color = palette.textSecondary, fontSize = 24.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-/** Same look as the transactions screen's search field, minus the icon. */
-@Composable
-private fun FormTextField(
-    palette: AccountsPalette,
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardOptions: KeyboardOptions,
-    singleLine: Boolean = true,
-)
-{
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(palette.surface)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-    ) {
-        if (value.isEmpty())
-        {
-            Text(text = placeholder, color = palette.textMuted, fontSize = 15.sp)
-        }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = singleLine,
-            textStyle = TextStyle(color = palette.textPrimary, fontSize = 15.sp),
-            cursorBrush = SolidColor(palette.textPrimary),
-            keyboardOptions = keyboardOptions,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
 private fun AccountPicker(
     palette: AccountsPalette,
     label: String,
@@ -403,11 +326,17 @@ private fun AccountPicker(
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, label)
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        // Starts scrolled to the selected account: with more accounts than fit on screen, a
+        // preselected one (e.g. when opened from an account's page) would otherwise sit off-screen
+        // and nothing visible would look selected.
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = accounts.indexOfFirst { it.id == selectedId }.coerceAtLeast(0),
+        )
+        LazyRow(
+            state = listState,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            accounts.forEach { account ->
+            items(accounts, key = { it.id.value.toString() }) { account ->
                 SubcategoryChip(
                     label = account.name.value,
                     selected = account.id == selectedId,
@@ -452,16 +381,11 @@ private fun SubcategoryPicker(
 }
 
 @Composable
-private fun SectionLabel(palette: AccountsPalette, text: String)
-{
-    Text(text = text, color = palette.textMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-}
-
-@Composable
 private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormError)
 {
     if (!visible) return
-    Text(
+    ErrorText(
+        palette = palette,
         text = stringResource(
             when (error)
             {
@@ -473,32 +397,7 @@ private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormEr
                 FormError.SUBCATEGORY_MISMATCH          -> R.string.transaction_form_error_subcategory
             },
         ),
-        color = palette.error,
-        fontSize = 12.sp,
     )
-}
-
-@Composable
-private fun SubmitButton(palette: AccountsPalette, onClick: () -> Unit)
-{
-    // Filled with iconToneGreen like the selected chips: palette.primaryButtonBackground is an
-    // outlined white button in light mode, too discreet for the form's one main action.
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(50))
-            .background(palette.iconToneGreen)
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.transaction_form_submit),
-            color = palette.heroOnCardPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
 }
 
 /** Today / yesterday chips plus a third one that opens the calendar (and shows the picked day). */
