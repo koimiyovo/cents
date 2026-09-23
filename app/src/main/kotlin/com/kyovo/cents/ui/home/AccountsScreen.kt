@@ -87,10 +87,10 @@ fun AccountsScreen(
             .fillMaxSize()
             .background(palette.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = if (isCompact) 10.dp else 16.dp),
+            .padding(horizontal = 16.dp, vertical = if (isCompact) 10.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 20.dp),
     ) {
-        AccountsTopBar(palette)
+        HomeTopBar(palette, stringResource(R.string.accounts_title))
         GreetingRow(palette)
         TotalBalanceCard(
             palette = palette,
@@ -118,8 +118,9 @@ fun AccountsScreen(
     }
 }
 
+/** Shared by every Home tab: the "CENTS" kicker plus that tab's own title. */
 @Composable
-private fun AccountsTopBar(palette: AccountsPalette)
+internal fun HomeTopBar(palette: AccountsPalette, title: String)
 {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -129,7 +130,7 @@ private fun AccountsTopBar(palette: AccountsPalette)
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = stringResource(R.string.accounts_title),
+            text = title,
             color = palette.textPrimary,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
@@ -475,7 +476,7 @@ private fun TipCard(palette: AccountsPalette)
 }
 
 @Composable
-private fun Pill(text: String, background: Color, content: Color, modifier: Modifier = Modifier)
+internal fun Pill(text: String, background: Color, content: Color, modifier: Modifier = Modifier)
 {
     Box(
         modifier = modifier
@@ -487,7 +488,7 @@ private fun Pill(text: String, background: Color, content: Color, modifier: Modi
     }
 }
 
-private fun toneBackground(tone: IconTone, palette: AccountsPalette): Color = when (tone)
+internal fun toneBackground(tone: IconTone, palette: AccountsPalette): Color = when (tone)
 {
     IconTone.Green -> palette.iconToneGreen
     IconTone.Gold  -> palette.iconToneGold

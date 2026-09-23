@@ -150,7 +150,7 @@ fun seedHardcodedData(
         cash.id,
         2000,
         RecordableTransactionCategory.EXPENSE,
-        null,
+        ExpenseSubcategory.CASH_WITHDRAWAL,
         "Retrait espèces",
         now.minus(1, ChronoUnit.DAYS)
     )

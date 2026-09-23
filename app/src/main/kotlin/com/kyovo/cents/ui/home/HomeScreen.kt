@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,11 +14,14 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,7 +63,7 @@ fun HomeScreen(
         ) { page ->
             when (HomeTab.entries[page]) {
                 HomeTab.Accounts -> AccountsScreen(listAccounts, getAccountBalance, listTransactions)
-                HomeTab.Transactions -> TransactionsPlaceholder(palette)
+                HomeTab.Transactions -> TransactionsScreen(listAccounts, listTransactions)
             }
         }
         BottomNavBar(
@@ -75,13 +77,6 @@ fun HomeScreen(
 }
 
 @Composable
-private fun TransactionsPlaceholder(palette: AccountsPalette) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = stringResource(R.string.transactions_placeholder), color = palette.textMuted)
-    }
-}
-
-@Composable
 private fun BottomNavBar(
     palette: AccountsPalette,
     selected: HomeTab,
@@ -91,8 +86,8 @@ private fun BottomNavBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(palette.surface)
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         BottomNavItem(
             emoji = "💳",
@@ -100,6 +95,7 @@ private fun BottomNavBar(
             selected = selected == HomeTab.Accounts,
             palette = palette,
             onClick = { onSelect(HomeTab.Accounts) },
+            modifier = Modifier.weight(1f),
         )
         BottomNavItem(
             emoji = "🧾",
@@ -107,6 +103,7 @@ private fun BottomNavBar(
             selected = selected == HomeTab.Transactions,
             palette = palette,
             onClick = { onSelect(HomeTab.Transactions) },
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -118,13 +115,25 @@ private fun BottomNavItem(
     selected: Boolean,
     palette: AccountsPalette,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val tint = if (selected) palette.statusActiveColor else palette.textMuted
+    // Same solid-fill treatment as SubcategoryChip/SelectableOptionRow, so the current tab is
+    // unambiguous rather than relying only on a label color change. The clickable area spans the
+    // whole item (via the caller's weight(1f)), not just the tight bounds of the emoji + label.
     Column(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) palette.iconToneGreen else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = emoji, fontSize = 20.sp)
-        Text(text = label, color = tint, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text = label,
+            color = if (selected) palette.heroOnCardPrimary else palette.textMuted,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }

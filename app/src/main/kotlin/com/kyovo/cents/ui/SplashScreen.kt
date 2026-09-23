@@ -59,7 +59,7 @@ fun SplashScreen(onFinished: () -> Unit = {}, modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(palette.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = 16.dp),
     ) {
         Column(
             modifier = Modifier
