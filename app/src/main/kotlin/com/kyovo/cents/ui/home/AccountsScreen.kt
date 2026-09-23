@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
@@ -363,39 +364,22 @@ private fun AccountsSectionHeader(palette: AccountsPalette, count: Int)
     }
 }
 
-private data class AccountExtras(
-    val emoji: String,
-    val tag: String?,
-    val subtitle: String,
-    val noteOverride: String? = null,
-)
+private const val ACCOUNT_DESCRIPTION_MAX_LENGTH = 40
 
-private val accountExtrasByName = mapOf(
-    "Compte Courant" to AccountExtras(
-        emoji = "🏦",
-        tag = "BNP",
-        subtitle = "Solde de référence",
-    ),
-    "Livret A (Sécurité)" to AccountExtras(
-        emoji = "🐷",
-        tag = "3,0 %",
-        subtitle = "Taux d'intérêts 3,0 %",
-        noteOverride = "+6,00 €/mois",
-    ),
-    "Portefeuille Espèces" to AccountExtras(
-        emoji = "💵",
-        tag = null,
-        subtitle = "Dernier retrait hier",
-        noteOverride = "Poche physique",
-    ),
-    "Enveloppe Projets" to AccountExtras(
-        emoji = "🎯",
-        tag = null,
-        subtitle = "Vacances & Loisirs",
-        noteOverride = "Objectif 500 €",
-    ),
-)
-private val defaultAccountExtras = AccountExtras(emoji = "💳", tag = null, subtitle = "")
+internal fun accountEmoji(type: AccountType): String = when (type)
+{
+    AccountType.CHECKING -> "🏦"
+    AccountType.SAVINGS  -> "🐷"
+}
+
+internal fun truncatedDescription(
+    value: String,
+    maxLength: Int = ACCOUNT_DESCRIPTION_MAX_LENGTH
+): String
+{
+    if (value.length <= maxLength) return value
+    return value.take(maxLength - 1).trimEnd() + "…"
+}
 
 @Composable
 private fun AccountRow(
@@ -406,7 +390,6 @@ private fun AccountRow(
     palette: AccountsPalette,
 )
 {
-    val extras = accountExtrasByName[account.name.value] ?: defaultAccountExtras
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -422,32 +405,26 @@ private fun AccountRow(
                 .background(toneBackground(tone, palette)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = extras.emoji, fontSize = 18.sp)
+            Text(text = accountEmoji(account.type), fontSize = 18.sp)
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = account.name.value,
+                color = palette.textPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            val description = account.description
+            if (description != null)
+            {
                 Text(
-                    text = account.name.value,
-                    color = palette.textPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    text = truncatedDescription(description.value),
+                    color = palette.textMuted,
+                    fontSize = 12.sp,
                 )
-                if (extras.tag != null)
-                {
-                    Spacer(Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(palette.badgeBackground)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    ) {
-                        Text(text = extras.tag, color = palette.textSecondary, fontSize = 11.sp)
-                    }
-                }
             }
-            Text(text = extras.subtitle, color = palette.textMuted, fontSize = 12.sp)
         }
         Column(horizontalAlignment = Alignment.End) {
             val hidden = stringResource(R.string.accounts_hidden_balance)
@@ -458,13 +435,11 @@ private fun AccountRow(
                 fontWeight = FontWeight.Bold,
             )
             val isActive = account.archivedAt == null
-            val note = extras.noteOverride
-                ?: if (isActive) stringResource(R.string.accounts_status_active) else stringResource(
-                    R.string.accounts_status_archived
-                )
             Text(
-                text = note,
-                color = if (extras.noteOverride == null && isActive) palette.statusActiveColor else palette.textMuted,
+                text = if (isActive) stringResource(R.string.accounts_status_active) else stringResource(
+                    R.string.accounts_status_archived
+                ),
+                color = if (isActive) palette.statusActiveColor else palette.textMuted,
                 fontSize = 12.sp,
             )
         }

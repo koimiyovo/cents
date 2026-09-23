@@ -2,6 +2,7 @@ package com.kyovo.cents.data
 
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.domain.model.AccountDescription
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
@@ -10,9 +11,9 @@ import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Transaction
-import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionSubcategory
+import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import java.time.Instant
@@ -39,6 +40,9 @@ fun seedHardcodedData(
         type = AccountType.CHECKING,
         currency = eur,
         createdAt = now.minus(400, ChronoUnit.DAYS),
+        description = AccountDescription.of(
+            "Compte courant principal pour les dépenses du quotidien et les prélèvements automatiques mensuels.",
+        ),
     )
     val savings = Account(
         id = AccountId(Uuid.random()),
@@ -46,6 +50,7 @@ fun seedHardcodedData(
         type = AccountType.SAVINGS,
         currency = eur,
         createdAt = now.minus(400, ChronoUnit.DAYS),
+        description = AccountDescription.of("Épargne de précaution"),
     )
     val cash = Account(
         id = AccountId(Uuid.random()),
@@ -60,6 +65,7 @@ fun seedHardcodedData(
         type = AccountType.SAVINGS,
         currency = eur,
         createdAt = now.minus(90, ChronoUnit.DAYS),
+        description = AccountDescription.of("Vacances & Loisirs"),
     )
 
     listOf(checking, savings, cash, envelope).forEach(accountRepository::save)
@@ -81,7 +87,7 @@ fun seedHardcodedData(
         amountCents: Long,
         category: RecordableTransactionCategory,
         subcategory: TransactionSubcategory?,
-        description: String,
+        title: String,
         date: Instant,
     )
     {
@@ -90,9 +96,10 @@ fun seedHardcodedData(
                 id = TransactionId(Uuid.random()),
                 accountId = accountId,
                 amount = Money(amountCents),
+                title = TransactionTitle(title),
                 category = category,
                 subcategory = subcategory,
-                description = TransactionDescription.of(description),
+                description = null,
                 date = date,
             ),
         )

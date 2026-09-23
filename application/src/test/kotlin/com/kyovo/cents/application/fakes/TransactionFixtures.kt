@@ -8,6 +8,7 @@ import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionSubcategory
+import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import java.time.Instant
@@ -23,12 +24,18 @@ fun aMoney(value: Long = 0): Money
     return Money(value)
 }
 
+fun aTransactionTitle(value: String = "Test transaction"): TransactionTitle
+{
+    return TransactionTitle(value)
+}
+
 fun aTransaction(
     id: TransactionId = aTransactionId(),
     accountId: AccountId = anAccountId(),
     amount: Money = aMoney(),
     date: Instant = anInstant(),
     category: TransactionCategory = TransactionCategory.INITIAL_DEPOSIT,
+    title: TransactionTitle = aTransactionTitle(),
     subcategory: TransactionSubcategory? = null,
     description: TransactionDescription? = null
 ): Transaction
@@ -43,6 +50,7 @@ fun aTransaction(
                 id,
                 accountId,
                 amount,
+                title,
                 RecordableTransactionCategory.EXPENSE,
                 subcategory,
                 description,
@@ -54,6 +62,7 @@ fun aTransaction(
                 id,
                 accountId,
                 amount,
+                title,
                 RecordableTransactionCategory.INCOME,
                 subcategory,
                 description,
@@ -65,23 +74,25 @@ fun aTransaction(
 fun aRecordTransactionCommand(
     accountId: AccountId = anAccountId(),
     amount: Money = aMoney(1_000),
+    title: TransactionTitle = aTransactionTitle(),
     category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     date: Instant = anInstant(),
     subcategory: TransactionSubcategory? = null,
     description: TransactionDescription? = null
 ): RecordTransactionCommand
 {
-    return RecordTransactionCommand(accountId, amount, category, subcategory, description, date)
+    return RecordTransactionCommand(accountId, amount, title, category, subcategory, description, date)
 }
 
 fun anUpdateTransactionCommand(
     id: TransactionId = aTransactionId(),
     amount: Money = aMoney(1_000),
+    title: TransactionTitle = aTransactionTitle(),
     category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     date: Instant = anInstant(),
     subcategory: TransactionSubcategory? = null,
     description: TransactionDescription? = null
 ): UpdateTransactionCommand
 {
-    return UpdateTransactionCommand(id, amount, category, subcategory, description, date)
+    return UpdateTransactionCommand(id, amount, title, category, subcategory, description, date)
 }
