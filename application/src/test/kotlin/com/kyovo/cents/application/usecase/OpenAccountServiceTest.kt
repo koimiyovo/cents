@@ -15,6 +15,7 @@ import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.application.fakes.anOpenAccountCommand
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
+import com.kyovo.cents.domain.model.AccountDescription
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -73,6 +74,38 @@ class OpenAccountServiceTest
 
         // THEN
         assertThat(repository.saved).containsExactly(expected)
+    }
+
+    @Test
+    fun `keeps the description given when opening the account`()
+    {
+        // GIVEN
+        val generatedId = anAccountId()
+        val repository = InMemoryAccountRepository()
+        val service =
+            anOpenAccountService(repository, FixedAccountIdGenerator(generatedId), aClock(anInstant()))
+        val description = AccountDescription.of("Épargne de précaution")
+        val command = anOpenAccountCommand().copy(description = description)
+
+        // WHEN
+        service.open(command)
+
+        // THEN
+        assertThat(repository.saved.single().description).isEqualTo(description)
+    }
+
+    @Test
+    fun `opens an account without description when none is given`()
+    {
+        // GIVEN
+        val repository = InMemoryAccountRepository()
+        val service = anOpenAccountService(repository, FixedAccountIdGenerator(anAccountId()), aClock(anInstant()))
+
+        // WHEN
+        service.open(anOpenAccountCommand())
+
+        // THEN
+        assertThat(repository.saved.single().description).isNull()
     }
 
     @ParameterizedTest

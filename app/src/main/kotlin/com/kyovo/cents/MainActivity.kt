@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kyovo.cents.ui.SplashScreen
+import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
@@ -38,6 +39,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val accountFormViewModel: AccountFormViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                AccountFormViewModel(
+                    openAccount = appContainer.openAccount,
+                    dataRevision = appContainer.dataRevision,
+                )
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -56,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     listTransactions = appContainer.listTransactions,
                     dataRevision = appContainer.dataRevision,
                     formViewModel = formViewModel,
+                    accountFormViewModel = accountFormViewModel,
                 )
             }
         }
