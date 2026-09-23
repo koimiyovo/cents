@@ -38,10 +38,11 @@ fun anAccount(
     name: AccountName = AccountName("Livret A"),
     type: AccountType = AccountType.CHECKING,
     currency: AccountCurrency = aCurrency(),
-    createdAt: Instant = anInstant()
+    createdAt: Instant = anInstant(),
+    archivedAt: Instant? = null
 ): Account
 {
-    return Account(id, name, type, currency, createdAt)
+    return Account(id, name, type, currency, createdAt, archivedAt)
 }
 
 fun anOpenAccountCommand(

@@ -17,7 +17,7 @@ class ListAccountRepository : AccountRepository
 
     override fun existsByName(name: AccountName): Boolean
     {
-        return accounts.any { it.name.matches(name) }
+        return accounts.any { it.archivedAt == null && it.name.matches(name) }
     }
 
     override fun findById(id: AccountId): Account?
