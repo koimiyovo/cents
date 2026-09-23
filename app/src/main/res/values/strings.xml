@@ -144,4 +144,15 @@
     <string name="transaction_form_failure_account_not_found">Ce compte n\'existe plus.</string>
     <string name="transaction_form_failure_archived">Ce compte est archivé : il ne peut plus recevoir de transaction.</string>
     <string name="transaction_form_add_content_description">Ajouter une transaction</string>
+
+    <!-- Account form -->
+    <string name="account_form_title">Nouveau compte</string>
+    <string name="account_form_name_placeholder">Nom du compte (ex. Livret A)</string>
+    <string name="account_form_type_label">Type de compte</string>
+    <string name="account_form_initial_amount_label">Solde initial (facultatif)</string>
+    <string name="account_form_description_placeholder">Description (facultatif)</string>
+    <string name="account_form_submit">Créer le compte</string>
+    <string name="account_form_error_name">Le nom est obligatoire.</string>
+    <string name="account_form_error_initial_amount">Saisissez un montant valide (2 décimales maximum).</string>
+    <string name="account_form_failure_duplicate_name">Un compte porte déjà ce nom.</string>
 </resources>

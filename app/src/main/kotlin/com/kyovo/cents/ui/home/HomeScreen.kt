@@ -41,6 +41,8 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.ui.account.AccountFormSheet
+import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
@@ -63,6 +65,7 @@ fun HomeScreen(
     listTransactions: ListTransactionsUseCase,
     dataRevision: DataRevision,
     formViewModel: TransactionFormViewModel,
+    accountFormViewModel: AccountFormViewModel,
     modifier: Modifier = Modifier,
 ) {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
@@ -71,6 +74,7 @@ fun HomeScreen(
     // Bumped after every write: re-reading on change is how the lists notice a new transaction.
     val revision by dataRevision.value.collectAsStateWithLifecycle()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
+    val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
@@ -130,6 +134,7 @@ fun HomeScreen(
                             getAccountBalance,
                             listTransactions,
                             onAccountClick = { openedAccountUuid = it.value.toString() },
+                            onNewAccountClick = accountFormViewModel::open,
                             revision = revision,
                         )
                         HomeTab.Transactions ->
@@ -163,6 +168,16 @@ fun HomeScreen(
             onFormChange = formViewModel::update,
             onSubmit = formViewModel::submit,
             onDismiss = formViewModel::close,
+        )
+    }
+    accountFormState.form?.let { form ->
+        AccountFormSheet(
+            form = form,
+            showErrors = accountFormState.showErrors,
+            failure = accountFormState.failure,
+            onFormChange = accountFormViewModel::update,
+            onSubmit = accountFormViewModel::submit,
+            onDismiss = accountFormViewModel::close,
         )
     }
 }

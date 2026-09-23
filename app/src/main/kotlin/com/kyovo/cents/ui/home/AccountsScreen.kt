@@ -62,6 +62,7 @@ fun AccountsScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     onAccountClick: (AccountId) -> Unit,
+    onNewAccountClick: () -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -109,7 +110,7 @@ fun AccountsScreen(
             onToggleVisibility = { balancesVisible = !balancesVisible },
             compact = isCompact,
         )
-        NewAccountButton(palette)
+        NewAccountButton(palette, onClick = onNewAccountClick)
         AccountsSectionHeader(palette, count = accounts.size)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             accounts.forEachIndexed { index, account ->
@@ -314,7 +315,7 @@ private fun HeroStatPill(
 }
 
 @Composable
-private fun NewAccountButton(palette: AccountsPalette)
+private fun NewAccountButton(palette: AccountsPalette, onClick: () -> Unit)
 {
     Box(
         modifier = Modifier
@@ -322,8 +323,7 @@ private fun NewAccountButton(palette: AccountsPalette)
             .clip(RoundedCornerShape(50))
             .background(palette.primaryButtonBackground)
             .border(1.dp, palette.primaryButtonBorder, RoundedCornerShape(50))
-            // Account creation isn't wired up yet — this button is a visual placeholder for now.
-            .clickable(onClick = {})
+            .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
