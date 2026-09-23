@@ -76,10 +76,12 @@ fun AccountsScreen(
     // here from the full list rather than via a query parameter.
     val allTransactions = remember { listTransactions.list() }
     val incomeCents = remember(allTransactions) {
-        allTransactions.filter { it.category == TransactionCategory.INCOME }.sumOf { it.amount.value }
+        allTransactions.filter { it.category == TransactionCategory.INCOME }
+            .sumOf { it.amount.value }
     }
     val expenseCents = remember(allTransactions) {
-        allTransactions.filter { it.category == TransactionCategory.EXPENSE }.sumOf { it.amount.value }
+        allTransactions.filter { it.category == TransactionCategory.EXPENSE }
+            .sumOf { it.amount.value }
     }
 
     Column(
@@ -374,6 +376,7 @@ internal fun accountEmoji(type: AccountType): String = when (type)
 {
     AccountType.CHECKING -> "🏦"
     AccountType.SAVINGS  -> "🐷"
+    AccountType.CASH     -> "💵"
 }
 
 internal fun truncatedDescription(

@@ -65,12 +65,56 @@ data class Transaction private constructor(
                 date = date
             )
         }
+
+        fun transferOut(
+            id: TransactionId,
+            accountId: AccountId,
+            amount: Money,
+            title: TransactionTitle,
+            date: Instant
+        ): Transaction
+        {
+            return Transaction(
+                id = id,
+                accountId = accountId,
+                amount = amount,
+                title = title,
+                category = TransactionCategory.TRANSFER_OUT,
+                subcategory = null,
+                description = null,
+                date = date
+            )
+        }
+
+        fun transferIn(
+            id: TransactionId,
+            accountId: AccountId,
+            amount: Money,
+            title: TransactionTitle,
+            date: Instant
+        ): Transaction
+        {
+            return Transaction(
+                id = id,
+                accountId = accountId,
+                amount = amount,
+                title = title,
+                category = TransactionCategory.TRANSFER_IN,
+                subcategory = null,
+                description = null,
+                date = date
+            )
+        }
     }
 
     val signedAmount: Long
         get() = when (category)
         {
-            TransactionCategory.EXPENSE                                     -> -amount.value
-            TransactionCategory.INCOME, TransactionCategory.INITIAL_DEPOSIT -> amount.value
+            TransactionCategory.EXPENSE,
+            TransactionCategory.TRANSFER_OUT -> -amount.value
+
+            TransactionCategory.INCOME,
+            TransactionCategory.INITIAL_DEPOSIT,
+            TransactionCategory.TRANSFER_IN  -> amount.value
         }
 }
