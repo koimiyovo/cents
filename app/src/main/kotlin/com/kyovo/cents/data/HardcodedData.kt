@@ -52,7 +52,20 @@ fun seedHardcodedData(
         createdAt = now.minus(200, ChronoUnit.DAYS),
     )
 
-    listOf(checking, cash).forEach(accountRepository::save)
+    // A closed joint account, archived since a move: it still has its history, but no longer
+    // counts in the totals and takes no new transaction. Its last movement empties it into the
+    // checking account, so it ends at a balance of zero, as a real closed account would.
+    val oldJoint = Account(
+        id = AccountId(Uuid.random()),
+        name = AccountName("Ancien Compte Joint"),
+        type = AccountType.CHECKING,
+        currency = eur,
+        createdAt = now.minus(520, ChronoUnit.DAYS),
+        archivedAt = now.minus(300, ChronoUnit.DAYS),
+        description = AccountDescription.of("Compte joint clos après le déménagement"),
+    )
+
+    listOf(checking, cash, oldJoint).forEach(accountRepository::save)
 
     fun deposit(accountId: AccountId, amountCents: Long, date: Instant)
     {
@@ -156,4 +169,12 @@ fun seedHardcodedData(
     recorded(cash.id, 500, expense, null, "Pourboire", ago(19))
     recorded(cash.id, 3000, income, IncomeSubcategory.REFUND, "Remboursement ami", ago(21))
     recorded(cash.id, 1580, expense, ExpenseSubcategory.GROCERIES, "Marché", ago(26))
+
+    // Ancien Compte Joint (archived): 850,00 + 45,00 - 120,00 - 60,00 = 715,00, all moved to
+    // Compte Courant when it was closed.
+    deposit(oldJoint.id, 85000, ago(520))
+    recorded(oldJoint.id, 12000, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(400))
+    recorded(oldJoint.id, 4500, income, IncomeSubcategory.REFUND, "Remboursement", ago(380))
+    recorded(oldJoint.id, 6000, expense, ExpenseSubcategory.FUEL, "Essence", ago(350))
+    transferred(oldJoint.id, checking.id, 71500, "Clôture du compte", ago(300))
 }

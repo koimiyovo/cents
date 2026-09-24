@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
                 AppScreen.Onboarding -> OnboardingScreen(onFinished = { screen = AppScreen.Home })
                 AppScreen.Home -> HomeScreen(
                     listAccounts = appContainer.listAccounts,
+                    listArchivedAccounts = appContainer.listArchivedAccounts,
+                    archiveAccount = appContainer.archiveAccount,
                     getAccount = appContainer.getAccount,
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,

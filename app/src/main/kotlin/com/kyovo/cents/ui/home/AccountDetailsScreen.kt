@@ -17,7 +17,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +65,7 @@ fun AccountDetailsScreen(
     listTransactions: ListTransactionsUseCase,
     revision: Int,
     onBack: () -> Unit,
+    onArchive: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -100,6 +103,7 @@ fun AccountDetailsScreen(
     var periodMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showArchiveConfirmation by rememberSaveable { mutableStateOf(false) }
 
     val (periodFrom, periodTo) = remember(selectedPeriod, customFrom, customTo) {
         periodRange(selectedPeriod, customFrom, customTo, Instant.now())
@@ -145,7 +149,7 @@ fun AccountDetailsScreen(
             Spacer(Modifier.width(12.dp))
             HomeTopBar(palette, account.name.value)
         }
-        AccountSummaryCard(palette, account, balanceCents)
+        AccountSummaryCard(palette, account, balanceCents, onArchiveClick = { showArchiveConfirmation = true })
         PeriodFilterRow(
             palette = palette,
             selected = selectedPeriod,
@@ -205,6 +209,19 @@ fun AccountDetailsScreen(
         }
     }
 
+    if (showArchiveConfirmation)
+    {
+        ArchiveConfirmationDialog(
+            palette = palette,
+            accountName = account.name.value,
+            onConfirm = {
+                showArchiveConfirmation = false
+                onArchive()
+            },
+            onDismiss = { showArchiveConfirmation = false },
+        )
+    }
+
     if (showCustomRangePicker)
     {
         CustomDateRangePickerDialog(
@@ -223,7 +240,12 @@ fun AccountDetailsScreen(
 }
 
 @Composable
-private fun AccountSummaryCard(palette: AccountsPalette, account: Account, balanceCents: Long)
+private fun AccountSummaryCard(
+    palette: AccountsPalette,
+    account: Account,
+    balanceCents: Long,
+    onArchiveClick: () -> Unit,
+)
 {
     Column(
         modifier = Modifier
@@ -244,13 +266,30 @@ private fun AccountSummaryCard(palette: AccountsPalette, account: Account, balan
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            val isActive = account.archivedAt == null
-            Text(
-                text = stringResource(if (isActive) R.string.accounts_status_active else R.string.accounts_status_archived),
-                color = if (isActive) palette.heroIncomeAccent else palette.heroOnCardSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
+            // No "active" badge — that is the normal state. The corner offers the one action an
+            // active account has; once archived, it says so.
+            if (account.archivedAt == null)
+            {
+                Text(
+                    text = stringResource(R.string.account_details_archive_button),
+                    color = palette.heroOnCardPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(palette.heroPillBackground)
+                        .clickable(onClick = onArchiveClick)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            } else
+            {
+                Text(
+                    text = stringResource(R.string.accounts_status_archived),
+                    color = palette.heroOnCardSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
         Column {
             Text(
@@ -306,4 +345,42 @@ private fun BackButton(palette: AccountsPalette, onClick: () -> Unit)
             style = Stroke(width = w * 0.16f, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
+}
+
+/**
+ * Asks before archiving: the app has no way to undo it yet, and the consequences (the account
+ * leaves the list, takes no more transactions) deserve a sentence before they happen.
+ */
+@Composable
+internal fun ArchiveConfirmationDialog(
+    palette: AccountsPalette,
+    accountName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+)
+{
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.background,
+        titleContentColor = palette.textPrimary,
+        textContentColor = palette.textSecondary,
+        title = { Text(stringResource(R.string.account_archive_dialog_title)) },
+        text = { Text(stringResource(R.string.account_archive_dialog_body, accountName)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.account_archive_dialog_confirm),
+                    color = palette.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.account_archive_dialog_cancel),
+                    color = palette.textSecondary,
+                )
+            }
+        },
+    )
 }

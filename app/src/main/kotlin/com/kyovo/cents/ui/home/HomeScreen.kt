@@ -37,9 +37,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
@@ -60,6 +62,8 @@ private enum class HomeTab { Accounts, Transactions }
 @Composable
 fun HomeScreen(
     listAccounts: ListAccountsUseCase,
+    listArchivedAccounts: ListArchivedAccountsUseCase,
+    archiveAccount: ArchiveAccountUseCase,
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
@@ -80,6 +84,11 @@ fun HomeScreen(
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
+
+    val archive: (AccountId) -> Unit = { id ->
+        archiveAccount.archive(id)
+        dataRevision.bump()
+    }
 
     // Back closes the details screen instead of leaving the app. In the old View system this was
     // onBackPressed() overridden in the Activity; here it's declarative and only active while
@@ -109,6 +118,12 @@ fun HomeScreen(
                     listTransactions = listTransactions,
                     revision = revision,
                     onBack = { openedAccountUuid = null },
+                    // Back to the list afterwards: that is where the account has just moved
+                    // (into "Comptes archivés"), and an archived account gets no "+" button.
+                    onArchive = {
+                        archive(openedAccountId)
+                        openedAccountUuid = null
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
@@ -131,14 +146,16 @@ fun HomeScreen(
                     when (HomeTab.entries[page]) {
                         HomeTab.Accounts -> AccountsScreen(
                             listAccounts,
+                            listArchivedAccounts,
                             getAccountBalance,
                             listTransactions,
                             onAccountClick = { openedAccountUuid = it.value.toString() },
                             onNewAccountClick = accountFormViewModel::open,
+                            onArchiveAccount = archive,
                             revision = revision,
                         )
                         HomeTab.Transactions ->
-                            TransactionsScreen(listAccounts, listTransactions, revision = revision)
+                            TransactionsScreen(listAccounts, listArchivedAccounts, listTransactions, revision = revision)
                     }
                 }
                 AddTransactionFab(

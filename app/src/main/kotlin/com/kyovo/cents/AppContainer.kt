@@ -1,17 +1,21 @@
 package com.kyovo.cents
 
+import com.kyovo.cents.application.usecase.ArchiveAccountService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.ListAccountsService
+import com.kyovo.cents.application.usecase.ListArchivedAccountsService
 import com.kyovo.cents.application.usecase.ListTransactionsService
 import com.kyovo.cents.application.usecase.OpenAccountService
 import com.kyovo.cents.application.usecase.RecordTransactionService
 import com.kyovo.cents.application.usecase.RecordTransferService
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.data.seedHardcodedData
+import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
@@ -35,6 +39,8 @@ class AppContainer {
     private val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository)
 
     val listAccounts: ListAccountsUseCase = ListAccountsService(accountRepository)
+    val listArchivedAccounts: ListArchivedAccountsUseCase = ListArchivedAccountsService(accountRepository)
+    val archiveAccount: ArchiveAccountUseCase = ArchiveAccountService(accountRepository, Clock.systemUTC())
     val getAccount: GetAccountUseCase = GetAccountService(accountRepository)
     val getAccountBalance: GetAccountBalanceUseCase =
         GetAccountBalanceService(accountRepository, transactionRepository)
