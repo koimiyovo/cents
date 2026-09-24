@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
                     listArchivedAccounts = appContainer.listArchivedAccounts,
                     archiveAccount = appContainer.archiveAccount,
                     unarchiveAccount = appContainer.unarchiveAccount,
+                    reorderAccounts = appContainer.reorderAccounts,
                     getAccount = appContainer.getAccount,
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
