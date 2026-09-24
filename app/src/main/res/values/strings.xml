@@ -78,10 +78,8 @@
     <string name="accounts_new_account_button">⊕ Nouveau compte</string>
     <string name="accounts_section_title">Mes Comptes</string>
     <string name="accounts_manage_link">Gérer</string>
-    <string name="accounts_status_active">✓ Actif</string>
     <string name="accounts_status_archived">Archivé</string>
-    <string name="accounts_tip_title">💡 Astuce d\'autonomie</string>
-    <string name="accounts_tip_body">Vos sauvegardes restent chiffrées sur votre appareil. Vous pouvez synchroniser un fichier exporté en toute liberté sans compte distant.</string>
+    <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
 
     <!-- Bottom navigation -->
     <string name="nav_accounts">Comptes</string>
@@ -107,6 +105,11 @@
 
     <!-- Account details screen -->
     <string name="account_details_back">Retour</string>
+    <string name="account_details_archive_button">Archiver</string>
+    <string name="account_archive_dialog_title">Archiver ce compte ?</string>
+    <string name="account_archive_dialog_body">« %1$s » disparaîtra de la liste des comptes et ne pourra plus recevoir de transactions. Son historique est conservé, et le compte reste consultable dans « Comptes archivés ».</string>
+    <string name="account_archive_dialog_confirm">Archiver</string>
+    <string name="account_archive_dialog_cancel">Annuler</string>
     <string name="account_details_balance_label">SOLDE DU COMPTE</string>
     <string name="account_details_transactions_title">Transactions</string>
     <string name="account_details_not_found">Ce compte est introuvable.</string>

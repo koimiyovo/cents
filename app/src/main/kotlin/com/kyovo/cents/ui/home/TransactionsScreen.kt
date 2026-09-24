@@ -57,6 +57,7 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
@@ -75,6 +76,7 @@ import java.util.Locale
 @Composable
 fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
+    listArchivedAccounts: ListArchivedAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
     revision: Int,
     modifier: Modifier = Modifier,
@@ -83,7 +85,10 @@ fun TransactionsScreen(
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
 
     val accounts = remember(revision) { listAccounts.list() }
-    val accountsById = remember(accounts) { accounts.associateBy { it.id } }
+    // The account filter offers the active accounts only, but the list still shows the history of
+    // archived ones: their names must resolve too, or those rows would lose their account.
+    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val accountsById = remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
     val allTransactions = remember(revision) { listTransactions.list() }
 
     // Filter selection isn't saved across configuration changes: AccountId/TransactionSubcategory

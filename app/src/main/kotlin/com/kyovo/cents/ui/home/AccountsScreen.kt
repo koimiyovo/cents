@@ -20,7 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +33,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -37,6 +43,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,7 +56,9 @@ import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.IconTone
 import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.common.formatSignedEuroCents
@@ -59,10 +70,12 @@ internal val FAB_CLEARANCE = 88.dp
 @Composable
 fun AccountsScreen(
     listAccounts: ListAccountsUseCase,
+    listArchivedAccounts: ListArchivedAccountsUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     onAccountClick: (AccountId) -> Unit,
     onNewAccountClick: () -> Unit,
+    onArchiveAccount: (AccountId) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -75,13 +88,25 @@ fun AccountsScreen(
     val isCompact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val accounts = remember(revision) { listAccounts.list() }
-    val balanceByAccountId = remember(accounts, revision) {
-        accounts.associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
+    // The account waiting for the user's yes/no after a swipe, kept as its UUID string (AccountId
+    // isn't Saveable) so the question survives a rotation.
+    var pendingArchiveId by rememberSaveable { mutableStateOf<String?>(null) }
+    val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
+    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val balanceByAccountId = remember(accounts, archivedAccounts, revision) {
+        (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
     }
-    val totalCents = remember(balanceByAccountId) { balanceByAccountId.values.sum() }
+    // The consolidated figures cover the active accounts only: an archived account is closed, so
+    // it counts neither in the total nor in the income/expense lines below.
+    val totalCents = remember(accounts, balanceByAccountId) {
+        accounts.sumOf { balanceByAccountId[it.id] ?: 0L }
+    }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
-    val allTransactions = remember(revision) { listTransactions.list() }
+    val allTransactions = remember(revision, accounts) {
+        val activeIds = accounts.map { it.id }.toSet()
+        listTransactions.list().filter { it.accountId in activeIds }
+    }
     val incomeCents = remember(allTransactions) {
         allTransactions.filter { it.category == TransactionCategory.INCOME }
             .sumOf { it.amount.value }
@@ -114,17 +139,45 @@ fun AccountsScreen(
         AccountsSectionHeader(palette, count = accounts.size)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             accounts.forEachIndexed { index, account ->
-                AccountRow(
-                    account = account,
-                    balanceCents = balanceByAccountId[account.id] ?: 0L,
-                    visible = balancesVisible,
-                    tone = IconTone.entries[index % IconTone.entries.size],
+                SwipeToArchiveBox(
                     palette = palette,
-                    onClick = { onAccountClick(account.id) },
-                )
+                    onArchiveRequest = { pendingArchiveId = account.id.value.toString() },
+                ) {
+                    AccountRow(
+                        account = account,
+                        balanceCents = balanceByAccountId[account.id] ?: 0L,
+                        visible = balancesVisible,
+                        tone = IconTone.entries[index % IconTone.entries.size],
+                        palette = palette,
+                        onClick = { onAccountClick(account.id) },
+                    )
+                }
             }
         }
-        TipCard(palette)
+        if (archivedAccounts.isNotEmpty())
+        {
+            ArchivedAccountsSection(
+                palette = palette,
+                accounts = archivedAccounts,
+                balanceByAccountId = balanceByAccountId,
+                balancesVisible = balancesVisible,
+                firstToneIndex = accounts.size,
+                onAccountClick = onAccountClick,
+            )
+        }
+    }
+
+    if (pendingArchive != null)
+    {
+        ArchiveConfirmationDialog(
+            palette = palette,
+            accountName = pendingArchive.name.value,
+            onConfirm = {
+                pendingArchiveId = null
+                onArchiveAccount(pendingArchive.id)
+            },
+            onDismiss = { pendingArchiveId = null },
+        )
     }
 }
 
@@ -403,11 +456,15 @@ private fun AccountRow(
     tone: IconTone,
     palette: AccountsPalette,
     onClick: () -> Unit,
+    archived: Boolean = false,
 )
 {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // Archived rows sit in their own collapsed section; toning them down says "closed"
+            // without needing a status label on every row.
+            .alpha(if (archived) 0.65f else 1f)
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
             .clickable(onClick = onClick)
@@ -442,48 +499,126 @@ private fun AccountRow(
                 )
             }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            val hidden = stringResource(R.string.accounts_hidden_balance)
-            Text(
-                text = if (visible) formatEuroCents(balanceCents) else hidden,
-                color = palette.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            val isActive = account.archivedAt == null
-            Text(
-                text = if (isActive) stringResource(R.string.accounts_status_active) else stringResource(
-                    R.string.accounts_status_archived
-                ),
-                color = if (isActive) palette.statusActiveColor else palette.textMuted,
-                fontSize = 12.sp,
-            )
-        }
+        val hidden = stringResource(R.string.accounts_hidden_balance)
+        Text(
+            text = if (visible) formatEuroCents(balanceCents) else hidden,
+            color = palette.textPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
+/**
+ * Swiping a row to the right offers to archive it (the same direction as Gmail's "archive"; the
+ * opposite one is kept for the edit/delete actions to come). The row never stays swiped: reaching
+ * the threshold only asks the question — [onArchiveRequest] opens the confirmation — and the row
+ * springs back either way. Views used `ItemTouchHelper` on a RecyclerView for this; Compose has
+ * `SwipeToDismissBox`, which is just a wrapper around any content.
+ *
+ * A gesture can't be discovered by screen-reader users, hence the custom accessibility action; the
+ * account's own page has an "Archiver" button too.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TipCard(palette: AccountsPalette)
+private fun SwipeToArchiveBox(
+    palette: AccountsPalette,
+    onArchiveRequest: () -> Unit,
+    content: @Composable () -> Unit,
+)
 {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(palette.tipBackground)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { target ->
+            if (target == SwipeToDismissBoxValue.StartToEnd) onArchiveRequest()
+            false
+        },
+    )
+    val actionLabel = stringResource(R.string.account_details_archive_button)
+    SwipeToDismissBox(
+        state = state,
+        modifier = Modifier.semantics {
+            customActions = listOf(CustomAccessibilityAction(actionLabel) { onArchiveRequest(); true })
+        },
+        enableDismissFromEndToStart = false,
+        backgroundContent = {
+            // Drawn only while dragging, or its colour would show through the row's rounded corners.
+            if (state.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
+            {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(palette.iconToneGreen)
+                        .padding(start = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "🗄️ $actionLabel",
+                        color = palette.heroOnCardPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        },
     ) {
-        Text(
-            text = stringResource(R.string.accounts_tip_title),
-            color = palette.textPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.accounts_tip_body),
-            color = palette.textMuted,
-            fontSize = 13.sp,
-        )
+        content()
+    }
+}
+
+/**
+ * A single quiet line, "Comptes archivés (N)", that unfolds the archived accounts in place. Kept
+ * folded by default and absent when there are none: archived accounts are a rarely-visited
+ * history, not something to keep on screen next to the live ones.
+ */
+@Composable
+private fun ArchivedAccountsSection(
+    palette: AccountsPalette,
+    accounts: List<Account>,
+    balanceByAccountId: Map<AccountId, Long>,
+    balancesVisible: Boolean,
+    firstToneIndex: Int,
+    onAccountClick: (AccountId) -> Unit,
+)
+{
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.accounts_archived_section, accounts.size),
+                color = palette.textSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            ChevronDownIcon(
+                tint = palette.textSecondary,
+                modifier = Modifier
+                    .size(14.dp)
+                    .rotate(if (expanded) 180f else 0f),
+            )
+        }
+        if (expanded)
+        {
+            accounts.forEachIndexed { index, account ->
+                AccountRow(
+                    account = account,
+                    balanceCents = balanceByAccountId[account.id] ?: 0L,
+                    visible = balancesVisible,
+                    tone = IconTone.entries[(firstToneIndex + index) % IconTone.entries.size],
+                    palette = palette,
+                    onClick = { onAccountClick(account.id) },
+                    archived = true,
+                )
+            }
+        }
     }
 }
 

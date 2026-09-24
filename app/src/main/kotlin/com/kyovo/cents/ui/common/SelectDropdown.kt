@@ -151,7 +151,7 @@ private fun DropdownField(
 }
 
 @Composable
-private fun ChevronDownIcon(tint: Color, modifier: Modifier = Modifier)
+internal fun ChevronDownIcon(tint: Color, modifier: Modifier = Modifier)
 {
     Canvas(modifier = modifier) {
         val w = size.width
