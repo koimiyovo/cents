@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
+import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.AccountNotArchivedException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
@@ -46,6 +47,7 @@ import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
@@ -69,6 +71,7 @@ fun HomeScreen(
     listArchivedAccounts: ListArchivedAccountsUseCase,
     archiveAccount: ArchiveAccountUseCase,
     unarchiveAccount: UnarchiveAccountUseCase,
+    reorderAccounts: ReorderAccountsUseCase,
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
@@ -100,6 +103,16 @@ fun HomeScreen(
         } catch (e: AccountAlreadyArchivedException)
         {
             // already archived: nothing to do
+        }
+        dataRevision.bump()
+    }
+    val reorder: (List<AccountId>) -> Unit = { ids ->
+        try
+        {
+            reorderAccounts.reorder(ids)
+        } catch (e: AccountNotFoundException)
+        {
+            // An account vanished since the list was read: nothing to reorder, just refresh.
         }
         dataRevision.bump()
     }
@@ -188,6 +201,7 @@ fun HomeScreen(
                             onArchiveAccount = archive,
                             onUnarchiveAccount = unarchive,
                             onEditAccount = accountFormViewModel::openForEdit,
+                            onReorderAccounts = reorder,
                             revision = revision,
                         )
                         HomeTab.Transactions ->

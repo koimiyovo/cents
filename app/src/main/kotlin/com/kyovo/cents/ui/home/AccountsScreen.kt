@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -92,6 +94,7 @@ fun AccountsScreen(
     onArchiveAccount: (AccountId) -> Unit,
     onUnarchiveAccount: (AccountId) -> Unit,
     onEditAccount: (Account) -> Unit,
+    onReorderAccounts: (List<AccountId>) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -104,6 +107,27 @@ fun AccountsScreen(
     val isCompact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val accounts = remember(revision) { listAccounts.list() }
+    // The order the user has just dropped the rows in, shown until the saved list catches up: the
+    // list re-reads on the next revision, and showing the old order for that one frame would make
+    // the dropped row flick back before jumping to its place.
+    var droppedOrder by remember { mutableStateOf<List<AccountId>?>(null) }
+    val displayedAccounts = remember(accounts, droppedOrder) {
+        val order = droppedOrder
+        if (order == null) accounts
+        else accounts.sortedBy { account -> order.indexOf(account.id).takeIf { it >= 0 } ?: Int.MAX_VALUE }
+    }
+    val displayedIds = remember(displayedAccounts) { displayedAccounts.map { it.id } }
+    // Whatever the saved list turns out to be (the new order, or unchanged if it was refused),
+    // it is the truth from then on.
+    LaunchedEffect(accounts) { droppedOrder = null }
+    val onReorder: (List<AccountId>) -> Unit = { ids ->
+        droppedOrder = ids
+        onReorderAccounts(ids)
+    }
+    val scrollState = rememberScrollState()
+    val reorder = remember { AccountReorderState() }
+    val moveUpLabel = stringResource(R.string.account_move_up)
+    val moveDownLabel = stringResource(R.string.account_move_down)
     // The account waiting for the user's yes/no after a swipe, kept as its UUID string (AccountId
     // isn't Saveable) so the question survives a rotation.
     var pendingArchiveId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -138,8 +162,14 @@ fun AccountsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            // The visible area, for scrolling the list while a row is carried past its edge.
+            .onGloballyPositioned {
+                val bounds = it.boundsInRoot()
+                reorder.viewportTop = bounds.top
+                reorder.viewportBottom = bounds.bottom
+            }
             .background(palette.background)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(start = 16.dp, end = 16.dp, top = if (isCompact) 10.dp else 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 20.dp),
     ) {
@@ -156,24 +186,58 @@ fun AccountsScreen(
         )
         NewAccountButton(palette, onClick = onNewAccountClick)
         AccountsSectionHeader(palette, count = accounts.size)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            accounts.forEachIndexed { index, account ->
+        Column(verticalArrangement = Arrangement.spacedBy(ACCOUNT_ROW_SPACING)) {
+            displayedAccounts.forEachIndexed { index, account ->
                 // Keyed by account: a swipe state belongs to one account, not to a position in the list.
                 key(account.id) {
                     val idText = account.id.value.toString()
-                    AccountListRow(
-                        account = account,
-                        balanceCents = balanceByAccountId[account.id] ?: 0L,
-                        visible = balancesVisible,
-                        tone = IconTone.entries[index % IconTone.entries.size],
-                        palette = palette,
-                        archived = false,
-                        revealed = revealedId == idText,
-                        onRevealedChange = { open -> revealedId = revealedIdAfter(revealedId, idText, open) },
-                        onOpen = { revealedId = null; onAccountClick(account.id) },
-                        onSwipeRight = { pendingArchiveId = idText },
-                        onEdit = { revealedId = null; onEditAccount(account) },
-                    )
+                    ReorderableRow(
+                        state = reorder,
+                        ids = displayedIds,
+                        index = index,
+                        scrollState = scrollState,
+                        spacing = ACCOUNT_ROW_SPACING,
+                        onReorder = onReorder,
+                        onDragStart = { revealedId = null },
+                    ) {
+                        AccountListRow(
+                            account = account,
+                            balanceCents = balanceByAccountId[account.id] ?: 0L,
+                            visible = balancesVisible,
+                            tone = IconTone.entries[index % IconTone.entries.size],
+                            palette = palette,
+                            archived = false,
+                            revealed = revealedId == idText,
+                            onRevealedChange = { open -> revealedId = revealedIdAfter(revealedId, idText, open) },
+                            onOpen = {
+                                // The finger lifting at the end of a drag must not open the account.
+                                if (!reorder.clicksSuppressed)
+                                {
+                                    revealedId = null
+                                    onAccountClick(account.id)
+                                }
+                            },
+                            onSwipeRight = { pendingArchiveId = idText },
+                            onEdit = { revealedId = null; onEditAccount(account) },
+                            // A row can't be swiped sideways while it is being carried up or down.
+                            swipeEnabled = reorder.draggedId == null,
+                            // The drag has an accessible equivalent, like the swipes.
+                            extraActions = buildList {
+                                if (index > 0)
+                                {
+                                    add(CustomAccessibilityAction(moveUpLabel) {
+                                        onReorder(moveItem(displayedIds, index, index - 1)); true
+                                    })
+                                }
+                                if (index < displayedIds.lastIndex)
+                                {
+                                    add(CustomAccessibilityAction(moveDownLabel) {
+                                        onReorder(moveItem(displayedIds, index, index + 1)); true
+                                    })
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -559,6 +623,8 @@ private fun AccountListRow(
     onOpen: () -> Unit,
     onSwipeRight: () -> Unit,
     onEdit: () -> Unit,
+    swipeEnabled: Boolean = true,
+    extraActions: List<CustomAccessibilityAction> = emptyList(),
 )
 {
     SwipeableRow(
@@ -571,6 +637,8 @@ private fun AccountListRow(
         rightEmoji = if (archived) "↩️" else "🗄️",
         onSwipeRight = onSwipeRight,
         onEdit = onEdit,
+        swipeEnabled = swipeEnabled,
+        extraActions = extraActions,
     ) {
         AccountRow(
             account = account,
@@ -584,6 +652,9 @@ private fun AccountListRow(
         )
     }
 }
+
+/** The gap between the account rows: the drag arithmetic needs to know it. */
+private val ACCOUNT_ROW_SPACING = 12.dp
 
 /** How far a row slides to show its "Modifier" button: the button, plus a small gap. */
 private val EDIT_PANEL_WIDTH = 104.dp
@@ -613,6 +684,8 @@ private fun SwipeableRow(
     rightEmoji: String,
     onSwipeRight: () -> Unit,
     onEdit: () -> Unit,
+    swipeEnabled: Boolean = true,
+    extraActions: List<CustomAccessibilityAction> = emptyList(),
     content: @Composable () -> Unit,
 )
 {
@@ -649,7 +722,7 @@ private fun SwipeableRow(
                 customActions = listOf(
                     CustomAccessibilityAction(rightLabel) { currentOnSwipeRight(); true },
                     CustomAccessibilityAction(editLabel) { currentOnEdit(); true },
-                )
+                ) + extraActions
             },
     ) {
         // Behind the row, and only while it is pulled aside: at rest their colour would show
@@ -699,6 +772,7 @@ private fun SwipeableRow(
                 .draggable(
                     state = dragState,
                     orientation = Orientation.Horizontal,
+                    enabled = swipeEnabled,
                     onDragStarted = { settleJob?.cancel() },
                     onDragStopped = { velocity ->
                         when

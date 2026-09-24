@@ -9,6 +9,7 @@ import com.kyovo.cents.application.usecase.ListTransactionsService
 import com.kyovo.cents.application.usecase.OpenAccountService
 import com.kyovo.cents.application.usecase.RecordTransactionService
 import com.kyovo.cents.application.usecase.RecordTransferService
+import com.kyovo.cents.application.usecase.ReorderAccountsService
 import com.kyovo.cents.application.usecase.UnarchiveAccountService
 import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.data.DataRevision
@@ -22,6 +23,7 @@ import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
+import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
@@ -47,6 +49,7 @@ class AppContainer {
     val archiveAccount: ArchiveAccountUseCase = ArchiveAccountService(accountRepository, Clock.systemUTC())
     val unarchiveAccount: UnarchiveAccountUseCase = UnarchiveAccountService(accountRepository)
     val updateAccount: UpdateAccountUseCase = UpdateAccountService(accountRepository)
+    val reorderAccounts: ReorderAccountsUseCase = ReorderAccountsService(accountRepository)
     val getAccount: GetAccountUseCase = GetAccountService(accountRepository)
     val getAccountBalance: GetAccountBalanceUseCase =
         GetAccountBalanceService(accountRepository, transactionRepository)

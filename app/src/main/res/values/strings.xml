@@ -163,6 +163,8 @@
     <string name="account_form_title_edit">Modifier le compte</string>
     <string name="account_form_submit_edit">Enregistrer</string>
     <string name="account_edit_action">Modifier</string>
+    <string name="account_move_up">Monter</string>
+    <string name="account_move_down">Descendre</string>
     <string name="account_form_error_name">Le nom est obligatoire.</string>
     <string name="account_form_error_initial_amount">Saisissez un montant valide (2 décimales maximum).</string>
     <string name="account_form_failure_duplicate_name">Un compte porte déjà ce nom.</string>
