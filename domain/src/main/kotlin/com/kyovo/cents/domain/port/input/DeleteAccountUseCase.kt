@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.AccountId
 
 interface DeleteAccountUseCase
 {
-    fun delete(id: AccountId)
+    fun delete(id: AccountId, deleteTransactions: Boolean = false)
 }
