@@ -157,6 +157,7 @@ fun HomeScreen(
                     },
                     // Stays on the page: the account is active again, so the "+" button reappears.
                     onUnarchive = { unarchive(openedAccountId) },
+                    onEdit = { getAccount.get(openedAccountId)?.let(accountFormViewModel::openForEdit) },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
