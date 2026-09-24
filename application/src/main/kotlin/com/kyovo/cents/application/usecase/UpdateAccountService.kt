@@ -15,7 +15,7 @@ class UpdateAccountService(private val accountRepository: AccountRepository) : U
             accountRepository.findById(command.id) ?: throw AccountNotFoundException()
 
         if (accountRepository.findAll()
-                .filter { it.id != command.id }
+                .filter { it.id != command.id && it.archivedAt == null }
                 .any { it.name.matches(command.name) }
         )
         {
