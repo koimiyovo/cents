@@ -1,9 +1,7 @@
 package com.kyovo.cents.ui.home
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,11 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +58,11 @@ import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
+import com.kyovo.cents.ui.common.SelectDropdown
+import com.kyovo.cents.ui.common.SelectOption
+import com.kyovo.cents.ui.common.SelectableOptionRow
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import java.time.Instant
 import java.time.LocalDate
@@ -172,7 +170,7 @@ fun TransactionsScreen(
             onSelect = { accountMenuExpanded = false; selectedAccountId = it },
             movementsCount = filteredTransactions.size,
         )
-        SubcategoryChipsRow(
+        SubcategoryFilter(
             palette = palette,
             subcategories = availableSubcategories,
             selected = selectedSubcategory,
@@ -623,99 +621,25 @@ private fun AccountFilterRow(
     }
 }
 
-/** A pill showing [label] with a hand-drawn chevron — not a "▾"/"⌄" glyph, whose vertical metrics
- *  vary across fonts and don't sit level with the label text (see EyeToggleIcon for the same
- *  reasoning). */
+/** Subcategory filter: a dropdown rather than chips, since the list grows with the categories in use. */
 @Composable
-private fun DropdownPill(label: String, palette: AccountsPalette, modifier: Modifier = Modifier)
-{
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(palette.surface)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = palette.textSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(Modifier.width(6.dp))
-        ChevronDownIcon(tint = palette.textSecondary, modifier = Modifier.size(12.dp))
-    }
-}
-
-@Composable
-private fun ChevronDownIcon(tint: Color, modifier: Modifier = Modifier)
-{
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val path = Path().apply {
-            moveTo(w * 0.15f, h * 0.35f)
-            lineTo(w * 0.5f, h * 0.75f)
-            lineTo(w * 0.85f, h * 0.35f)
-        }
-        drawPath(
-            path,
-            color = tint,
-            style = Stroke(width = w * 0.18f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}
-
-/** Same treatment as the subcategory chips: a solid fill, not just a text color change, so the
- *  current choice in the period/account dropdowns is unambiguous at a glance. */
-@Composable
-private fun SelectableOptionRow(
-    label: String,
-    selected: Boolean,
-    palette: AccountsPalette,
-    onClick: () -> Unit
-)
-{
-    Text(
-        text = label,
-        color = if (selected) palette.heroOnCardPrimary else palette.textPrimary,
-        fontSize = 14.sp,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (selected) palette.iconToneGreen else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    )
-}
-
-@Composable
-internal fun SubcategoryChipsRow(
+internal fun SubcategoryFilter(
     palette: AccountsPalette,
     subcategories: List<TransactionSubcategory>,
     selected: TransactionSubcategory?,
     onSelect: (TransactionSubcategory?) -> Unit,
 )
 {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SubcategoryChip(
-            label = stringResource(R.string.transactions_filter_all),
-            selected = selected == null,
-            palette = palette,
-            onClick = { onSelect(null) },
-        )
-        subcategories.forEach { subcategory ->
-            SubcategoryChip(
-                label = subcategoryLabel(subcategory),
-                selected = selected == subcategory,
-                palette = palette,
-                onClick = { onSelect(subcategory) },
-            )
-        }
-    }
+    val allLabel = stringResource(R.string.transactions_all_subcategories)
+    val options = listOf(SelectOption<TransactionSubcategory?>(null, allLabel)) +
+        subcategories.map { SelectOption<TransactionSubcategory?>(it, subcategoryLabel(it)) }
+    SelectDropdown(
+        palette = palette,
+        options = options,
+        selected = selected,
+        onSelect = onSelect,
+        labelPrefix = "🏷️ ",
+    )
 }
 
 @Composable
