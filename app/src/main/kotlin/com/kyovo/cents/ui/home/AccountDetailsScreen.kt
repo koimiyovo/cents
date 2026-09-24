@@ -66,6 +66,7 @@ fun AccountDetailsScreen(
     revision: Int,
     onBack: () -> Unit,
     onArchive: () -> Unit,
+    onUnarchive: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -149,7 +150,14 @@ fun AccountDetailsScreen(
             Spacer(Modifier.width(12.dp))
             HomeTopBar(palette, account.name.value)
         }
-        AccountSummaryCard(palette, account, balanceCents, onArchiveClick = { showArchiveConfirmation = true })
+        AccountSummaryCard(
+            palette = palette,
+            account = account,
+            balanceCents = balanceCents,
+            onArchiveClick = { showArchiveConfirmation = true },
+            // No confirmation: unarchiving destroys nothing and is undone by archiving again.
+            onUnarchiveClick = onUnarchive,
+        )
         PeriodFilterRow(
             palette = palette,
             selected = selectedPeriod,
@@ -245,6 +253,7 @@ private fun AccountSummaryCard(
     account: Account,
     balanceCents: Long,
     onArchiveClick: () -> Unit,
+    onUnarchiveClick: () -> Unit,
 )
 {
     Column(
@@ -260,36 +269,29 @@ private fun AccountSummaryCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val isArchived = account.archivedAt != null
+            val typeLabel = "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}"
             Text(
-                text = "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}",
+                // No "active" badge — that is the normal state; only the exception is spelled out.
+                text = if (isArchived) "$typeLabel · ${stringResource(R.string.accounts_status_archived)}" else typeLabel,
                 color = palette.heroOnCardSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            // No "active" badge — that is the normal state. The corner offers the one action an
-            // active account has; once archived, it says so.
-            if (account.archivedAt == null)
-            {
-                Text(
-                    text = stringResource(R.string.account_details_archive_button),
-                    color = palette.heroOnCardPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(palette.heroPillBackground)
-                        .clickable(onClick = onArchiveClick)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            } else
-            {
-                Text(
-                    text = stringResource(R.string.accounts_status_archived),
-                    color = palette.heroOnCardSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
+            // The corner offers the one action that makes sense in the account's current state.
+            Text(
+                text = stringResource(
+                    if (isArchived) R.string.account_details_unarchive_button else R.string.account_details_archive_button,
+                ),
+                color = palette.heroOnCardPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(palette.heroPillBackground)
+                    .clickable(onClick = if (isArchived) onUnarchiveClick else onArchiveClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
         }
         Column {
             Text(
@@ -345,6 +347,32 @@ private fun BackButton(palette: AccountsPalette, onClick: () -> Unit)
             style = Stroke(width = w * 0.16f, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
+}
+
+/** Explains why an account can't come back: its name is now taken by an active account. */
+@Composable
+internal fun UnarchiveBlockedDialog(
+    palette: AccountsPalette,
+    accountName: String,
+    onDismiss: () -> Unit,
+)
+{
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.background,
+        titleContentColor = palette.textPrimary,
+        textContentColor = palette.textSecondary,
+        title = { Text(stringResource(R.string.account_unarchive_error_title)) },
+        text = { Text(stringResource(R.string.account_unarchive_error_body, accountName)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.account_unarchive_error_ok),
+                    color = palette.textSecondary,
+                )
+            }
+        },
+    )
 }
 
 /**
