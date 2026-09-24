@@ -2,6 +2,7 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
+import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.aTransaction
@@ -21,7 +22,7 @@ class DeleteAccountServiceTest
         val id = anAccountId()
         val accountRepository = InMemoryAccountRepository()
         accountRepository.save(anAccount(id = id))
-        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository())
+        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository(), InMemoryUnitOfWork())
 
         // WHEN
         service.delete(id)
@@ -42,7 +43,7 @@ class DeleteAccountServiceTest
         val accountRepository = InMemoryAccountRepository()
         accountRepository.save(anAccount(id = idToDelete))
         accountRepository.save(otherAccount)
-        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository())
+        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository(), InMemoryUnitOfWork())
 
         // WHEN
         service.delete(idToDelete)
@@ -56,7 +57,7 @@ class DeleteAccountServiceTest
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
-        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository())
+        val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository(), InMemoryUnitOfWork())
 
         // WHEN / THEN
         assertThatCode { service.delete(anAccountId()) }.doesNotThrowAnyException()
@@ -71,7 +72,7 @@ class DeleteAccountServiceTest
         accountRepository.save(anAccount(id = id))
         val transactionRepository = InMemoryTransactionRepository()
         transactionRepository.save(aTransaction(accountId = id))
-        val service = DeleteAccountService(accountRepository, transactionRepository)
+        val service = DeleteAccountService(accountRepository, transactionRepository, InMemoryUnitOfWork())
 
         // WHEN / THEN
         assertThatThrownBy { service.delete(id) }
@@ -88,7 +89,7 @@ class DeleteAccountServiceTest
         accountRepository.save(account)
         val transactionRepository = InMemoryTransactionRepository()
         transactionRepository.save(aTransaction(accountId = id))
-        val service = DeleteAccountService(accountRepository, transactionRepository)
+        val service = DeleteAccountService(accountRepository, transactionRepository, InMemoryUnitOfWork())
 
         // WHEN
         assertThatThrownBy { service.delete(id) }
