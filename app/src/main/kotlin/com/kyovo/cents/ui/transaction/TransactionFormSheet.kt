@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -63,6 +60,8 @@ import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
 import com.kyovo.cents.ui.common.SectionLabel
+import com.kyovo.cents.ui.common.SelectDropdown
+import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.home.AccountsPalette
@@ -188,7 +187,7 @@ fun TransactionFormSheet(
                         if (isTransfer) R.string.transaction_form_account_from_label
                         else R.string.transaction_form_account_label,
                     ),
-                    accounts = selectable,
+                    accounts = form.sourceChoices(selectable),
                     selectedId = form.accountId,
                     onSelect = { onFormChange(form.copy(accountId = it)) },
                 )
@@ -198,7 +197,7 @@ fun TransactionFormSheet(
                     AccountPicker(
                         palette = palette,
                         label = stringResource(R.string.transaction_form_account_to_label),
-                        accounts = selectable,
+                        accounts = form.destinationChoices(selectable),
                         selectedId = form.toAccountId,
                         onSelect = { onFormChange(form.copy(toAccountId = it)) },
                     )
@@ -326,25 +325,16 @@ private fun AccountPicker(
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, label)
-        // Starts scrolled to the selected account: with more accounts than fit on screen, a
-        // preselected one (e.g. when opened from an account's page) would otherwise sit off-screen
-        // and nothing visible would look selected.
-        val listState = rememberLazyListState(
-            initialFirstVisibleItemIndex = accounts.indexOfFirst { it.id == selectedId }.coerceAtLeast(0),
+        // A dropdown, not chips: the number of accounts is up to the user, and the trigger always
+        // shows the current choice (a preselected account can't hide off-screen in a scrolling row).
+        SelectDropdown(
+            palette = palette,
+            options = accounts.map { SelectOption<AccountId?>(it.id, it.name.value) },
+            selected = selectedId,
+            onSelect = { it?.let(onSelect) },
+            fillWidth = true,
+            placeholder = stringResource(R.string.transaction_form_account_placeholder),
         )
-        LazyRow(
-            state = listState,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(accounts, key = { it.id.value.toString() }) { account ->
-                SubcategoryChip(
-                    label = account.name.value,
-                    selected = account.id == selectedId,
-                    palette = palette,
-                    onClick = { onSelect(account.id) },
-                )
-            }
-        }
     }
 }
 
@@ -358,25 +348,15 @@ private fun SubcategoryPicker(
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, stringResource(R.string.transaction_form_subcategory_label))
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SubcategoryChip(
-                label = stringResource(R.string.transaction_form_subcategory_none),
-                selected = selected == null,
-                palette = palette,
-                onClick = { onSelect(null) },
-            )
-            subcategories.forEach { subcategory ->
-                SubcategoryChip(
-                    label = subcategoryLabel(subcategory),
-                    selected = subcategory == selected,
-                    palette = palette,
-                    onClick = { onSelect(subcategory) },
-                )
-            }
-        }
+        val noneLabel = stringResource(R.string.transaction_form_subcategory_none)
+        SelectDropdown(
+            palette = palette,
+            options = listOf(SelectOption<TransactionSubcategory?>(null, noneLabel)) +
+                subcategories.map { SelectOption<TransactionSubcategory?>(it, subcategoryLabel(it)) },
+            selected = selected,
+            onSelect = onSelect,
+            fillWidth = true,
+        )
     }
 }
 

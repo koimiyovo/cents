@@ -332,6 +332,88 @@ class TransactionFormTypeSwitchTest
         // THEN
         assertThat(switched.subcategory).isEqualTo(ExpenseSubcategory.GROCERIES)
     }
+
+    @Test
+    fun `switching to transfer drops a destination equal to the chosen account`()
+    {
+        // GIVEN a destination typed earlier that has since become the chosen account
+        val form = anExpenseForm(accountId = SAVINGS).copy(toAccountId = SAVINGS)
+
+        // WHEN
+        val switched = form.withType(TransactionFormType.TRANSFER)
+
+        // THEN
+        assertThat(switched.toAccountId).isNull()
+        assertThat(switched.accountId).isEqualTo(SAVINGS)
+    }
+
+    @Test
+    fun `switching to transfer keeps a destination different from the chosen account`()
+    {
+        // GIVEN
+        val form = anExpenseForm(accountId = CHECKING).copy(toAccountId = SAVINGS)
+
+        // WHEN
+        val switched = form.withType(TransactionFormType.TRANSFER)
+
+        // THEN
+        assertThat(switched.toAccountId).isEqualTo(SAVINGS)
+    }
+}
+
+class TransactionFormTransferChoicesTest
+{
+    private val checking = anAccount(CHECKING)
+    private val savings = anAccount(SAVINGS)
+    private val cash = anAccount(AccountId(Uuid.random()))
+    private val all = listOf(checking, savings, cash)
+
+    @Test
+    fun `destinations exclude the chosen source account`()
+    {
+        // GIVEN
+        val form = aTransferForm(from = CHECKING, to = null)
+
+        // WHEN
+        val choices = form.destinationChoices(all)
+
+        // THEN
+        assertThat(choices).containsExactly(savings, cash)
+    }
+
+    @Test
+    fun `sources exclude the chosen destination account`()
+    {
+        // GIVEN
+        val form = aTransferForm(from = null, to = SAVINGS)
+
+        // WHEN
+        val choices = form.sourceChoices(all)
+
+        // THEN
+        assertThat(choices).containsExactly(checking, cash)
+    }
+
+    @Test
+    fun `nothing is excluded while the other side is still empty`()
+    {
+        // GIVEN
+        val form = aTransferForm(from = null, to = null)
+
+        // THEN
+        assertThat(form.sourceChoices(all)).containsExactlyElementsOf(all)
+        assertThat(form.destinationChoices(all)).containsExactlyElementsOf(all)
+    }
+
+    @Test
+    fun `sources are not filtered outside of a transfer`()
+    {
+        // GIVEN a destination left over from an earlier transfer attempt
+        val form = anExpenseForm(accountId = null).copy(toAccountId = SAVINGS)
+
+        // THEN
+        assertThat(form.sourceChoices(all)).containsExactlyElementsOf(all)
+    }
 }
 
 class TransactionFormInitialTest

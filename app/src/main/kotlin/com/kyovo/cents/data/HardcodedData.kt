@@ -44,14 +44,6 @@ fun seedHardcodedData(
             "Compte courant principal pour les dépenses du quotidien et les prélèvements automatiques mensuels.",
         ),
     )
-    val savings = Account(
-        id = AccountId(Uuid.random()),
-        name = AccountName("Livret A (Sécurité)"),
-        type = AccountType.SAVINGS,
-        currency = eur,
-        createdAt = now.minus(400, ChronoUnit.DAYS),
-        description = AccountDescription.of("Épargne de précaution"),
-    )
     val cash = Account(
         id = AccountId(Uuid.random()),
         name = AccountName("Portefeuille Espèces"),
@@ -59,16 +51,8 @@ fun seedHardcodedData(
         currency = eur,
         createdAt = now.minus(200, ChronoUnit.DAYS),
     )
-    val envelope = Account(
-        id = AccountId(Uuid.random()),
-        name = AccountName("Enveloppe Projets"),
-        type = AccountType.SAVINGS,
-        currency = eur,
-        createdAt = now.minus(90, ChronoUnit.DAYS),
-        description = AccountDescription.of("Vacances & Loisirs"),
-    )
 
-    listOf(checking, savings, cash, envelope).forEach(accountRepository::save)
+    listOf(checking, cash).forEach(accountRepository::save)
 
     fun deposit(accountId: AccountId, amountCents: Long, date: Instant)
     {
@@ -125,53 +109,51 @@ fun seedHardcodedData(
         )
     }
 
+    fun ago(days: Long, hours: Long = 0): Instant =
+        now.minus(days, ChronoUnit.DAYS).minus(hours, ChronoUnit.HOURS)
+
+    val income = RecordableTransactionCategory.INCOME
+    val expense = RecordableTransactionCategory.EXPENSE
+
     // Compte Courant: balance built entirely from its recent recorded activity (no opening
-    // deposit), so it doubles as the "recent transactions" example on the accounts screen.
-    recorded(
-        checking.id,
-        245000,
-        RecordableTransactionCategory.INCOME,
-        IncomeSubcategory.SALARY,
-        "Salaire",
-        now.minus(5, ChronoUnit.DAYS)
-    )
-    recorded(
-        checking.id,
-        18000,
-        RecordableTransactionCategory.EXPENSE,
-        ExpenseSubcategory.GROCERIES,
-        "Courses",
-        now.minus(4, ChronoUnit.DAYS)
-    )
-    recorded(
-        checking.id,
-        7025,
-        RecordableTransactionCategory.EXPENSE,
-        ExpenseSubcategory.FUEL,
-        "Essence",
-        now.minus(3, ChronoUnit.DAYS)
-    )
-    recorded(
-        checking.id,
-        5950,
-        RecordableTransactionCategory.EXPENSE,
-        ExpenseSubcategory.HAIRDRESSER,
-        "Coiffeur",
-        now.minus(2, ChronoUnit.DAYS)
-    )
+    // deposit), so it doubles as the "recent transactions" example on the accounts screen. Two
+    // months of a typical routine: monthly salary and rent, weekly groceries, fuel, small outings.
+    recorded(checking.id, 460, expense, ExpenseSubcategory.GROCERIES, "Boulangerie", ago(0, 2))
+    recorded(checking.id, 3800, expense, null, "Restaurant", ago(1, 5))
+    recorded(checking.id, 5950, expense, ExpenseSubcategory.HAIRDRESSER, "Coiffeur", ago(2))
+    recorded(checking.id, 7025, expense, ExpenseSubcategory.FUEL, "Essence", ago(3))
+    recorded(checking.id, 18000, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(4))
+    recorded(checking.id, 245000, income, IncomeSubcategory.SALARY, "Salaire", ago(5))
+    recorded(checking.id, 6435, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(6))
+    recorded(checking.id, 1399, expense, null, "Abonnement streaming", ago(7))
+    recorded(checking.id, 2640, income, IncomeSubcategory.REFUND, "Remboursement mutuelle", ago(8))
+    recorded(checking.id, 5210, expense, ExpenseSubcategory.FUEL, "Essence", ago(9))
+    recorded(checking.id, 1780, expense, null, "Pharmacie", ago(11))
+    recorded(checking.id, 9275, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(12))
+    recorded(checking.id, 2400, expense, null, "Cinéma", ago(14))
+    recorded(checking.id, 72000, expense, null, "Loyer", ago(16))
+    recorded(checking.id, 7820, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(20))
+    recorded(checking.id, 5000, income, IncomeSubcategory.GIFT, "Cadeau de Mamie", ago(23))
+    recorded(checking.id, 6140, expense, ExpenseSubcategory.FUEL, "Essence", ago(25))
+    recorded(checking.id, 1999, expense, null, "Abonnement téléphone", ago(27))
+    recorded(checking.id, 10560, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(29))
+    recorded(checking.id, 72000, expense, null, "Loyer", ago(31))
+    recorded(checking.id, 245000, income, IncomeSubcategory.SALARY, "Salaire", ago(35))
+    recorded(checking.id, 8890, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(38))
+    recorded(checking.id, 5500, expense, ExpenseSubcategory.HAIRDRESSER, "Coiffeur", ago(40))
+    recorded(checking.id, 4875, expense, ExpenseSubcategory.FUEL, "Essence", ago(42))
+    recorded(checking.id, 4650, expense, null, "Restaurant", ago(45))
 
-    // Livret A / Enveloppe Projets: just their starting capital, no recent movement.
-    deposit(savings.id, 240000, now.minus(400, ChronoUnit.DAYS))
-    deposit(envelope.id, 35000, now.minus(90, ChronoUnit.DAYS))
-
-    // Portefeuille Espèces: an opening float plus a recent cash withdrawal from Compte Courant,
-    // modeled as a transfer (not an expense — the money isn't spent, just moved).
-    deposit(cash.id, 10550, now.minus(200, ChronoUnit.DAYS))
-    transferred(
-        checking.id,
-        cash.id,
-        2000,
-        "Retrait espèces",
-        now.minus(1, ChronoUnit.DAYS)
-    )
+    // Portefeuille Espèces: an opening float, two cash withdrawals from Compte Courant (modeled
+    // as transfers, not expenses — the money isn't spent, just moved) and small everyday spending.
+    deposit(cash.id, 10550, ago(200))
+    transferred(checking.id, cash.id, 4000, "Retrait espèces", ago(30))
+    transferred(checking.id, cash.id, 2000, "Retrait espèces", ago(1))
+    recorded(cash.id, 1240, expense, ExpenseSubcategory.GROCERIES, "Marché", ago(2))
+    recorded(cash.id, 350, expense, null, "Café", ago(5))
+    recorded(cash.id, 600, expense, null, "Parking", ago(9))
+    recorded(cash.id, 820, expense, ExpenseSubcategory.GROCERIES, "Boulangerie", ago(13))
+    recorded(cash.id, 500, expense, null, "Pourboire", ago(19))
+    recorded(cash.id, 3000, income, IncomeSubcategory.REFUND, "Remboursement ami", ago(21))
+    recorded(cash.id, 1580, expense, ExpenseSubcategory.GROCERIES, "Marché", ago(26))
 }

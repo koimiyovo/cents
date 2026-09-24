@@ -95,7 +95,7 @@
     <string name="transactions_net_label">🐷 Solde net</string>
     <string name="transactions_search_placeholder">Rechercher une transaction…</string>
     <string name="transactions_all_accounts">Tous les comptes</string>
-    <string name="transactions_filter_all">Toutes</string>
+    <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
     <string name="transactions_period_7_days">7 derniers jours</string>
     <string name="transactions_period_30_days">30 derniers jours</string>
     <string name="transactions_period_all_time">Tout l\'historique</string>
@@ -124,6 +124,7 @@
     <string name="transaction_form_account_label">Compte</string>
     <string name="transaction_form_account_from_label">Depuis</string>
     <string name="transaction_form_account_to_label">Vers</string>
+    <string name="transaction_form_account_placeholder">Choisir un compte</string>
     <string name="transaction_form_no_active_account">Aucun compte actif : créez d\'abord un compte.</string>
     <string name="transaction_form_more_details">Plus de détails</string>
     <string name="transaction_form_less_details">Moins de détails</string>
@@ -143,7 +144,7 @@
     <string name="transaction_form_date_cancel">Annuler</string>
     <string name="transaction_form_failure_account_not_found">Ce compte n\'existe plus.</string>
     <string name="transaction_form_failure_archived">Ce compte est archivé : il ne peut plus recevoir de transaction.</string>
-    <string name="transaction_form_add_content_description">Ajouter une transaction</string>
+    <string name="transaction_form_add_label">Transaction</string>
 
     <!-- Account form -->
     <string name="account_form_title">Nouveau compte</string>

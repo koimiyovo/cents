@@ -126,12 +126,35 @@ data class TransactionFormState(
         return if (day(zone) == now.atZone(zone).toLocalDate()) copy(date = now) else this
     }
 
-    /** Changes the type, keeping everything typed except a subcategory the new type can't take. */
+    /**
+     * Changes the type, keeping everything typed except what the new type can't take: a
+     * subcategory of the wrong kind, and a transfer destination equal to the chosen account (the
+     * form never lets one pick the same account twice, but a destination typed earlier may have
+     * become the account since).
+     */
     fun withType(type: TransactionFormType): TransactionFormState
     {
         val category = type.recordableCategory()
         val keptSubcategory = subcategory?.takeIf { category != null && category.accepts(it) }
-        return copy(type = type, subcategory = keptSubcategory)
+        val keptDestination = toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
+        return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination)
+    }
+
+    /**
+     * Accounts a transfer can leave from: every selectable one except the chosen destination — a
+     * transfer to the same account is meaningless, so it isn't offered rather than rejected later.
+     * Any other type has no destination and offers them all.
+     */
+    fun sourceChoices(selectable: List<Account>): List<Account>
+    {
+        if (type != TransactionFormType.TRANSFER) return selectable
+        return selectable.filter { it.id != toAccountId }
+    }
+
+    /** Accounts a transfer can go to: every selectable one except the chosen source. */
+    fun destinationChoices(selectable: List<Account>): List<Account>
+    {
+        return selectable.filter { it.id != accountId }
     }
 }
 

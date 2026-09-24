@@ -179,7 +179,7 @@ fun AccountDetailsScreen(
                 fontSize = 13.sp,
             )
         }
-        SubcategoryChipsRow(
+        SubcategoryFilter(
             palette = palette,
             subcategories = availableSubcategories,
             selected = selectedSubcategory,
