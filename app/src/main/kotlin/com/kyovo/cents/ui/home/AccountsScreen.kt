@@ -27,8 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -76,6 +78,7 @@ fun AccountsScreen(
     onAccountClick: (AccountId) -> Unit,
     onNewAccountClick: () -> Unit,
     onArchiveAccount: (AccountId) -> Unit,
+    onUnarchiveAccount: (AccountId) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -139,18 +142,23 @@ fun AccountsScreen(
         AccountsSectionHeader(palette, count = accounts.size)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             accounts.forEachIndexed { index, account ->
-                SwipeToArchiveBox(
-                    palette = palette,
-                    onArchiveRequest = { pendingArchiveId = account.id.value.toString() },
-                ) {
-                    AccountRow(
-                        account = account,
-                        balanceCents = balanceByAccountId[account.id] ?: 0L,
-                        visible = balancesVisible,
-                        tone = IconTone.entries[index % IconTone.entries.size],
+                // Keyed by account: a swipe state belongs to one account, not to a position in the list.
+                key(account.id) {
+                    SwipeToActionBox(
                         palette = palette,
-                        onClick = { onAccountClick(account.id) },
-                    )
+                        actionLabel = stringResource(R.string.account_details_archive_button),
+                        actionEmoji = "🗄️",
+                        onAction = { pendingArchiveId = account.id.value.toString() },
+                    ) {
+                        AccountRow(
+                            account = account,
+                            balanceCents = balanceByAccountId[account.id] ?: 0L,
+                            visible = balancesVisible,
+                            tone = IconTone.entries[index % IconTone.entries.size],
+                            palette = palette,
+                            onClick = { onAccountClick(account.id) },
+                        )
+                    }
                 }
             }
         }
@@ -163,6 +171,7 @@ fun AccountsScreen(
                 balancesVisible = balancesVisible,
                 firstToneIndex = accounts.size,
                 onAccountClick = onAccountClick,
+                onUnarchiveAccount = onUnarchiveAccount,
             )
         }
     }
@@ -510,34 +519,40 @@ private fun AccountRow(
 }
 
 /**
- * Swiping a row to the right offers to archive it (the same direction as Gmail's "archive"; the
- * opposite one is kept for the edit/delete actions to come). The row never stays swiped: reaching
- * the threshold only asks the question — [onArchiveRequest] opens the confirmation — and the row
- * springs back either way. Views used `ItemTouchHelper` on a RecyclerView for this; Compose has
- * `SwipeToDismissBox`, which is just a wrapper around any content.
+ * Swiping a row to the right triggers [onAction] — "Archiver" on an active account, "Désarchiver"
+ * on an archived one: the same direction as Gmail's "archive", and the same gesture both ways
+ * since the row is just moving between the two lists (the opposite direction is kept for the
+ * edit/delete actions to come). The row never stays swiped: reaching the threshold only calls
+ * [onAction] (which may open a confirmation) and the row springs back either way. Views used
+ * `ItemTouchHelper` on a RecyclerView for this; Compose has `SwipeToDismissBox`, which is just a
+ * wrapper around any content.
  *
  * A gesture can't be discovered by screen-reader users, hence the custom accessibility action; the
- * account's own page has an "Archiver" button too.
+ * account's own page has the same button too.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeToArchiveBox(
+private fun SwipeToActionBox(
     palette: AccountsPalette,
-    onArchiveRequest: () -> Unit,
+    actionLabel: String,
+    actionEmoji: String,
+    onAction: () -> Unit,
     content: @Composable () -> Unit,
 )
 {
+    // The state is created once and keeps the lambda it was given: without this, a row whose slot
+    // got reused for another account (after the list changed) would still act on the old one.
+    val currentOnAction by rememberUpdatedState(onAction)
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { target ->
-            if (target == SwipeToDismissBoxValue.StartToEnd) onArchiveRequest()
+            if (target == SwipeToDismissBoxValue.StartToEnd) currentOnAction()
             false
         },
     )
-    val actionLabel = stringResource(R.string.account_details_archive_button)
     SwipeToDismissBox(
         state = state,
         modifier = Modifier.semantics {
-            customActions = listOf(CustomAccessibilityAction(actionLabel) { onArchiveRequest(); true })
+            customActions = listOf(CustomAccessibilityAction(actionLabel) { onAction(); true })
         },
         enableDismissFromEndToStart = false,
         backgroundContent = {
@@ -553,7 +568,7 @@ private fun SwipeToArchiveBox(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "🗄️ $actionLabel",
+                        text = "$actionEmoji $actionLabel",
                         color = palette.heroOnCardPrimary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -579,6 +594,7 @@ private fun ArchivedAccountsSection(
     balancesVisible: Boolean,
     firstToneIndex: Int,
     onAccountClick: (AccountId) -> Unit,
+    onUnarchiveAccount: (AccountId) -> Unit,
 )
 {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -608,15 +624,25 @@ private fun ArchivedAccountsSection(
         if (expanded)
         {
             accounts.forEachIndexed { index, account ->
-                AccountRow(
-                    account = account,
-                    balanceCents = balanceByAccountId[account.id] ?: 0L,
-                    visible = balancesVisible,
-                    tone = IconTone.entries[(firstToneIndex + index) % IconTone.entries.size],
-                    palette = palette,
-                    onClick = { onAccountClick(account.id) },
-                    archived = true,
-                )
+                // No confirmation, unlike archiving: nothing is lost, and archiving again undoes it.
+                key(account.id) {
+                    SwipeToActionBox(
+                        palette = palette,
+                        actionLabel = stringResource(R.string.account_details_unarchive_button),
+                        actionEmoji = "↩️",
+                        onAction = { onUnarchiveAccount(account.id) },
+                    ) {
+                        AccountRow(
+                            account = account,
+                            balanceCents = balanceByAccountId[account.id] ?: 0L,
+                            visible = balancesVisible,
+                            tone = IconTone.entries[(firstToneIndex + index) % IconTone.entries.size],
+                            palette = palette,
+                            onClick = { onAccountClick(account.id) },
+                            archived = true,
+                        )
+                    }
+                }
             }
         }
     }

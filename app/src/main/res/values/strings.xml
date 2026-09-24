@@ -106,6 +106,10 @@
     <!-- Account details screen -->
     <string name="account_details_back">Retour</string>
     <string name="account_details_archive_button">Archiver</string>
+    <string name="account_details_unarchive_button">Désarchiver</string>
+    <string name="account_unarchive_error_title">Désarchivage impossible</string>
+    <string name="account_unarchive_error_body">Un compte actif porte déjà le nom « %1$s ». Ce compte ne pourra être désarchivé que lorsque ce nom sera de nouveau libre.</string>
+    <string name="account_unarchive_error_ok">OK</string>
     <string name="account_archive_dialog_title">Archiver ce compte ?</string>
     <string name="account_archive_dialog_body">« %1$s » disparaîtra de la liste des comptes et ne pourra plus recevoir de transactions. Son historique est conservé, et le compte reste consultable dans « Comptes archivés ».</string>
     <string name="account_archive_dialog_confirm">Archiver</string>

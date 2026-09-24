@@ -36,6 +36,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.data.DataRevision
+import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
+import com.kyovo.cents.domain.exception.AccountNotArchivedException
+import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
@@ -43,6 +46,7 @@ import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
@@ -64,6 +68,7 @@ fun HomeScreen(
     listAccounts: ListAccountsUseCase,
     listArchivedAccounts: ListArchivedAccountsUseCase,
     archiveAccount: ArchiveAccountUseCase,
+    unarchiveAccount: UnarchiveAccountUseCase,
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
@@ -85,8 +90,34 @@ fun HomeScreen(
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
 
+    // Archiving and unarchiving are idempotent from the user's side: a gesture that fires twice,
+    // or on an account that already is in the wanted state, must not crash the app — the wanted
+    // state is reached either way, so there is nothing to report.
     val archive: (AccountId) -> Unit = { id ->
-        archiveAccount.archive(id)
+        try
+        {
+            archiveAccount.archive(id)
+        } catch (e: AccountAlreadyArchivedException)
+        {
+            // already archived: nothing to do
+        }
+        dataRevision.bump()
+    }
+    // The name of the account whose unarchiving was refused, while its dialog is up. Refusals
+    // come from one rule only: an active account took the name in the meantime. Shared by the
+    // details button and the list swipe, hence held here rather than in either screen.
+    var unarchiveBlockedName by rememberSaveable { mutableStateOf<String?>(null) }
+    val unarchive: (AccountId) -> Unit = { id ->
+        try
+        {
+            unarchiveAccount.unarchive(id)
+        } catch (e: AccountNotArchivedException)
+        {
+            // already active: nothing to do
+        } catch (e: DuplicateAccountNameException)
+        {
+            unarchiveBlockedName = getAccount.get(id)?.name?.value
+        }
         dataRevision.bump()
     }
 
@@ -124,6 +155,8 @@ fun HomeScreen(
                         archive(openedAccountId)
                         openedAccountUuid = null
                     },
+                    // Stays on the page: the account is active again, so the "+" button reappears.
+                    onUnarchive = { unarchive(openedAccountId) },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
@@ -152,6 +185,7 @@ fun HomeScreen(
                             onAccountClick = { openedAccountUuid = it.value.toString() },
                             onNewAccountClick = accountFormViewModel::open,
                             onArchiveAccount = archive,
+                            onUnarchiveAccount = unarchive,
                             revision = revision,
                         )
                         HomeTab.Transactions ->
@@ -173,6 +207,10 @@ fun HomeScreen(
                 },
             )
         }
+    }
+
+    unarchiveBlockedName?.let { name ->
+        UnarchiveBlockedDialog(palette = palette, accountName = name, onDismiss = { unarchiveBlockedName = null })
     }
 
     // Outside the Column: the sheet floats over whichever screen (tabs or account details) is shown.
