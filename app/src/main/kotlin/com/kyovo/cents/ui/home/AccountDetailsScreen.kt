@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
@@ -67,6 +68,7 @@ fun AccountDetailsScreen(
     onBack: () -> Unit,
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -154,6 +156,7 @@ fun AccountDetailsScreen(
             palette = palette,
             account = account,
             balanceCents = balanceCents,
+            onEditClick = onEdit,
             onArchiveClick = { showArchiveConfirmation = true },
             // No confirmation: unarchiving destroys nothing and is undone by archiving again.
             onUnarchiveClick = onUnarchive,
@@ -252,6 +255,7 @@ private fun AccountSummaryCard(
     palette: AccountsPalette,
     account: Account,
     balanceCents: Long,
+    onEditClick: () -> Unit,
     onArchiveClick: () -> Unit,
     onUnarchiveClick: () -> Unit,
 )
@@ -277,21 +281,24 @@ private fun AccountSummaryCard(
                 color = palette.heroOnCardSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // Takes what the buttons leave, so a long label can't push them off the card.
+                modifier = Modifier.weight(1f),
             )
-            // The corner offers the one action that makes sense in the account's current state.
-            Text(
-                text = stringResource(
-                    if (isArchived) R.string.account_details_unarchive_button else R.string.account_details_archive_button,
-                ),
-                color = palette.heroOnCardPrimary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(palette.heroPillBackground)
-                    .clickable(onClick = if (isArchived) onUnarchiveClick else onArchiveClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            )
+            Spacer(Modifier.width(8.dp))
+            // The card's actions: the same edit as the row's left swipe, then the one move that
+            // makes sense in the account's current state.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CardActionPill(palette, stringResource(R.string.account_edit_action), onEditClick)
+                CardActionPill(
+                    palette = palette,
+                    label = stringResource(
+                        if (isArchived) R.string.account_details_unarchive_button else R.string.account_details_archive_button,
+                    ),
+                    onClick = if (isArchived) onUnarchiveClick else onArchiveClick,
+                )
+            }
         }
         Column {
             Text(
@@ -311,6 +318,22 @@ private fun AccountSummaryCard(
             Text(text = it.value, color = palette.heroOnCardSecondary, fontSize = 13.sp)
         }
     }
+}
+
+@Composable
+private fun CardActionPill(palette: AccountsPalette, label: String, onClick: () -> Unit)
+{
+    Text(
+        text = label,
+        color = palette.heroOnCardPrimary,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(palette.heroPillBackground)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 internal fun accountTypeLabelRes(type: AccountType): Int = when (type)
