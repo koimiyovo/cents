@@ -186,6 +186,7 @@ fun HomeScreen(
                             onNewAccountClick = accountFormViewModel::open,
                             onArchiveAccount = archive,
                             onUnarchiveAccount = unarchive,
+                            onEditAccount = accountFormViewModel::openForEdit,
                             revision = revision,
                         )
                         HomeTab.Transactions ->

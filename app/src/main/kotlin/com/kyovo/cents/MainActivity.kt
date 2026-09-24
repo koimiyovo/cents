@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
             initializer {
                 AccountFormViewModel(
                     openAccount = appContainer.openAccount,
+                    updateAccount = appContainer.updateAccount,
                     dataRevision = appContainer.dataRevision,
                 )
             }

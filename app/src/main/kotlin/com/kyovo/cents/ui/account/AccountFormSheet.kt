@@ -88,7 +88,7 @@ fun AccountFormSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                text = stringResource(R.string.account_form_title),
+                text = stringResource(if (form.isEditing) R.string.account_form_title_edit else R.string.account_form_title),
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -116,7 +116,8 @@ fun AccountFormSheet(
 
             TypePicker(palette, form.type) { onFormChange(form.copy(type = it)) }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The opening balance is only asked for when opening: afterwards it is a transaction.
+            if (!form.isEditing) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionLabel(palette, stringResource(R.string.account_form_initial_amount_label))
                 AmountField(
                     palette = palette,
@@ -141,7 +142,11 @@ fun AccountFormSheet(
                 singleLine = false,
             )
 
-            SubmitButton(palette, stringResource(R.string.account_form_submit), onSubmit)
+            SubmitButton(
+                palette,
+                stringResource(if (form.isEditing) R.string.account_form_submit_edit else R.string.account_form_submit),
+                onSubmit,
+            )
         }
     }
 }

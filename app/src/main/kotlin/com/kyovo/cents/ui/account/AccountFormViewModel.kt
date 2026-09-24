@@ -3,7 +3,9 @@ package com.kyovo.cents.ui.account
 import androidx.lifecycle.ViewModel
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
+import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
+import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,11 +25,12 @@ data class AccountFormUiState(
 )
 
 /**
- * Holds the "new account" form across configuration changes, the same way
+ * Holds the account form (new account, or editing one) across configuration changes, the same way
  * [com.kyovo.cents.ui.transaction.TransactionFormViewModel] does for transactions.
  */
 class AccountFormViewModel(
     private val openAccount: OpenAccountUseCase,
+    private val updateAccount: UpdateAccountUseCase,
     private val dataRevision: DataRevision,
 ) : ViewModel()
 {
@@ -38,6 +41,12 @@ class AccountFormViewModel(
     fun open()
     {
         _uiState.value = AccountFormUiState(form = AccountFormState())
+    }
+
+    /** Opens the form pre-filled with [account]'s values, to change them. */
+    fun openForEdit(account: Account)
+    {
+        _uiState.value = AccountFormUiState(form = AccountFormState.editing(account))
     }
 
     fun update(form: AccountFormState)
@@ -57,20 +66,23 @@ class AccountFormViewModel(
         when (val submission = form.submit())
         {
             is AccountFormSubmission.Invalid -> _uiState.update { it.copy(showErrors = true) }
-            is AccountFormSubmission.Open    ->
-            {
-                try
-                {
-                    openAccount.open(submission.command)
-                } catch (_: DuplicateAccountNameException)
-                {
-                    _uiState.update { it.copy(failure = AccountSubmitFailure.DUPLICATE_NAME) }
-                    return
-                }
-                // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-                dataRevision.bump()
-                close()
-            }
+            is AccountFormSubmission.Open    -> save { openAccount.open(submission.command) }
+            is AccountFormSubmission.Update  -> save { updateAccount.update(submission.command) }
         }
+    }
+
+    private fun save(write: () -> Unit)
+    {
+        try
+        {
+            write()
+        } catch (_: DuplicateAccountNameException)
+        {
+            _uiState.update { it.copy(failure = AccountSubmitFailure.DUPLICATE_NAME) }
+            return
+        }
+        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
+        dataRevision.bump()
+        close()
     }
 }

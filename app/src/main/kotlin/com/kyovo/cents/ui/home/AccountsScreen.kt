@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.home
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,10 +10,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,16 +26,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -43,12 +49,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
@@ -65,6 +74,9 @@ import com.kyovo.cents.ui.common.IconTone
 import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import java.time.LocalTime
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /** Bottom padding of the scrolling screens, so the last item can scroll clear of the floating "+" button. */
 internal val FAB_CLEARANCE = 88.dp
@@ -79,6 +91,7 @@ fun AccountsScreen(
     onNewAccountClick: () -> Unit,
     onArchiveAccount: (AccountId) -> Unit,
     onUnarchiveAccount: (AccountId) -> Unit,
+    onEditAccount: (Account) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -94,6 +107,9 @@ fun AccountsScreen(
     // The account waiting for the user's yes/no after a swipe, kept as its UUID string (AccountId
     // isn't Saveable) so the question survives a rotation.
     var pendingArchiveId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The row whose "Modifier" button is showing (a left swipe leaves it open), by UUID string
+    // for the same reason. One at a time: opening a row closes the previous one.
+    var revealedId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
     val balanceByAccountId = remember(accounts, archivedAccounts, revision) {
@@ -144,21 +160,20 @@ fun AccountsScreen(
             accounts.forEachIndexed { index, account ->
                 // Keyed by account: a swipe state belongs to one account, not to a position in the list.
                 key(account.id) {
-                    SwipeToActionBox(
+                    val idText = account.id.value.toString()
+                    AccountListRow(
+                        account = account,
+                        balanceCents = balanceByAccountId[account.id] ?: 0L,
+                        visible = balancesVisible,
+                        tone = IconTone.entries[index % IconTone.entries.size],
                         palette = palette,
-                        actionLabel = stringResource(R.string.account_details_archive_button),
-                        actionEmoji = "🗄️",
-                        onAction = { pendingArchiveId = account.id.value.toString() },
-                    ) {
-                        AccountRow(
-                            account = account,
-                            balanceCents = balanceByAccountId[account.id] ?: 0L,
-                            visible = balancesVisible,
-                            tone = IconTone.entries[index % IconTone.entries.size],
-                            palette = palette,
-                            onClick = { onAccountClick(account.id) },
-                        )
-                    }
+                        archived = false,
+                        revealed = revealedId == idText,
+                        onRevealedChange = { open -> revealedId = revealedIdAfter(revealedId, idText, open) },
+                        onOpen = { revealedId = null; onAccountClick(account.id) },
+                        onSwipeRight = { pendingArchiveId = idText },
+                        onEdit = { revealedId = null; onEditAccount(account) },
+                    )
                 }
             }
         }
@@ -172,6 +187,9 @@ fun AccountsScreen(
                 firstToneIndex = accounts.size,
                 onAccountClick = onAccountClick,
                 onUnarchiveAccount = onUnarchiveAccount,
+                onEditAccount = onEditAccount,
+                revealedId = revealedId,
+                onRevealedIdChange = { revealedId = it },
             )
         }
     }
@@ -518,68 +536,207 @@ private fun AccountRow(
     }
 }
 
+/** The id to keep as "the row showing its buttons" once [id]'s row asks to open or close. */
+internal fun revealedIdAfter(current: String?, id: String, open: Boolean): String?
+{
+    return if (open) id else current.takeUnless { it == id }
+}
+
 /**
- * Swiping a row to the right triggers [onAction] — "Archiver" on an active account, "Désarchiver"
- * on an archived one: the same direction as Gmail's "archive", and the same gesture both ways
- * since the row is just moving between the two lists (the opposite direction is kept for the
- * edit/delete actions to come). The row never stays swiped: reaching the threshold only calls
- * [onAction] (which may open a confirmation) and the row springs back either way. Views used
- * `ItemTouchHelper` on a RecyclerView for this; Compose has `SwipeToDismissBox`, which is just a
- * wrapper around any content.
- *
- * A gesture can't be discovered by screen-reader users, hence the custom accessibility action; the
- * account's own page has the same button too.
+ * One account in a list: the row itself, pulled aside by a swipe. Right = [onSwipeRight] (archive
+ * or unarchive), left = the "Modifier" button.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeToActionBox(
+private fun AccountListRow(
+    account: Account,
+    balanceCents: Long,
+    visible: Boolean,
+    tone: IconTone,
     palette: AccountsPalette,
-    actionLabel: String,
-    actionEmoji: String,
-    onAction: () -> Unit,
+    archived: Boolean,
+    revealed: Boolean,
+    onRevealedChange: (Boolean) -> Unit,
+    onOpen: () -> Unit,
+    onSwipeRight: () -> Unit,
+    onEdit: () -> Unit,
+)
+{
+    SwipeableRow(
+        palette = palette,
+        revealed = revealed,
+        onRevealedChange = onRevealedChange,
+        rightLabel = stringResource(
+            if (archived) R.string.account_details_unarchive_button else R.string.account_details_archive_button,
+        ),
+        rightEmoji = if (archived) "↩️" else "🗄️",
+        onSwipeRight = onSwipeRight,
+        onEdit = onEdit,
+    ) {
+        AccountRow(
+            account = account,
+            balanceCents = balanceCents,
+            visible = visible,
+            tone = tone,
+            palette = palette,
+            // A tap on a row that is showing its buttons only closes them.
+            onClick = { if (revealed) onRevealedChange(false) else onOpen() },
+            archived = archived,
+        )
+    }
+}
+
+/** How far a row slides to show its "Modifier" button: the button, plus a small gap. */
+private val EDIT_PANEL_WIDTH = 104.dp
+private val EDIT_PANEL_GAP = 8.dp
+
+/**
+ * A row that can be pulled sideways, in both directions:
+ *
+ *  - **right**: past a threshold, [onSwipeRight] is called and the row springs back — it never
+ *    stays there (the action may open a confirmation, or move the row to the other list);
+ *  - **left**: the row slides aside and *stays* open ([revealed]) on a "Modifier" button, until it
+ *    is closed by a tap, by another swipe, or by opening another row.
+ *
+ * Material's `SwipeToDismissBox` only knows the first behaviour (it dismisses, it can't rest
+ * half-open), so this is built on the plain `draggable` modifier: one offset, driven by the finger
+ * and then animated to wherever it should rest. Views had `ItemTouchHelper` for the first kind and
+ * a custom `ViewDragHelper` (or a library) for the second.
+ *
+ * A gesture can't be discovered by screen-reader users, hence the custom accessibility actions.
+ */
+@Composable
+private fun SwipeableRow(
+    palette: AccountsPalette,
+    revealed: Boolean,
+    onRevealedChange: (Boolean) -> Unit,
+    rightLabel: String,
+    rightEmoji: String,
+    onSwipeRight: () -> Unit,
+    onEdit: () -> Unit,
     content: @Composable () -> Unit,
 )
 {
-    // The state is created once and keeps the lambda it was given: without this, a row whose slot
-    // got reused for another account (after the list changed) would still act on the old one.
-    val currentOnAction by rememberUpdatedState(onAction)
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { target ->
-            if (target == SwipeToDismissBoxValue.StartToEnd) currentOnAction()
-            false
-        },
-    )
-    SwipeToDismissBox(
-        state = state,
-        modifier = Modifier.semantics {
-            customActions = listOf(CustomAccessibilityAction(actionLabel) { onAction(); true })
-        },
-        enableDismissFromEndToStart = false,
-        backgroundContent = {
-            // Drawn only while dragging, or its colour would show through the row's rounded corners.
-            if (state.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
-            {
-                Row(
+    val density = LocalDensity.current
+    val revealPx = with(density) { (EDIT_PANEL_WIDTH + EDIT_PANEL_GAP).toPx() }
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    var offsetPx by remember { mutableFloatStateOf(0f) }
+    var settleJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
+    // The drag callbacks and the accessibility actions must always call the *current* lambdas.
+    val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
+    val currentOnRevealedChange by rememberUpdatedState(onRevealedChange)
+    val currentOnEdit by rememberUpdatedState(onEdit)
+
+    fun settleTo(target: Float)
+    {
+        settleJob?.cancel()
+        settleJob = scope.launch { animate(offsetPx, target) { value, _ -> offsetPx = value } }
+    }
+
+    // Follows the hoisted state when it changes from outside: another row opened, a tap closed it.
+    LaunchedEffect(revealed) { settleTo(if (revealed) -revealPx else 0f) }
+
+    val dragState = rememberDraggableState { delta ->
+        offsetPx = (offsetPx + delta).coerceIn(-revealPx * 1.1f, rowWidthPx * 0.6f)
+    }
+    val editLabel = stringResource(R.string.account_edit_action)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onSizeChanged { rowWidthPx = it.width }
+            .semantics {
+                customActions = listOf(
+                    CustomAccessibilityAction(rightLabel) { currentOnSwipeRight(); true },
+                    CustomAccessibilityAction(editLabel) { currentOnEdit(); true },
+                )
+            },
+    ) {
+        // Behind the row, and only while it is pulled aside: at rest their colour would show
+        // through the row's rounded corners.
+        if (offsetPx > 0f)
+        {
+            Row(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(palette.iconToneGreen)
+                    .padding(start = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "$rightEmoji $rightLabel",
+                    color = palette.heroOnCardPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+        if (offsetPx < 0f)
+        {
+            Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .width(EDIT_PANEL_WIDTH)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(palette.iconToneGreen)
-                        .padding(start = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .background(palette.badgeBackground)
+                        .clickable { currentOnEdit() },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "$actionEmoji $actionLabel",
-                        color = palette.heroOnCardPrimary,
+                        text = "✏️ $editLabel",
+                        color = palette.textPrimary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
-        },
-    ) {
-        content()
+        }
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetPx.roundToInt(), 0) }
+                .draggable(
+                    state = dragState,
+                    orientation = Orientation.Horizontal,
+                    onDragStarted = { settleJob?.cancel() },
+                    onDragStopped = { velocity ->
+                        when
+                        {
+                            offsetPx > rowWidthPx * SWIPE_RIGHT_THRESHOLD ->
+                            {
+                                currentOnSwipeRight()
+                                currentOnRevealedChange(false)
+                                settleTo(0f)
+                            }
+                            // A quick flick counts as much as a long drag.
+                            velocity > FLING_VELOCITY ->
+                            {
+                                currentOnRevealedChange(false)
+                                settleTo(0f)
+                            }
+                            offsetPx < -revealPx / 2f || (velocity < -FLING_VELOCITY && offsetPx < 0f) ->
+                            {
+                                currentOnRevealedChange(true)
+                                settleTo(-revealPx)
+                            }
+                            else ->
+                            {
+                                currentOnRevealedChange(false)
+                                settleTo(0f)
+                            }
+                        }
+                    },
+                ),
+        ) {
+            content()
+        }
     }
 }
+
+/** Share of the row's width a right swipe must cross before it triggers its action. */
+private const val SWIPE_RIGHT_THRESHOLD = 0.35f
+private const val FLING_VELOCITY = 1200f
 
 /**
  * A single quiet line, "Comptes archivés (N)", that unfolds the archived accounts in place. Kept
@@ -595,6 +752,9 @@ private fun ArchivedAccountsSection(
     firstToneIndex: Int,
     onAccountClick: (AccountId) -> Unit,
     onUnarchiveAccount: (AccountId) -> Unit,
+    onEditAccount: (Account) -> Unit,
+    revealedId: String?,
+    onRevealedIdChange: (String?) -> Unit,
 )
 {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -626,22 +786,20 @@ private fun ArchivedAccountsSection(
             accounts.forEachIndexed { index, account ->
                 // No confirmation, unlike archiving: nothing is lost, and archiving again undoes it.
                 key(account.id) {
-                    SwipeToActionBox(
+                    val idText = account.id.value.toString()
+                    AccountListRow(
+                        account = account,
+                        balanceCents = balanceByAccountId[account.id] ?: 0L,
+                        visible = balancesVisible,
+                        tone = IconTone.entries[(firstToneIndex + index) % IconTone.entries.size],
                         palette = palette,
-                        actionLabel = stringResource(R.string.account_details_unarchive_button),
-                        actionEmoji = "↩️",
-                        onAction = { onUnarchiveAccount(account.id) },
-                    ) {
-                        AccountRow(
-                            account = account,
-                            balanceCents = balanceByAccountId[account.id] ?: 0L,
-                            visible = balancesVisible,
-                            tone = IconTone.entries[(firstToneIndex + index) % IconTone.entries.size],
-                            palette = palette,
-                            onClick = { onAccountClick(account.id) },
-                            archived = true,
-                        )
-                    }
+                        archived = true,
+                        revealed = revealedId == idText,
+                        onRevealedChange = { open -> onRevealedIdChange(revealedIdAfter(revealedId, idText, open)) },
+                        onOpen = { onRevealedIdChange(null); onAccountClick(account.id) },
+                        onSwipeRight = { onUnarchiveAccount(account.id) },
+                        onEdit = { onRevealedIdChange(null); onEditAccount(account) },
+                    )
                 }
             }
         }

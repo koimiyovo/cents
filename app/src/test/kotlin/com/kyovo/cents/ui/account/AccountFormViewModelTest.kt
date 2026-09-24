@@ -3,13 +3,19 @@ package com.kyovo.cents.ui.account
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.domain.model.AccountDescription
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
+import com.kyovo.cents.domain.port.input.UpdateAccountCommand
+import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.Currency
 import kotlin.uuid.Uuid
 
 /** Records what it is asked to open; can be told to refuse instead. */
@@ -26,11 +32,35 @@ private class FakeOpenAccount : OpenAccountUseCase
     }
 }
 
+/** Records what it is asked to update; can be told to refuse instead. */
+private class FakeUpdateAccount : UpdateAccountUseCase
+{
+    val commands = mutableListOf<UpdateAccountCommand>()
+    var failWith: RuntimeException? = null
+
+    override fun update(command: UpdateAccountCommand): Account
+    {
+        failWith?.let { throw it }
+        commands += command
+        return command.toAccount(anExistingAccount(command.id))
+    }
+}
+
+private fun anExistingAccount(id: AccountId = AccountId(Uuid.random())) = Account(
+    id = id,
+    name = AccountName("Livret A"),
+    type = AccountType.SAVINGS,
+    currency = AccountCurrency(Currency.getInstance("EUR")),
+    createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+    description = AccountDescription.of("Épargne de précaution"),
+)
+
 class AccountFormViewModelTest
 {
     private val openAccount = FakeOpenAccount()
+    private val updateAccount = FakeUpdateAccount()
     private val revision = DataRevision()
-    private val viewModel = AccountFormViewModel(openAccount, revision)
+    private val viewModel = AccountFormViewModel(openAccount, updateAccount, revision)
 
     private val form get() = viewModel.uiState.value.form
 
@@ -146,5 +176,93 @@ class AccountFormViewModelTest
 
         // THEN
         assertThat(form).isEqualTo(AccountFormState())
+    }
+
+    @Test
+    fun `opening for edit pre-fills the form with the account's values`()
+    {
+        // GIVEN
+        val account = anExistingAccount()
+
+        // WHEN
+        viewModel.openForEdit(account)
+
+        // THEN
+        assertThat(form).isEqualTo(AccountFormState.editing(account))
+        assertThat(form!!.isEditing).isTrue()
+        assertThat(viewModel.uiState.value.showErrors).isFalse()
+    }
+
+    @Test
+    fun `a valid edit updates the account instead of opening one, refreshes the lists and closes`()
+    {
+        // GIVEN
+        val account = anExistingAccount()
+        viewModel.openForEdit(account)
+        viewModel.update(form!!.copy(name = "Livret B", type = AccountType.CHECKING))
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(openAccount.commands).isEmpty()
+        assertThat(updateAccount.commands).hasSize(1)
+        assertThat(updateAccount.commands.single().id).isEqualTo(account.id)
+        assertThat(updateAccount.commands.single().name).isEqualTo(AccountName("Livret B"))
+        assertThat(updateAccount.commands.single().type).isEqualTo(AccountType.CHECKING)
+        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `an edit with a blank name updates nothing, stays open and starts showing its errors`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingAccount())
+        viewModel.update(form!!.copy(name = "  "))
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(updateAccount.commands).isEmpty()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+        assertThat(form).isNotNull()
+        assertThat(viewModel.uiState.value.showErrors).isTrue()
+    }
+
+    @Test
+    fun `renaming to a name already in use keeps the sheet open and says why`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingAccount())
+        viewModel.update(form!!.copy(name = "Compte courant"))
+        updateAccount.failWith = DuplicateAccountNameException()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(AccountSubmitFailure.DUPLICATE_NAME)
+        assertThat(form).isNotNull()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+    }
+
+    @Test
+    fun `opening a new account after an edit starts from an empty form`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingAccount())
+        viewModel.close()
+
+        // WHEN
+        viewModel.open()
+
+        // THEN
+        assertThat(form).isEqualTo(AccountFormState())
+        assertThat(form!!.isEditing).isFalse()
     }
 }
