@@ -7,11 +7,13 @@ value class AccountName private constructor(val value: String)
 {
     init
     {
-        if (value.isBlank()) throw InvalidAccountNameException()
+        if (value.isBlank() || value.length > MAX_LENGTH) throw InvalidAccountNameException()
     }
 
     companion object
     {
+        const val MAX_LENGTH = 60
+
         operator fun invoke(value: String): AccountName
         {
             return AccountName(value.trim())

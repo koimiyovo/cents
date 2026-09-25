@@ -96,4 +96,28 @@ class CreateSubcategoryServiceTest
         assertThat(repository.saved).hasSize(2)
         assertThat(repository.findById(created.id)).isEqualTo(created)
     }
+
+    // Uniqueness ignores accents as well as case: "Education" and "Éducation" are the same name.
+    @ParameterizedTest
+    @ValueSource(strings = ["Education", "éducation", "EDUCATION", "E\u0301ducation"])
+    fun `throws when a subcategory of the same kind has the same name with other accents`(name: String)
+    {
+        // GIVEN
+        repository.save(aSubcategory(id = existingId, name = SubcategoryName("Éducation")))
+
+        // WHEN / THEN
+        assertThatThrownBy { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
+            .isInstanceOf(DuplicateSubcategoryNameException::class.java)
+    }
+
+    @Test
+    fun `throws when the existing name has no accent and the new one has`()
+    {
+        // GIVEN
+        repository.save(aSubcategory(id = existingId, name = SubcategoryName("Education")))
+
+        // WHEN / THEN
+        assertThatThrownBy { service.create(aCreateSubcategoryCommand(name = SubcategoryName("Éducation"))) }
+            .isInstanceOf(DuplicateSubcategoryNameException::class.java)
+    }
 }
