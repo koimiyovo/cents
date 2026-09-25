@@ -7,7 +7,7 @@ class InMemoryUnitOfWork : UnitOfWork
     var executionCount = 0
         private set
 
-    override fun <T> execute(block: () -> T): T
+    override suspend fun <T> execute(block: suspend () -> T): T
     {
         executionCount++
         return block()

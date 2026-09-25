@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Transaction
 
 interface UpdateTransactionUseCase
 {
-    fun update(command: UpdateTransactionCommand): Transaction
+    suspend fun update(command: UpdateTransactionCommand): Transaction
 }

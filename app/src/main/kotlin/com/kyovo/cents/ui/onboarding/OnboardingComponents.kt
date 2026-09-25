@@ -92,9 +92,9 @@ fun Pill(
         modifier = modifier
             .clip(RoundedCornerShape(50))
             .background(backgroundColor)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
-        Text(text = text, color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(text = text, color = contentColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -109,31 +109,55 @@ fun FeatureRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(palette.surface)
-            .padding(13.dp),
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(46.dp)
                 .clip(CircleShape)
                 .background(palette.toneBackground(tone)),
         )
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(16.dp))
         Column {
             Text(
                 text = title,
                 color = palette.textPrimary,
-                fontSize = 14.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = description,
                 color = palette.textMuted,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
             )
         }
+    }
+}
+
+/**
+ * The one illustration of an onboarding page: an emoji in a big round badge. Deliberately not a mock of
+ * a screen of the app — a drawn copy of a screen goes out of date every time the design changes, and
+ * nothing would tell us.
+ */
+@Composable
+fun PageIcon(
+    icon: String,
+    tone: IconTone,
+    palette: OnboardingPalette,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(112.dp)
+            .clip(CircleShape)
+            .background(palette.toneBackground(tone)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = icon, fontSize = 54.sp)
     }
 }
 

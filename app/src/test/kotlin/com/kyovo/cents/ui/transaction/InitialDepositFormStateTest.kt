@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
-private val DEPOSIT_ID = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
-private val DEPOSIT_ACCOUNT = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+private val DEPOSIT_ID = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
+private val DEPOSIT_ACCOUNT = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
 private val OPENED_AT = Instant.parse("2026-01-01T00:00:00Z")
 
 private fun anOpeningDeposit(cents: Long = 10_000) =

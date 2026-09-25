@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aTransaction
@@ -34,7 +36,7 @@ class UpdateInitialDepositServiceTest
     private val transactionRepository = InMemoryTransactionRepository()
     private val service = UpdateInitialDepositService(transactionRepository)
 
-    private fun givenAnInitialDeposit(amount: Long = 10_000)
+    private suspend fun givenAnInitialDeposit(amount: Long = 10_000)
     {
         transactionRepository.save(
             aTransaction(
@@ -48,7 +50,7 @@ class UpdateInitialDepositServiceTest
     }
 
     @Test
-    fun `changes the amount of the initial deposit`()
+    fun `changes the amount of the initial deposit`() = runTest()
     {
         // GIVEN
         givenAnInitialDeposit(amount = 10_000)
@@ -62,7 +64,7 @@ class UpdateInitialDepositServiceTest
     }
 
     @Test
-    fun `changes nothing but the amount`()
+    fun `changes nothing but the amount`() = runTest()
     {
         // GIVEN
         givenAnInitialDeposit(amount = 10_000)
@@ -86,7 +88,7 @@ class UpdateInitialDepositServiceTest
     }
 
     @Test
-    fun `leaves the other transactions alone`()
+    fun `leaves the other transactions alone`() = runTest()
     {
         // GIVEN
         givenAnInitialDeposit()
@@ -109,25 +111,25 @@ class UpdateInitialDepositServiceTest
     // Opening an account with 0 creates no deposit at all (see OpenAccountService), so an existing
     // deposit can't be turned into a 0 one — a state opening never produces.
     @Test
-    fun `throws when the new amount is zero`()
+    fun `throws when the new amount is zero`() = runTest()
     {
         // GIVEN
         givenAnInitialDeposit(amount = 10_000)
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(id, aMoney(0)) }
+        assertThatThrownBySuspending { service.update(id, aMoney(0)) }
             .isInstanceOf(InvalidInitialDepositAmountException::class.java)
     }
 
     @Test
-    fun `does not modify the deposit when the new amount is zero`()
+    fun `does not modify the deposit when the new amount is zero`() = runTest()
     {
         // GIVEN
         givenAnInitialDeposit(amount = 10_000)
         val before = transactionRepository.findById(id)
 
         // WHEN
-        assertThatThrownBy { service.update(id, aMoney(0)) }
+        assertThatThrownBySuspending { service.update(id, aMoney(0)) }
             .isInstanceOf(InvalidInitialDepositAmountException::class.java)
 
         // THEN
@@ -135,35 +137,35 @@ class UpdateInitialDepositServiceTest
     }
 
     @Test
-    fun `throws when the transaction does not exist`()
+    fun `throws when the transaction does not exist`() = runTest()
     {
         // WHEN / THEN
-        assertThatThrownBy { service.update(id, aMoney(25_050)) }
+        assertThatThrownBySuspending { service.update(id, aMoney(25_050)) }
             .isInstanceOf(TransactionNotFoundException::class.java)
     }
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["INITIAL_DEPOSIT"], mode = EnumSource.Mode.EXCLUDE)
-    fun `throws when the transaction is not an initial deposit`(category: TransactionCategory)
+    fun `throws when the transaction is not an initial deposit`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         transactionRepository.save(aTransaction(id = id, category = category))
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(id, aMoney(25_050)) }
+        assertThatThrownBySuspending { service.update(id, aMoney(25_050)) }
             .isInstanceOf(NotAnInitialDepositException::class.java)
     }
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["INITIAL_DEPOSIT"], mode = EnumSource.Mode.EXCLUDE)
-    fun `does not modify a transaction it refuses to update`(category: TransactionCategory)
+    fun `does not modify a transaction it refuses to update`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         val original = aTransaction(id = id, amount = aMoney(1_000), category = category)
         transactionRepository.save(original)
 
         // WHEN
-        assertThatThrownBy { service.update(id, aMoney(25_050)) }
+        assertThatThrownBySuspending { service.update(id, aMoney(25_050)) }
             .isInstanceOf(NotAnInitialDepositException::class.java)
 
         // THEN

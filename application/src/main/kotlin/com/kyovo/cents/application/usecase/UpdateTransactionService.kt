@@ -20,7 +20,7 @@ class UpdateTransactionService(
     private val subcategoryRepository: SubcategoryRepository
 ) : UpdateTransactionUseCase
 {
-    override fun update(command: UpdateTransactionCommand): Transaction
+    override suspend fun update(command: UpdateTransactionCommand): Transaction
     {
         val existing =
             transactionRepository.findById(command.id) ?: throw TransactionNotFoundException()

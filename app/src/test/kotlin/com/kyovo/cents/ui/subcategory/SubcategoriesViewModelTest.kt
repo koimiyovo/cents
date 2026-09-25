@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.subcategory
 
-import com.kyovo.cents.data.DataRevision
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -15,7 +16,7 @@ import com.kyovo.cents.domain.port.input.UpdateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private const val CART = "🛒"
 private val EXPENSE = RecordableTransactionCategory.EXPENSE
@@ -27,11 +28,11 @@ private class RecordingCreate : CreateSubcategoryUseCase
     val commands = mutableListOf<CreateSubcategoryCommand>()
     var failWith: RuntimeException? = null
 
-    override fun create(command: CreateSubcategoryCommand): Subcategory
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory
     {
         failWith?.let { throw it }
         commands += command
-        return Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+        return Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
     }
 }
 
@@ -41,7 +42,7 @@ private class RecordingUpdate : UpdateSubcategoryUseCase
     val commands = mutableListOf<UpdateSubcategoryCommand>()
     var failWith: RuntimeException? = null
 
-    override fun update(command: UpdateSubcategoryCommand): Subcategory
+    override suspend fun update(command: UpdateSubcategoryCommand): Subcategory
     {
         failWith?.let { throw it }
         commands += command
@@ -53,29 +54,37 @@ private class RecordingDelete : DeleteSubcategoryUseCase
 {
     val deleted = mutableListOf<SubcategoryId>()
 
-    override fun delete(id: SubcategoryId)
+    override suspend fun delete(id: SubcategoryId)
     {
         deleted += id
     }
 }
 
-private fun aRow(name: String = "Alimentation", count: Int = 12, kind: RecordableTransactionCategory = EXPENSE) =
+private fun aRow(
+    name: String = "Alimentation",
+    count: Int = 12,
+    kind: RecordableTransactionCategory = EXPENSE
+) =
     SubcategoryRow(
-        Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName(name), SubcategoryEmoji(CART)),
+        Subcategory(
+            SubcategoryId(UUID.randomUUID()),
+            kind,
+            SubcategoryName(name),
+            SubcategoryEmoji(CART)
+        ),
         count,
     )
 
+@ExtendWith(MainDispatcherExtension::class)
 class SubcategoriesViewModelTest
 {
     private val create = RecordingCreate()
     private val update = RecordingUpdate()
     private val delete = RecordingDelete()
-    private val revision = DataRevision()
-    private val viewModel = SubcategoriesViewModel(create, update, delete, revision)
+    private val viewModel = SubcategoriesViewModel(create, update, delete)
 
     private val state get() = viewModel.uiState.value
     private val form get() = state.form
-    private val revisionNow get() = revision.value.value
 
     @Test
     fun `is closed until a form is opened`()
@@ -137,12 +146,11 @@ class SubcategoriesViewModelTest
     // ------------------------------------------------------------------ creating
 
     @Test
-    fun `a valid creation is saved, the lists are told to refresh and the sheet closes`()
+    fun `a valid creation is saved and the sheet closes`()
     {
         // GIVEN
         viewModel.openCreate(INCOME)
         viewModel.update(form!!.withName(" Primes ").withEmoji(CART))
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.submit()
@@ -151,7 +159,6 @@ class SubcategoriesViewModelTest
         assertThat(create.commands).containsExactly(
             CreateSubcategoryCommand(INCOME, SubcategoryName("Primes"), SubcategoryEmoji(CART)),
         )
-        assertThat(revisionNow).isEqualTo(revisionBefore + 1)
         assertThat(state).isEqualTo(SubcategoriesUiState())
     }
 
@@ -160,7 +167,6 @@ class SubcategoriesViewModelTest
     {
         // GIVEN
         viewModel.openCreate(EXPENSE)
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.submit()
@@ -169,7 +175,6 @@ class SubcategoriesViewModelTest
         assertThat(state.errors).containsExactly(SubcategoryFormError.NAME_REQUIRED)
         assertThat(form).isNotNull()
         assertThat(create.commands).isEmpty()
-        assertThat(revisionNow).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -179,7 +184,6 @@ class SubcategoriesViewModelTest
         viewModel.openCreate(EXPENSE)
         viewModel.update(form!!.withName("Alimentation").withEmoji(CART))
         create.failWith = DuplicateSubcategoryNameException()
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.submit()
@@ -188,7 +192,6 @@ class SubcategoriesViewModelTest
         assertThat(state.errors).containsExactly(SubcategoryFormError.NAME_TAKEN)
         assertThat(form!!.name).isEqualTo("Alimentation")
         assertThat(form!!.emoji).isEqualTo(CART)
-        assertThat(revisionNow).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -205,23 +208,25 @@ class SubcategoriesViewModelTest
     // ------------------------------------------------------------------ editing
 
     @Test
-    fun `a valid edit is saved on that subcategory, the lists are told to refresh and the sheet closes`()
+    fun `a valid edit is saved on that subcategory and the sheet closes`()
     {
         // GIVEN
         val row = aRow()
         viewModel.openForEdit(row)
         viewModel.update(form!!.withName("Courses"))
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(update.commands).containsExactly(
-            UpdateSubcategoryCommand(row.subcategory.id, SubcategoryName("Courses"), SubcategoryEmoji(CART)),
+            UpdateSubcategoryCommand(
+                row.subcategory.id,
+                SubcategoryName("Courses"),
+                SubcategoryEmoji(CART)
+            ),
         )
         assertThat(create.commands).isEmpty()
-        assertThat(revisionNow).isEqualTo(revisionBefore + 1)
         assertThat(state).isEqualTo(SubcategoriesUiState())
     }
 
@@ -261,7 +266,6 @@ class SubcategoriesViewModelTest
         // GIVEN
         viewModel.openForEdit(aRow())
         update.failWith = SubcategoryNotFoundException()
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.submit()
@@ -269,7 +273,6 @@ class SubcategoriesViewModelTest
         // THEN
         assertThat(state.errors).containsExactly(SubcategoryFormError.SUBCATEGORY_GONE)
         assertThat(form).isNotNull()
-        assertThat(revisionNow).isEqualTo(revisionBefore)
     }
 
     // ------------------------------------------------------------------ deleting
@@ -356,20 +359,18 @@ class SubcategoriesViewModelTest
     }
 
     @Test
-    fun `confirming deletes that subcategory, refreshes the lists and closes everything`()
+    fun `confirming deletes that subcategory and closes everything`()
     {
         // GIVEN
         val row = aRow()
         viewModel.openForEdit(row)
         viewModel.askToDelete()
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.confirmDelete()
 
         // THEN
         assertThat(delete.deleted).containsExactly(row.subcategory.id)
-        assertThat(revisionNow).isEqualTo(revisionBefore + 1)
         assertThat(state).isEqualTo(SubcategoriesUiState())
     }
 
@@ -379,14 +380,12 @@ class SubcategoriesViewModelTest
     {
         // GIVEN
         viewModel.openForEdit(aRow())
-        val revisionBefore = revisionNow
 
         // WHEN
         viewModel.confirmDelete()
 
         // THEN
         assertThat(delete.deleted).isEmpty()
-        assertThat(revisionNow).isEqualTo(revisionBefore)
         assertThat(form).isNotNull()
     }
 

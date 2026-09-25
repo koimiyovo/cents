@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 class TransactionFormDayTest
 {
@@ -16,7 +16,7 @@ class TransactionFormDayTest
 
     private fun aForm(date: Instant = now) = TransactionFormState(
         type = TransactionFormType.EXPENSE,
-        accountId = AccountId(Uuid.random()),
+        accountId = AccountId(UUID.randomUUID()),
         date = date,
     )
 

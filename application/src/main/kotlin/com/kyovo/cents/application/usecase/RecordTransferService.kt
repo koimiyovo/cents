@@ -19,7 +19,7 @@ class RecordTransferService(
     private val unitOfWork: UnitOfWork
 ) : RecordTransferUseCase
 {
-    override fun record(command: RecordTransferCommand): TransferResult
+    override suspend fun record(command: RecordTransferCommand): TransferResult
     {
         if (command.fromAccountId == command.toAccountId)
         {

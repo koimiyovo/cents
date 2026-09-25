@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
@@ -16,7 +18,7 @@ import org.junit.jupiter.api.Test
 class DeleteAccountServiceTest
 {
     @Test
-    fun `deletes an existing account that has no transactions`()
+    fun `deletes an existing account that has no transactions`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -32,7 +34,7 @@ class DeleteAccountServiceTest
     }
 
     @Test
-    fun `does not affect other accounts when deleting one of them`()
+    fun `does not affect other accounts when deleting one of them`() = runTest()
     {
         // GIVEN
         val idToDelete = anAccountId()
@@ -53,18 +55,18 @@ class DeleteAccountServiceTest
     }
 
     @Test
-    fun `does not throw when no account matches the given id`()
+    fun `does not throw when no account matches the given id`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
         val service = DeleteAccountService(accountRepository, InMemoryTransactionRepository(), InMemoryUnitOfWork())
 
         // WHEN / THEN
-        assertThatCode { service.delete(anAccountId()) }.doesNotThrowAnyException()
+        service.delete(anAccountId())
     }
 
     @Test
-    fun `throws when the account has transactions`()
+    fun `throws when the account has transactions`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -75,12 +77,12 @@ class DeleteAccountServiceTest
         val service = DeleteAccountService(accountRepository, transactionRepository, InMemoryUnitOfWork())
 
         // WHEN / THEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteAccountWithTransactionsException::class.java)
     }
 
     @Test
-    fun `does not delete the account when it has transactions`()
+    fun `does not delete the account when it has transactions`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -92,7 +94,7 @@ class DeleteAccountServiceTest
         val service = DeleteAccountService(accountRepository, transactionRepository, InMemoryUnitOfWork())
 
         // WHEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteAccountWithTransactionsException::class.java)
 
         // THEN

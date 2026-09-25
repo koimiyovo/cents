@@ -18,11 +18,11 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val NOW = Instant.parse("2026-09-23T12:00:00Z")
-private val CHECKING = AccountId(Uuid.random())
-private val SAVINGS = AccountId(Uuid.random())
+private val CHECKING = AccountId(UUID.randomUUID())
+private val SAVINGS = AccountId(UUID.randomUUID())
 
 private fun anExpenseForm(
     accountId: AccountId? = CHECKING,
@@ -363,7 +363,7 @@ class TransactionFormTransferChoicesTest
 {
     private val checking = anAccount(CHECKING)
     private val savings = anAccount(SAVINGS)
-    private val cash = anAccount(AccountId(Uuid.random()))
+    private val cash = anAccount(AccountId(UUID.randomUUID()))
     private val all = listOf(checking, savings, cash)
 
     @Test
@@ -418,7 +418,7 @@ class TransactionFormInitialTest
 {
     private val active = anAccount(CHECKING)
     private val other = anAccount(SAVINGS)
-    private val archived = anAccount(AccountId(Uuid.random()), archived = true)
+    private val archived = anAccount(AccountId(UUID.randomUUID()), archived = true)
 
     @Test
     fun `archived accounts are not selectable`()

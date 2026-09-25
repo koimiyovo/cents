@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.aClock
 import com.kyovo.cents.application.fakes.anAccount
@@ -14,7 +16,7 @@ import org.junit.jupiter.api.Test
 class ArchiveAccountServiceTest
 {
     @Test
-    fun `archives an existing account, recording the archival instant`()
+    fun `archives an existing account, recording the archival instant`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -32,19 +34,19 @@ class ArchiveAccountServiceTest
     }
 
     @Test
-    fun `throws when no account matches the given id`()
+    fun `throws when no account matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
         val service = ArchiveAccountService(repository, aClock())
 
         // WHEN / THEN
-        assertThatThrownBy { service.archive(anAccountId()) }
+        assertThatThrownBySuspending { service.archive(anAccountId()) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the account is already archived`()
+    fun `throws when the account is already archived`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -53,12 +55,12 @@ class ArchiveAccountServiceTest
         val service = ArchiveAccountService(repository, aClock())
 
         // WHEN / THEN
-        assertThatThrownBy { service.archive(id) }
+        assertThatThrownBySuspending { service.archive(id) }
             .isInstanceOf(AccountAlreadyArchivedException::class.java)
     }
 
     @Test
-    fun `does not change the account when it is already archived`()
+    fun `does not change the account when it is already archived`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -68,7 +70,7 @@ class ArchiveAccountServiceTest
         val service = ArchiveAccountService(repository, aClock(anInstant("2026-09-23T09:00:00Z")))
 
         // WHEN
-        assertThatThrownBy { service.archive(id) }
+        assertThatThrownBySuspending { service.archive(id) }
             .isInstanceOf(AccountAlreadyArchivedException::class.java)
 
         // THEN

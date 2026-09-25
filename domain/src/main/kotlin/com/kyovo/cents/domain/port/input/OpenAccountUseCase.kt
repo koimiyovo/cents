@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Account
 
 interface OpenAccountUseCase
 {
-    fun open(command: OpenAccountCommand): Account
+    suspend fun open(command: OpenAccountCommand): Account
 }

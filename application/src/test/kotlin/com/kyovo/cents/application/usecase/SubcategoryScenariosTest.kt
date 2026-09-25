@@ -1,5 +1,9 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -55,10 +59,10 @@ class SubcategoryScenariosTest
 
     init
     {
-        accountRepository.save(anAccount(id = accountId))
+        runBlocking { accountRepository.save(anAccount(id = accountId)) }
     }
 
-    private fun spend(cents: Long, subcategoryId: SubcategoryId?) =
+    private suspend fun spend(cents: Long, subcategoryId: SubcategoryId?) =
         recordTransaction.record(
             aRecordTransactionCommand(
                 accountId = accountId,
@@ -69,7 +73,7 @@ class SubcategoryScenariosTest
         )
 
     @Test
-    fun `deleting a subcategory keeps its transactions listed, uncategorised`()
+    fun `deleting a subcategory keeps its transactions listed, uncategorised`() = runTest()
     {
         // GIVEN two expenses in a subcategory, and one with none
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -81,29 +85,29 @@ class SubcategoryScenariosTest
         deleteSubcategory.delete(first)
 
         // THEN nothing is found under the deleted subcategory any more, yet no transaction is lost
-        assertThat(listTransactions.list(subcategoryId = first)).isEmpty()
-        assertThat(listTransactions.list()).hasSize(3)
-        assertThat(listTransactions.list().map { it.subcategoryId }).containsOnlyNulls()
+        assertThat(listTransactions.observe(subcategoryId = first).first()).isEmpty()
+        assertThat(listTransactions.observe().first()).hasSize(3)
+        assertThat(listTransactions.observe().first().map { it.subcategoryId }).containsOnlyNulls()
     }
 
     @Test
-    fun `deleting a subcategory changes no balance`()
+    fun `deleting a subcategory changes no balance`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
         spend(1_000, first)
         spend(2_000, null)
-        val balanceBefore = getBalance.getBalance(accountId)
+        val balanceBefore = getBalance.observe(accountId).first()
 
         // WHEN
         deleteSubcategory.delete(first)
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(balanceBefore)
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(balanceBefore)
     }
 
     @Test
-    fun `renaming a subcategory keeps its transactions attached to it`()
+    fun `renaming a subcategory keeps its transactions attached to it`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -114,11 +118,11 @@ class SubcategoryScenariosTest
         updateSubcategory.update(anUpdateSubcategoryCommand(id = first, name = SubcategoryName("Courses")))
 
         // THEN they are found under the same subcategory, whatever it is called now
-        assertThat(listTransactions.list(subcategoryId = first)).hasSize(2)
+        assertThat(listTransactions.observe(subcategoryId = first).first()).hasSize(2)
     }
 
     @Test
-    fun `a name freed by a deletion can be used again, by a subcategory of its own`()
+    fun `a name freed by a deletion can be used again, by a subcategory of its own`() = runTest()
     {
         // GIVEN a transaction recorded under "Alimentation", which is then deleted
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -130,19 +134,19 @@ class SubcategoryScenariosTest
 
         // THEN it is a new subcategory: the old transaction does not come back under it
         assertThat(again.id).isEqualTo(second)
-        assertThat(listTransactions.list(subcategoryId = second)).isEmpty()
-        assertThat(listTransactions.list().single().subcategoryId).isNull()
+        assertThat(listTransactions.observe(subcategoryId = second).first()).isEmpty()
+        assertThat(listTransactions.observe().first().single().subcategoryId).isNull()
     }
 
     @Test
-    fun `a deleted subcategory can no longer be used to record a transaction`()
+    fun `a deleted subcategory can no longer be used to record a transaction`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
         deleteSubcategory.delete(first)
 
         // WHEN / THEN
-        assertThatThrownBy { spend(1_000, first) }
+        assertThatThrownBySuspending { spend(1_000, first) }
             .isInstanceOf(SubcategoryNotFoundException::class.java)
         assertThat(transactionRepository.saved).isEmpty()
     }

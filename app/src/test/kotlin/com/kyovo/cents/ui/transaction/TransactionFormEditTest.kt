@@ -22,11 +22,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
-private val ACCOUNT = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
-private val OTHER_ACCOUNT = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222"))
-private val TRANSACTION_ID = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
+private val ACCOUNT = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
+private val OTHER_ACCOUNT = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222"))
+private val TRANSACTION_ID = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
 private val NOW_INSTANT = Instant.parse("2026-09-23T12:00:00Z")
 private val EARLIER = Instant.parse("2026-09-20T08:30:00Z")
 
@@ -350,8 +350,8 @@ class AccountChoicesTest
 {
     private val active = anAccount(ACCOUNT)
     private val otherActive = anAccount(OTHER_ACCOUNT)
-    private val archivedOne = anAccount(AccountId(Uuid.parse("44444444-4444-4444-4444-444444444444")), archived = true)
-    private val archivedOther = anAccount(AccountId(Uuid.parse("55555555-5555-5555-5555-555555555555")), archived = true)
+    private val archivedOne = anAccount(AccountId(UUID.fromString("44444444-4444-4444-4444-444444444444")), archived = true)
+    private val archivedOther = anAccount(AccountId(UUID.fromString("55555555-5555-5555-5555-555555555555")), archived = true)
 
     @Test
     fun `a new transaction is offered the active accounts only`()
@@ -417,7 +417,7 @@ class AccountChoicesTest
 class ArchivedOriginalAccountTest
 {
     private val active = anAccount(ACCOUNT)
-    private val archivedOne = anAccount(AccountId(Uuid.parse("44444444-4444-4444-4444-444444444444")), archived = true)
+    private val archivedOne = anAccount(AccountId(UUID.fromString("44444444-4444-4444-4444-444444444444")), archived = true)
 
     private fun expenseOn(accountId: AccountId) = Transaction.recorded(
         id = TRANSACTION_ID, accountId = accountId, amount = Money(100), title = TransactionTitle("Vieux"),

@@ -1,5 +1,8 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -44,7 +47,7 @@ class UpdateTransactionServiceArchivedAccountTest
 
     private val archivedAccount = anAccount(id = accountId).copy(archivedAt = anInstant("2026-01-01T00:00:00Z"))
 
-    private fun givenAnExpenseOnTheArchivedAccount()
+    private suspend fun givenAnExpenseOnTheArchivedAccount()
     {
         accountRepository.save(archivedAccount)
         transactionRepository.save(
@@ -53,7 +56,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `updates every editable field of a transaction that sits on an archived account`()
+    fun `updates every editable field of a transaction that sits on an archived account`() = runTest()
     {
         // GIVEN
         givenAnExpenseOnTheArchivedAccount()
@@ -90,7 +93,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `editing a transaction leaves its account archived and untouched`()
+    fun `editing a transaction leaves its account archived and untouched`() = runTest()
     {
         // GIVEN
         givenAnExpenseOnTheArchivedAccount()
@@ -103,7 +106,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `the balance of the archived account follows the edit`()
+    fun `the balance of the archived account follows the edit`() = runTest()
     {
         // GIVEN an archived account that opened with 100,00 € and holds a 10,00 € expense
         givenAnExpenseOnTheArchivedAccount()
@@ -116,12 +119,12 @@ class UpdateTransactionServiceArchivedAccountTest
             ),
         )
         val balances = GetAccountBalanceService(accountRepository, transactionRepository)
-        assertThat(balances.getBalance(accountId)!!.value).isEqualTo(9_000)
+        assertThat(balances.observe(accountId).first()!!.value).isEqualTo(9_000)
 
         // WHEN the expense is corrected to 25,00 €
         service.update(anUpdateTransactionCommand(id = id, accountId = accountId, amount = aMoney(2_500)))
 
         // THEN the closed account's final balance changed with it: nothing freezes it
-        assertThat(balances.getBalance(accountId)!!.value).isEqualTo(7_500)
+        assertThat(balances.observe(accountId).first()!!.value).isEqualTo(7_500)
     }
 }

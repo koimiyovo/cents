@@ -1,5 +1,8 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
@@ -31,7 +34,7 @@ class UpdateInitialDepositScenarioTest
     private val getBalance = GetAccountBalanceService(accountRepository, transactionRepository)
 
     /** An account that opened with 100,00 € and spent 30,00 €: 70,00 € left. */
-    private fun givenAnAccountWithADepositAndAnExpense(archived: Boolean = false)
+    private suspend fun givenAnAccountWithADepositAndAnExpense(archived: Boolean = false)
     {
         accountRepository.save(
             anAccount(id = accountId, archivedAt = if (archived) anInstant("2026-01-01T00:00:00Z") else null),
@@ -55,21 +58,21 @@ class UpdateInitialDepositScenarioTest
     }
 
     @Test
-    fun `the balance follows the new amount of the deposit`()
+    fun `the balance follows the new amount of the deposit`() = runTest()
     {
         // GIVEN
         givenAnAccountWithADepositAndAnExpense()
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(7_000))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(7_000))
 
         // WHEN the deposit was really 250,50 €
         updateInitialDeposit.update(depositId, aMoney(25_050))
 
         // THEN 250,50 - 30,00
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(22_050))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(22_050))
     }
 
     @Test
-    fun `the balance of an archived account follows too`()
+    fun `the balance of an archived account follows too`() = runTest()
     {
         // GIVEN
         givenAnAccountWithADepositAndAnExpense(archived = true)
@@ -78,11 +81,11 @@ class UpdateInitialDepositScenarioTest
         updateInitialDeposit.update(depositId, aMoney(25_050))
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(22_050))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(22_050))
     }
 
     @Test
-    fun `only the deposit changes, the other transactions of the account are left alone`()
+    fun `only the deposit changes, the other transactions of the account are left alone`() = runTest()
     {
         // GIVEN
         givenAnAccountWithADepositAndAnExpense()
@@ -99,24 +102,24 @@ class UpdateInitialDepositScenarioTest
     // The zero check comes before the lookup: a 0 is refused whatever it is asked of. This pins that
     // order, so that changing it is a decision and not an accident.
     @Test
-    fun `a zero is refused before the transaction is even looked up`()
+    fun `a zero is refused before the transaction is even looked up`() = runTest()
     {
         // WHEN / THEN
-        assertThatThrownBy { updateInitialDeposit.update(aTransactionId("99999999-9999-9999-9999-999999999999"), aMoney(0)) }
+        assertThatThrownBySuspending { updateInitialDeposit.update(aTransactionId("99999999-9999-9999-9999-999999999999"), aMoney(0)) }
             .isInstanceOf(InvalidInitialDepositAmountException::class.java)
     }
 
     @Test
-    fun `a refused zero leaves the balance as it was`()
+    fun `a refused zero leaves the balance as it was`() = runTest()
     {
         // GIVEN
         givenAnAccountWithADepositAndAnExpense()
 
         // WHEN
-        assertThatThrownBy { updateInitialDeposit.update(depositId, aMoney(0)) }
+        assertThatThrownBySuspending { updateInitialDeposit.update(depositId, aMoney(0)) }
             .isInstanceOf(InvalidInitialDepositAmountException::class.java)
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(7_000))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(7_000))
     }
 }

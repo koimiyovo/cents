@@ -12,13 +12,13 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private fun aTransactionAt(date: Instant): Transaction
 {
     return Transaction.recorded(
-        TransactionId(Uuid.random()),
-        AccountId(Uuid.random()),
+        TransactionId(UUID.randomUUID()),
+        AccountId(UUID.randomUUID()),
         Money(1_000),
         TransactionTitle("Test transaction"),
         RecordableTransactionCategory.EXPENSE,

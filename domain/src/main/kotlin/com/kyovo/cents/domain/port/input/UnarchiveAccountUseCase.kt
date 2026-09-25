@@ -5,5 +5,5 @@ import com.kyovo.cents.domain.model.AccountId
 
 interface UnarchiveAccountUseCase
 {
-    fun unarchive(id: AccountId): Account
+    suspend fun unarchive(id: AccountId): Account
 }

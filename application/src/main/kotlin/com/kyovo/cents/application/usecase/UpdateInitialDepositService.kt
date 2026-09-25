@@ -13,7 +13,7 @@ import com.kyovo.cents.domain.port.output.TransactionRepository
 class UpdateInitialDepositService(private val transactionRepository: TransactionRepository) :
     UpdateInitialDepositUseCase
 {
-    override fun update(id: TransactionId, amount: Money): Transaction
+    override suspend fun update(id: TransactionId, amount: Money): Transaction
     {
         if (amount.value == 0L)
         {

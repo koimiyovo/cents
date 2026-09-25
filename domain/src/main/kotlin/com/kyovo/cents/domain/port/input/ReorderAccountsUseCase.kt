@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.AccountId
 
 interface ReorderAccountsUseCase
 {
-    fun reorder(orderedIds: List<AccountId>)
+    suspend fun reorder(orderedIds: List<AccountId>)
 }

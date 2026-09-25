@@ -12,7 +12,7 @@ class CreateSubcategoryService(
     private val idGenerator: SubcategoryIdGenerator
 ) : CreateSubcategoryUseCase
 {
-    override fun create(command: CreateSubcategoryCommand): Subcategory
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory
     {
         // Names only have to be unique among the subcategories of the same kind.
         if (subcategoryRepository.findAll()

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.subcategory
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,7 +58,6 @@ import com.kyovo.cents.ui.home.LightAccountsPalette
 fun SubcategoriesScreen(
     listSubcategories: ListSubcategoriesUseCase,
     listTransactions: ListTransactionsUseCase,
-    revision: Int,
     onBack: () -> Unit,
     onCreate: (RecordableTransactionCategory) -> Unit,
     onEdit: (SubcategoryRow) -> Unit,
@@ -65,7 +65,9 @@ fun SubcategoriesScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
-    val sections = remember(revision) { subcategorySections(listSubcategories.list(), listTransactions.list()) }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val transactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val sections = remember(subcategories, transactions) { subcategorySections(subcategories, transactions) }
     // Each section folds on its own: with many subcategories in the first, the second would otherwise be
     // lost at the bottom. Both start unfolded.
     var expensesExpanded by rememberSaveable { mutableStateOf(true) }

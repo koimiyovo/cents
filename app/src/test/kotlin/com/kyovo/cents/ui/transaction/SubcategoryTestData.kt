@@ -5,26 +5,26 @@ import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 // Subcategories shared by the form tests: two of the expense kind, one of the income kind.
 
 internal val GROCERIES_SUBCATEGORY = Subcategory(
-    SubcategoryId(Uuid.parse("aaaaaaaa-0000-0000-0000-000000000001")),
+    SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001")),
     RecordableTransactionCategory.EXPENSE,
     SubcategoryName("Alimentation"),
     null,
 )
 
 internal val FUEL_SUBCATEGORY = Subcategory(
-    SubcategoryId(Uuid.parse("aaaaaaaa-0000-0000-0000-000000000002")),
+    SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000002")),
     RecordableTransactionCategory.EXPENSE,
     SubcategoryName("Transport"),
     null,
 )
 
 internal val SALARY_SUBCATEGORY = Subcategory(
-    SubcategoryId(Uuid.parse("bbbbbbbb-0000-0000-0000-000000000001")),
+    SubcategoryId(UUID.fromString("bbbbbbbb-0000-0000-0000-000000000001")),
     RecordableTransactionCategory.INCOME,
     SubcategoryName("Salaire"),
     null,
