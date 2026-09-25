@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Subcategory
 
 interface CreateSubcategoryUseCase
 {
-    fun create(command: CreateSubcategoryCommand): Subcategory
+    suspend fun create(command: CreateSubcategoryCommand): Subcategory
 }

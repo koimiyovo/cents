@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.fakes
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryEmoji
@@ -51,27 +53,36 @@ class FixedSubcategoryIdGenerator(private val id: SubcategoryId) : SubcategoryId
 
 class InMemorySubcategoryRepository : SubcategoryRepository
 {
-    val saved = mutableListOf<Subcategory>()
+    private val state = MutableStateFlow<List<Subcategory>>(emptyList())
 
-    override fun save(subcategory: Subcategory)
+    /** What is stored, in order (for the tests to look at). */
+    val saved: List<Subcategory> get() = state.value
+
+    override suspend fun save(subcategory: Subcategory)
     {
-        val index = saved.indexOfFirst { it.id == subcategory.id }
-        if (index >= 0) saved[index] = subcategory else saved.add(subcategory)
+        val current = state.value
+        val index = current.indexOfFirst { it.id == subcategory.id }
+        state.value = if (index >= 0) current.toMutableList().also { it[index] = subcategory } else current + subcategory
     }
 
-    override fun findById(id: SubcategoryId): Subcategory?
+    override suspend fun findById(id: SubcategoryId): Subcategory?
     {
-        return saved.find { it.id == id }
+        return state.value.find { it.id == id }
     }
 
-    override fun findAll(): List<Subcategory>
+    override suspend fun findAll(): List<Subcategory>
     {
-        return saved.toList()
+        return state.value
     }
 
-    override fun deleteById(id: SubcategoryId)
+    override suspend fun deleteById(id: SubcategoryId)
     {
-        saved.removeAll { it.id == id }
+        state.value = state.value.filterNot { it.id == id }
+    }
+
+    override fun observeAll(): Flow<List<Subcategory>>
+    {
+        return state
     }
 }
 

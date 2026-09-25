@@ -1,5 +1,6 @@
 package com.kyovo.cents.data
 
+import kotlinx.coroutines.runBlocking
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -29,10 +30,10 @@ class HardcodedDataTest
 
     init
     {
-        seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository)
+        runBlocking { seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository) }
         accounts = accountRepository.findAll()
         transactions = transactionRepository.findAll()
-        subcategories = subcategoryRepository.findAll()
+        subcategories = runBlocking { subcategoryRepository.findAll() }
     }
 
     private fun account(name: String) = accounts.single { it.name.value == name }

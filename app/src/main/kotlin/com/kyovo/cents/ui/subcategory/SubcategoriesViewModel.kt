@@ -84,6 +84,11 @@ class SubcategoriesViewModel(
     /** Saves the form. On success the sheet closes and the lists refresh; otherwise the state says why not. */
     fun submit()
     {
+        viewModelScope.launch { save() }
+    }
+
+    private suspend fun save()
+    {
         val form = _uiState.value.form ?: return
         try
         {

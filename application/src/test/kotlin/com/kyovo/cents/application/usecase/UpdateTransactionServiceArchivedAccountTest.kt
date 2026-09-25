@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -53,7 +55,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `updates every editable field of a transaction that sits on an archived account`()
+    fun `updates every editable field of a transaction that sits on an archived account`() = runTest()
     {
         // GIVEN
         givenAnExpenseOnTheArchivedAccount()
@@ -90,7 +92,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `editing a transaction leaves its account archived and untouched`()
+    fun `editing a transaction leaves its account archived and untouched`() = runTest()
     {
         // GIVEN
         givenAnExpenseOnTheArchivedAccount()
@@ -103,7 +105,7 @@ class UpdateTransactionServiceArchivedAccountTest
     }
 
     @Test
-    fun `the balance of the archived account follows the edit`()
+    fun `the balance of the archived account follows the edit`() = runTest()
     {
         // GIVEN an archived account that opened with 100,00 € and holds a 10,00 € expense
         givenAnExpenseOnTheArchivedAccount()

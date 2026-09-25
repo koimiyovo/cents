@@ -60,7 +60,7 @@ class SubcategoryScenariosTest
         accountRepository.save(anAccount(id = accountId))
     }
 
-    private fun spend(cents: Long, subcategoryId: SubcategoryId?) =
+    private suspend fun spend(cents: Long, subcategoryId: SubcategoryId?) =
         recordTransaction.record(
             aRecordTransactionCommand(
                 accountId = accountId,

@@ -28,7 +28,7 @@ import kotlin.uuid.Uuid
  * repositories. Stands in for real user input until account creation and transaction recording
  * are wired into the UI.
  */
-fun seedHardcodedData(
+suspend fun seedHardcodedData(
     accountRepository: AccountRepository,
     transactionRepository: TransactionRepository,
     subcategoryRepository: SubcategoryRepository
@@ -133,9 +133,9 @@ fun seedHardcodedData(
 
     // The subcategories the app starts with (the user will manage their own): what used to be
     // hardcoded in the domain and the UI, now plain data with the emoji stored on each.
-    fun subcategory(kind: RecordableTransactionCategory, name: String, emoji: String): Subcategory =
+    suspend fun subcategory(kind: RecordableTransactionCategory, name: String, emoji: String): Subcategory =
         Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName(name), SubcategoryEmoji(emoji))
-            .also(subcategoryRepository::save)
+            .also { subcategoryRepository.save(it) }
 
     val groceries = subcategory(expense, "Alimentation", "\uD83D\uDED2")
     val fuel = subcategory(expense, "Transport", "\u26FD")

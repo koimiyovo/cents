@@ -55,7 +55,7 @@ private class FakeRecordTransaction : RecordTransactionUseCase
     val commands = mutableListOf<RecordTransactionCommand>()
     var failWith: RuntimeException? = null
 
-    override fun record(command: RecordTransactionCommand): Transaction
+    override suspend fun record(command: RecordTransactionCommand): Transaction
     {
         failWith?.let { throw it }
         commands += command
@@ -98,7 +98,7 @@ private class FakeUpdateTransaction : UpdateTransactionUseCase
     val commands = mutableListOf<UpdateTransactionCommand>()
     var failWith: RuntimeException? = null
 
-    override fun update(command: UpdateTransactionCommand): Transaction
+    override suspend fun update(command: UpdateTransactionCommand): Transaction
     {
         failWith?.let { throw it }
         commands += command
@@ -125,7 +125,7 @@ private class FakeDeleteTransaction : DeleteTransactionUseCase
 /** Not what these tests are about (see [TransactionFormNewSubcategoryTest]): only has to exist. */
 private class FakeCreateSubcategory : CreateSubcategoryUseCase
 {
-    override fun create(command: CreateSubcategoryCommand): Subcategory =
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory =
         Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
 }
 

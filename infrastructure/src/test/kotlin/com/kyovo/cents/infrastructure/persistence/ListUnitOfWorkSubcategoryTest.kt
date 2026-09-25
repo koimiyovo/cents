@@ -1,5 +1,8 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
@@ -26,6 +29,7 @@ import kotlin.uuid.Uuid
  * subcategory repository being a `ListSubcategoryRepository` that can be snapshotted and restored
  * like the other two (internally, as they are).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ListUnitOfWorkSubcategoryTest
 {
     private val accountRepository = ListAccountRepository()
@@ -192,5 +196,45 @@ class ListUnitOfWorkSubcategoryTest
                 throw IllegalStateException("specific")
             }
         }.isInstanceOf(IllegalStateException::class.java).hasMessage("specific")
+    }
+
+    // A screen collecting the subcategories must not be left showing what a failed deletion had
+    // removed: the rollback restores the repository *and* tells its observers.
+    @Test
+    fun `a rollback is seen by the observers of the subcategories`() = runTest()
+    {
+        // GIVEN a screen collecting the subcategories
+        subcategoryRepository.save(groceries)
+        subcategoryRepository.save(transport)
+        val seen = mutableListOf<List<String>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            subcategoryRepository.observeAll().collect { list -> seen += list.map { it.name.value } }
+        }
+
+        // WHEN a deletion fails halfway
+        failing { subcategoryRepository.deleteById(groceries.id) }
+
+        // THEN the observer saw the deletion, then the restored list
+        assertThat(seen.last()).containsExactly("Alimentation", "Transport")
+        assertThat(seen).contains(listOf("Transport"))
+    }
+
+    @Test
+    fun `observers see nothing when the block completes and changes nothing`() = runTest()
+    {
+        // GIVEN
+        subcategoryRepository.save(groceries)
+        val seen = mutableListOf<List<String>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            subcategoryRepository.observeAll().collect { list -> seen += list.map { it.name.value } }
+        }
+
+        // WHEN
+        unitOfWork.execute { }
+
+        // THEN
+        assertThat(seen).containsExactly(listOf("Alimentation"))
     }
 }

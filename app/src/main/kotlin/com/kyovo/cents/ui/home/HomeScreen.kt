@@ -112,7 +112,7 @@ fun HomeScreen(
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
-    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }

@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -28,7 +30,7 @@ class UpdateTransactionServiceTest
     private val salaryId = aSubcategoryId("22222222-2222-2222-2222-222222222222")
 
     @Test
-    fun `updates the amount, category, subcategory, description and date of an existing transaction`()
+    fun `updates the amount, category, subcategory, description and date of an existing transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -67,7 +69,7 @@ class UpdateTransactionServiceTest
     }
 
     @Test
-    fun `keeps the transaction on its account when the command carries the same one`()
+    fun `keeps the transaction on its account when the command carries the same one`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -89,7 +91,7 @@ class UpdateTransactionServiceTest
     }
 
     @Test
-    fun `throws when no transaction matches the given id`()
+    fun `throws when no transaction matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -97,12 +99,12 @@ class UpdateTransactionServiceTest
         val command = anUpdateTransactionCommand(id = aTransactionId())
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(TransactionNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when trying to update an initial deposit transaction`()
+    fun `throws when trying to update an initial deposit transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -112,12 +114,12 @@ class UpdateTransactionServiceTest
         val command = anUpdateTransactionCommand(id = id)
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(CannotUpdateInitialDepositException::class.java)
     }
 
     @Test
-    fun `does not modify the transaction when trying to update an initial deposit transaction`()
+    fun `does not modify the transaction when trying to update an initial deposit transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -128,7 +130,7 @@ class UpdateTransactionServiceTest
         val command = anUpdateTransactionCommand(id = id)
 
         // WHEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(CannotUpdateInitialDepositException::class.java)
 
         // THEN
@@ -136,7 +138,7 @@ class UpdateTransactionServiceTest
     }
 
     @Test
-    fun `throws when the new subcategory does not belong to the new category`()
+    fun `throws when the new subcategory does not belong to the new category`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -151,12 +153,12 @@ class UpdateTransactionServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(InvalidTransactionSubcategoryException::class.java)
     }
 
     @Test
-    fun `throws when the new subcategory does not exist, and leaves the transaction as it was`()
+    fun `throws when the new subcategory does not exist, and leaves the transaction as it was`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -167,7 +169,7 @@ class UpdateTransactionServiceTest
         val command = anUpdateTransactionCommand(id = id, subcategoryId = salaryId)
 
         // WHEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(SubcategoryNotFoundException::class.java)
 
         // THEN
@@ -176,7 +178,7 @@ class UpdateTransactionServiceTest
 
     // The command carries the whole new state: a null subcategory removes the one the transaction had.
     @Test
-    fun `a null subcategory removes the one the transaction had`()
+    fun `a null subcategory removes the one the transaction had`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -193,7 +195,7 @@ class UpdateTransactionServiceTest
     }
 
     @Test
-    fun `an initial deposit is refused before the subcategory is looked at`()
+    fun `an initial deposit is refused before the subcategory is looked at`() = runTest()
     {
         // GIVEN a command whose subcategory doesn't exist
         val id = aTransactionId()
@@ -202,7 +204,7 @@ class UpdateTransactionServiceTest
         val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
 
         // WHEN / THEN it is the deposit rule that answers
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, subcategoryId = salaryId)) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id, subcategoryId = salaryId)) }
             .isInstanceOf(CannotUpdateInitialDepositException::class.java)
     }
 }

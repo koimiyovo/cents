@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
@@ -31,7 +33,7 @@ class RecordTransactionServiceTest
     private val salaryId = aSubcategoryId("22222222-2222-2222-2222-222222222222")
 
     @Test
-    fun `records an expense transaction for an existing account`()
+    fun `records an expense transaction for an existing account`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -70,7 +72,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `records an income transaction for an existing account`()
+    fun `records an income transaction for an existing account`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -108,7 +110,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `throws when no account matches the given id`()
+    fun `throws when no account matches the given id`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -122,12 +124,12 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(accountId = anAccountId())
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `does not save a transaction when no account matches the given id`()
+    fun `does not save a transaction when no account matches the given id`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -141,7 +143,7 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(accountId = anAccountId())
 
         // WHEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(AccountNotFoundException::class.java)
 
         // THEN
@@ -149,7 +151,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `records an expense transaction with a subcategory and a description`()
+    fun `records an expense transaction with a subcategory and a description`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -192,7 +194,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `throws when the subcategory does not exist, and saves nothing`()
+    fun `throws when the subcategory does not exist, and saves nothing`() = runTest()
     {
         // GIVEN a subcategory id that no subcategory has
         val accountId = anAccountId()
@@ -208,7 +210,7 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(accountId = accountId, subcategoryId = groceriesId)
 
         // WHEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(SubcategoryNotFoundException::class.java)
 
         // THEN
@@ -216,7 +218,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `records a transaction with no subcategory when none is given`()
+    fun `records a transaction with no subcategory when none is given`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -237,7 +239,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `throws when the subcategory does not belong to the given category`()
+    fun `throws when the subcategory does not belong to the given category`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -258,12 +260,12 @@ class RecordTransactionServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(InvalidTransactionSubcategoryException::class.java)
     }
 
     @Test
-    fun `records a transaction with no description when given a blank description`()
+    fun `records a transaction with no description when given a blank description`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -289,7 +291,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `throws when trying to record a transaction on an archived account`()
+    fun `throws when trying to record a transaction on an archived account`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -305,12 +307,12 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(accountId = accountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `does not save a transaction when trying to record it on an archived account`()
+    fun `does not save a transaction when trying to record it on an archived account`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -326,7 +328,7 @@ class RecordTransactionServiceTest
         val command = aRecordTransactionCommand(accountId = accountId)
 
         // WHEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
 
         // THEN
@@ -334,7 +336,7 @@ class RecordTransactionServiceTest
     }
 
     @Test
-    fun `an unknown account is reported before an unknown subcategory`()
+    fun `an unknown account is reported before an unknown subcategory`() = runTest()
     {
         // GIVEN neither the account nor the subcategory exists
         val service = RecordTransactionService(
@@ -345,13 +347,13 @@ class RecordTransactionServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.record(aRecordTransactionCommand(accountId = anAccountId(), subcategoryId = groceriesId))
         }.isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `an archived account is reported before an unknown subcategory`()
+    fun `an archived account is reported before an unknown subcategory`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -365,13 +367,13 @@ class RecordTransactionServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.record(aRecordTransactionCommand(accountId = accountId, subcategoryId = groceriesId))
         }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `throws when an income is given an expense subcategory, and saves nothing`()
+    fun `throws when an income is given an expense subcategory, and saves nothing`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -392,7 +394,7 @@ class RecordTransactionServiceTest
         )
 
         // WHEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(InvalidTransactionSubcategoryException::class.java)
 
         // THEN

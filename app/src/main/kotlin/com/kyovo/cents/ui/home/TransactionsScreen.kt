@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -96,7 +97,7 @@ fun TransactionsScreen(
         remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
     val allTransactions = remember(revision) { listTransactions.list() }
     // Already ordered by name by the use case.
-    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
     // Filter selection isn't saved across configuration changes: AccountId/SubcategoryId

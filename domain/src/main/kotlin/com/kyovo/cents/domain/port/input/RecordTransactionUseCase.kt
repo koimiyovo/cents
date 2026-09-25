@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Transaction
 
 interface RecordTransactionUseCase
 {
-    fun record(command: RecordTransactionCommand): Transaction
+    suspend fun record(command: RecordTransactionCommand): Transaction
 }
