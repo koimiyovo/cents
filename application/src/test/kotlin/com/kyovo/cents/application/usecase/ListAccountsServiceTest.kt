@@ -3,6 +3,7 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.model.AccountName
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -93,5 +94,27 @@ class ListAccountsServiceTest
 
         // THEN
         assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun `excludes archived accounts from the results`()
+    {
+        // GIVEN
+        val repository = InMemoryAccountRepository()
+        val active = anAccount(name = AccountName("Livret A"))
+        val archived = anAccount(
+            id = anAccountId("22222222-2222-2222-2222-222222222222"),
+            name = AccountName("Compte courant"),
+            archivedAt = anInstant()
+        )
+        repository.save(active)
+        repository.save(archived)
+        val service = ListAccountsService(repository)
+
+        // WHEN
+        val result = service.list()
+
+        // THEN
+        assertThat(result).containsExactly(active)
     }
 }

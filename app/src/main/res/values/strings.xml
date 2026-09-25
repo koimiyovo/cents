@@ -1,3 +1,239 @@
 <resources>
     <string name="app_name">Cents</string>
+
+    <string name="splash_tagline">Your money, simply tracked</string>
+    <string name="splash_privacy_badge">100% On-Device &amp; Private</string>
+    <string name="splash_status">Initializing secure vault</string>
+    <string name="splash_version">v%1$s</string>
+
+    <!-- Onboarding — shared -->
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_back">← Retour</string>
+
+    <!-- Onboarding — page 1 -->
+    <string name="onboarding_page1_badge">100% Hors-ligne &amp; Sécurisé</string>
+    <string name="onboarding_page1_title">Reprenez le contrôle de vos finances en toute sérénité</string>
+    <string name="onboarding_page1_subtitle">Simple, privé et sans inscription. Toutes vos données restent stockées exclusivement sur votre appareil.</string>
+    <string name="onboarding_page1_feature1_title">100% Confidentiel &amp; Hors-ligne</string>
+    <string name="onboarding_page1_feature1_description">Aucun serveur cloud, zéro tracking, pas de revente de données. Aucune création de compte requise.</string>
+    <string name="onboarding_page1_feature2_title">Suivi des Comptes &amp; Enveloppes</string>
+    <string name="onboarding_page1_feature2_description">Banques, espèces, épargne et enveloppes de dépenses pour une clarté totale.</string>
+    <string name="onboarding_page1_feature3_title">Budgets clairs sans prise de tête</string>
+    <string name="onboarding_page1_feature3_description">Allouez vos enveloppes de dépenses visuelles et épargnez naturellement chaque mois.</string>
+    <string name="onboarding_page1_rating">★★★★★ Recommandé • Zéro pub • Open &amp; local</string>
+    <string name="onboarding_page1_button">Suivant →</string>
+    <string name="onboarding_page1_caption">⚡ Prêt en 30 secondes • Aucune carte requise</string>
+
+    <!-- Onboarding — page 2 -->
+    <string name="onboarding_page2_badge">Étape 2 sur 3 • Suivi &amp; Devises</string>
+    <string name="onboarding_page2_title">Chaque euro, devise &amp; centime à sa juste place.</string>
+    <string name="onboarding_page2_subtitle">Gardez une vision claire de votre argent liquide, vos banques et vos devises étrangères sans jamais lier vos identifiants bancaires.</string>
+    <string name="onboarding_page2_account1_name">BNP • Compte Courant</string>
+    <string name="onboarding_page2_account1_subtitle">Solde de référence</string>
+    <string name="onboarding_page2_account1_amount">2 450,80 €</string>
+    <string name="onboarding_page2_account1_status">Actif</string>
+    <string name="onboarding_page2_account1_note">✓ Vérifié</string>
+    <string name="onboarding_page2_account2_name">Espèces &amp; Portefeuille</string>
+    <string name="onboarding_page2_account2_subtitle">Enveloppe liquide</string>
+    <string name="onboarding_page2_account2_amount">85,50 €</string>
+    <string name="onboarding_page2_account2_note">Prêt à dépenser</string>
+    <string name="onboarding_page2_feature2_title">Zéro identifiant bancaire requis</string>
+    <string name="onboarding_page2_feature2_description">Saisie manuelle ou import rapide, sans jamais confier vos accès à un intermédiaire.</string>
+    <string name="onboarding_page2_button">Suivant →</string>
+    <string name="onboarding_page2_caption">🔒 Données privées stockées à 100% sur cet appareil</string>
+
+    <!-- Onboarding — page 3 -->
+    <string name="onboarding_page3_badge">Étape 3 sur 3 • Simplicité &amp; Rapidité</string>
+    <string name="onboarding_page3_title">Enregistrez vos dépenses en 3 secondes chrono</string>
+    <string name="onboarding_page3_subtitle">Finis les tableurs compliqués et les interfaces bancaires lentes. Une saisie ultra-rapide pensée pour le quotidien.</string>
+    <string name="onboarding_page3_entry_saved">✓ Enregistré en local</string>
+    <string name="onboarding_page3_entry_offline">🔒 Hors-ligne</string>
+    <string name="onboarding_page3_entry_label">Montant saisi</string>
+    <string name="onboarding_page3_entry_amount">14,50</string>
+    <string name="onboarding_page3_category_label">Catégorie instantanée</string>
+    <string name="onboarding_page3_category_coffee">Café</string>
+    <string name="onboarding_page3_category_groceries">Courses</string>
+    <string name="onboarding_page3_category_transport">Transport</string>
+    <string name="onboarding_page3_category_restaurant">Resto</string>
+    <string name="onboarding_page3_account_name">Compte Courant</string>
+    <string name="onboarding_page3_account_note">Solde ajusté auto</string>
+    <string name="onboarding_page3_feature1_title">Zéro friction au quotidien</string>
+    <string name="onboarding_page3_feature1_description">Ouvrez l\'application, tapez le montant, c\'est immédiatement sauvegardé. Aucun temps de chargement.</string>
+    <string name="onboarding_page3_feature2_title">Sauvegarde locale maîtrisée</string>
+    <string name="onboarding_page3_feature2_description">Vos données restent chez vous. Exportez en JSON ou tableur CSV chiffré en un seul geste.</string>
+    <string name="onboarding_page3_button">Commencer l\'expérience Cents →</string>
+    <string name="onboarding_page3_caption">🛡 Prêt en 30 secondes • Sans compte • Zéro publicité</string>
+
+    <!-- Accounts (home) screen -->
+    <string name="accounts_kicker">CENTS</string>
+    <string name="accounts_title">Comptes</string>
+    <string name="accounts_greeting_day">Bonjour 👋</string>
+    <string name="accounts_greeting_evening">Bonsoir 👋</string>
+    <string name="accounts_greeting_subtitle">Données locales synchronisées</string>
+    <string name="accounts_vault_badge">🔒 Coffre local</string>
+    <string name="accounts_hero_label">SOLDE TOTAL CONSOLIDÉ</string>
+    <string name="accounts_income_label">↓ Revenus</string>
+    <string name="accounts_expense_label">↑ Dépenses</string>
+    <string name="accounts_hidden_balance">••••••</string>
+    <string name="accounts_new_account_button">⊕ Nouveau compte</string>
+    <string name="accounts_section_title">Mes Comptes</string>
+    <string name="accounts_status_archived">Archivé</string>
+    <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_accounts">Comptes</string>
+    <string name="nav_transactions">Transactions</string>
+
+    <!-- Transactions screen -->
+    <string name="transactions_title">Transactions</string>
+    <string name="transactions_subtitle">Historique de vos dépenses &amp; revenus</string>
+    <string name="transactions_expense_label">↘ Dépenses</string>
+    <string name="transactions_income_label">↗ Revenus</string>
+    <string name="transactions_net_label">🐷 Solde net</string>
+    <string name="transactions_search_placeholder">Rechercher une transaction…</string>
+    <string name="transactions_all_accounts">Tous les comptes</string>
+    <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
+    <string name="transactions_period_7_days">7 derniers jours</string>
+    <string name="transactions_period_30_days">30 derniers jours</string>
+    <string name="transactions_period_all_time">Tout l\'historique</string>
+    <string name="transactions_period_custom">Personnalisée</string>
+    <string name="transactions_today">Aujourd\'hui</string>
+    <string name="transactions_yesterday">Hier</string>
+    <string name="transactions_empty">Aucune transaction ne correspond à ces filtres.</string>
+    <string name="transactions_privacy_footer">🛡 Stockage local chiffré • 0 donnée partagée</string>
+
+    <!-- Account details screen -->
+    <string name="account_details_back">Retour</string>
+    <string name="account_details_archive_button">Archiver</string>
+    <string name="account_details_unarchive_button">Désarchiver</string>
+    <string name="account_unarchive_error_title">Désarchivage impossible</string>
+    <string name="account_unarchive_error_body">Un compte actif porte déjà le nom « %1$s ». Ce compte ne pourra être désarchivé que lorsque ce nom sera de nouveau libre.</string>
+    <string name="account_unarchive_error_ok">OK</string>
+    <string name="account_archive_dialog_title">Archiver ce compte ?</string>
+    <string name="account_archive_dialog_body">« %1$s » disparaîtra de la liste des comptes et ne pourra plus recevoir de transactions. Son historique est conservé, et le compte reste consultable dans « Comptes archivés ».</string>
+    <string name="account_archive_dialog_confirm">Archiver</string>
+    <string name="account_archive_dialog_cancel">Annuler</string>
+    <string name="account_details_balance_label">SOLDE DU COMPTE</string>
+    <string name="account_details_transactions_title">Transactions</string>
+    <string name="account_details_not_found">Ce compte est introuvable.</string>
+    <string name="account_details_type_checking">Compte courant</string>
+    <string name="account_details_type_savings">Épargne</string>
+    <string name="account_details_type_cash">Espèces</string>
+
+    <!-- Transaction form -->
+    <string name="transaction_form_title">Nouvelle transaction</string>
+    <string name="transaction_form_title_edit">Modifier la transaction</string>
+    <string name="initial_deposit_form_title">Modifier le dépôt initial</string>
+    <string name="initial_deposit_form_hint">Seul le montant peut être corrigé : le solde du compte suivra.</string>
+    <string name="initial_deposit_form_failure_unavailable">Ce dépôt n\'existe plus ou ne peut plus être modifié.</string>
+    <string name="transaction_form_delete">Supprimer la transaction</string>
+    <string name="transaction_delete_title">Supprimer cette transaction ?</string>
+    <string name="transaction_delete_body">« %1$s » (%2$s) sera supprimée définitivement, et le solde de son compte sera recalculé.</string>
+    <string name="transaction_delete_confirm">Supprimer</string>
+    <string name="transaction_form_archived_notice">Le compte « %1$s » est archivé : modifier cette transaction change son solde final.</string>
+    <string name="transaction_form_type_expense">Dépense</string>
+    <string name="transaction_form_type_income">Revenu</string>
+    <string name="transaction_form_type_transfer">Virement</string>
+    <string name="transaction_form_amount_placeholder">0,00</string>
+    <string name="transaction_form_title_placeholder">Titre (ex. Courses)</string>
+    <string name="transaction_form_account_label">Compte</string>
+    <string name="transaction_form_account_from_label">Depuis</string>
+    <string name="transaction_form_account_to_label">Vers</string>
+    <string name="transaction_form_account_placeholder">Choisir un compte</string>
+    <string name="transaction_form_account_create">+ Créer un compte</string>
+    <string name="transaction_form_create_account">Créer un compte</string>
+    <string name="transaction_form_no_active_account">Aucun compte actif : créez d\'abord un compte.</string>
+    <string name="transaction_form_more_details">Plus de détails</string>
+    <string name="transaction_form_less_details">Moins de détails</string>
+    <string name="transaction_form_subcategory_label">Sous-catégorie</string>
+    <string name="transaction_form_subcategory_none">Aucune</string>
+    <string name="transaction_form_subcategory_create">+ Nouvelle sous-catégorie</string>
+    <string name="new_subcategory_title_expense">Nouvelle sous-catégorie de dépense</string>
+    <string name="new_subcategory_title_income">Nouvelle sous-catégorie de revenu</string>
+    <string name="new_subcategory_name_placeholder">Nom (ex. Loisirs)</string>
+    <string name="new_subcategory_emoji_description">Choisir un emoji</string>
+    <string name="new_subcategory_create">Créer</string>
+    <string name="new_subcategory_error_name_required">Donnez un nom à la sous-catégorie.</string>
+    <string name="new_subcategory_error_emoji_invalid">Cet emoji n\'est pas valide.</string>
+    <string name="new_subcategory_error_name_taken">Une sous-catégorie de ce type porte déjà ce nom.</string>
+    <string name="transaction_form_description_placeholder">Description (facultatif)</string>
+    <string name="transaction_form_submit">Enregistrer</string>
+    <string name="transaction_form_error_amount">Saisissez un montant supérieur à 0 (2 décimales maximum).</string>
+    <string name="transaction_form_error_title">Le titre est obligatoire.</string>
+    <string name="transaction_form_error_account">Choisissez un compte.</string>
+    <string name="transaction_form_error_destination">Choisissez le compte de destination.</string>
+    <string name="transaction_form_error_same_account">Les deux comptes doivent être différents.</string>
+    <string name="transaction_form_error_subcategory">Cette sous-catégorie ne correspond pas au type choisi.</string>
+    <string name="transaction_form_date_other">📅 Autre date</string>
+    <string name="transaction_form_date_title">Sélectionnez une date</string>
+    <string name="transaction_form_date_ok">OK</string>
+    <string name="transaction_form_date_cancel">Annuler</string>
+    <string name="transaction_form_failure_account_not_found">Ce compte n\'existe plus.</string>
+    <string name="transaction_form_failure_unavailable">Cette transaction n\'existe plus ou ne peut plus être modifiée.</string>
+    <string name="transaction_form_failure_archived">Ce compte est archivé : il ne peut plus recevoir de transaction.</string>
+    <string name="transaction_form_add_label">Transaction</string>
+
+    <!-- Account form -->
+    <string name="account_form_title">Nouveau compte</string>
+    <string name="account_form_name_placeholder">Nom du compte (ex. Livret A)</string>
+    <string name="account_form_type_label">Type de compte</string>
+    <string name="account_form_initial_amount_label">Solde initial (facultatif)</string>
+    <string name="account_form_description_placeholder">Description (facultatif)</string>
+    <string name="account_form_submit">Créer le compte</string>
+    <string name="account_form_title_edit">Modifier le compte</string>
+    <string name="account_form_submit_edit">Enregistrer</string>
+    <string name="account_edit_action">Modifier</string>
+    <string name="account_delete_action">Supprimer</string>
+    <string name="account_actions_menu">Actions</string>
+    <string name="account_delete_title">Supprimer ce compte ?</string>
+    <string name="account_delete_body_empty">« %1$s » sera supprimé définitivement.</string>
+    <plurals name="account_delete_body_transactions">
+        <item quantity="one">« %1$s » contient %2$d transaction. Supprimer le compte efface aussi cette transaction, définitivement.</item>
+        <item quantity="other">« %1$s » contient %2$d transactions. Supprimer le compte efface aussi toutes ses transactions, définitivement.</item>
+    </plurals>
+    <string name="account_delete_archive_hint">Vous pouvez plutôt l\'archiver : il disparaît de la liste, mais tout son historique est conservé.</string>
+    <string name="account_delete_archive_instead">Archiver à la place</string>
+    <string name="account_delete_confirm">Supprimer</string>
+    <string name="account_delete_confirm_all">Tout supprimer</string>
+    <string name="account_move_up">Monter</string>
+    <string name="account_move_down">Descendre</string>
+    <string name="account_form_error_name">Le nom est obligatoire.</string>
+    <string name="account_form_error_initial_amount">Saisissez un montant valide (2 décimales maximum).</string>
+    <string name="account_form_failure_duplicate_name">Un compte porte déjà ce nom.</string>
+
+    <!-- Settings and subcategory management -->
+    <string name="settings_button_description">Réglages</string>
+    <string name="settings_title">Réglages</string>
+    <string name="settings_subcategories">Sous-catégories</string>
+    <string name="settings_subcategories_hint">Ajouter, renommer ou supprimer</string>
+    <string name="subcategories_title">Sous-catégories</string>
+    <string name="subcategories_intro">Les sous-catégories classent vos transactions. Touchez-en une pour la modifier ou la supprimer.</string>
+    <string name="subcategories_section_expenses">Dépenses</string>
+    <string name="subcategories_section_income">Revenus</string>
+    <string name="subcategories_empty_expenses">Aucune sous-catégorie de dépense.</string>
+    <string name="subcategories_empty_income">Aucune sous-catégorie de revenu.</string>
+    <string name="subcategories_section_toggle">Replier ou déplier la section</string>
+    <string name="subcategories_new">+</string>
+    <string name="subcategories_edit_action">Modifier</string>
+    <string name="subcategories_transactions_none">Aucune transaction</string>
+    <plurals name="subcategories_transactions">
+        <item quantity="one">%d transaction</item>
+        <item quantity="other">%d transactions</item>
+    </plurals>
+    <string name="subcategory_form_title_edit">Modifier la sous-catégorie</string>
+    <string name="subcategory_form_kind">Type : %1$s</string>
+    <plurals name="subcategory_form_rename_hint">
+        <item quantity="one">Renommer met à jour la transaction qui l\'utilise.</item>
+        <item quantity="other">Renommer met à jour les %d transactions qui l\'utilisent.</item>
+    </plurals>
+    <string name="subcategory_form_error_name_too_long">Ce nom est trop long (%1$d caractères au maximum).</string>
+    <string name="subcategory_form_error_gone">Cette sous-catégorie n\'existe plus.</string>
+    <string name="subcategory_form_delete">Supprimer la sous-catégorie</string>
+    <string name="subcategory_delete_title">Supprimer cette sous-catégorie ?</string>
+    <string name="subcategory_delete_body_unused">« %1$s » sera supprimée.</string>
+    <plurals name="subcategory_delete_body_used">
+        <item quantity="one">« %1$s » sera supprimée. La transaction qui l\'utilise est conservée, sans sous-catégorie.</item>
+        <item quantity="other">« %1$s » sera supprimée. Les %2$d transactions qui l\'utilisent sont conservées, sans sous-catégorie.</item>
+    </plurals>
+    <string name="subcategory_delete_confirm">Supprimer</string>
 </resources>

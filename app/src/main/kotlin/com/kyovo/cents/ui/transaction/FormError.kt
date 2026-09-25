@@ -1,0 +1,7 @@
+package com.kyovo.cents.ui.transaction
+
+enum class FormError
+{
+    ACCOUNT_REQUIRED, DESTINATION_ACCOUNT_REQUIRED, SAME_ACCOUNT,
+    AMOUNT_INVALID, TITLE_REQUIRED, SUBCATEGORY_MISMATCH
+}

@@ -2,15 +2,16 @@
     <!-- Base application theme. -->
     <style name="Theme.Cents" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorPrimary">@color/cents_gold</item>
+        <item name="colorPrimaryVariant">@color/cents_green_deep</item>
         <item name="colorOnPrimary">@color/black</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorSecondary">@color/cents_gold</item>
+        <item name="colorSecondaryVariant">@color/cents_gold</item>
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <!-- Matches the Compose splash background so there is no flash before Compose draws. -->
+        <item name="android:windowBackground">@color/cents_green_deep</item>
     </style>
 </resources>
