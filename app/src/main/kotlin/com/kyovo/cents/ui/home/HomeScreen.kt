@@ -49,6 +49,7 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
@@ -57,6 +58,7 @@ import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormSheet
+import com.kyovo.cents.ui.transaction.NewSubcategoryDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
@@ -83,6 +85,7 @@ fun HomeScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    listSubcategories: ListSubcategoriesUseCase,
     dataRevision: DataRevision,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
@@ -99,6 +102,7 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val subcategories = remember(revision) { listSubcategories.list() }
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -108,7 +112,7 @@ fun HomeScreen(
     // correct, an income or an expense has the full form (a transfer leg never reaches here).
     val openTransaction: (Transaction) -> Unit = { transaction ->
         if (canEditInitialDeposit(transaction)) initialDepositFormViewModel.openForEdit(transaction)
-        else formViewModel.openForEdit(transaction)
+        else formViewModel.openForEdit(transaction, subcategories.find { it.id == transaction.subcategoryId })
     }
 
     // Archiving and unarchiving are idempotent from the user's side: a gesture that fires twice,
@@ -190,6 +194,7 @@ fun HomeScreen(
                     getAccount = getAccount,
                     getAccountBalance = getAccountBalance,
                     listTransactions = listTransactions,
+                    listSubcategories = listSubcategories,
                     revision = revision,
                     onBack = { openedAccountUuid = null },
                     // Back to the list afterwards: that is where the account has just moved
@@ -246,6 +251,7 @@ fun HomeScreen(
                                 listAccounts,
                                 listArchivedAccounts,
                                 listTransactions,
+                                listSubcategories,
                                 onTransactionClick = openTransaction,
                                 revision = revision,
                             )
@@ -277,14 +283,29 @@ fun HomeScreen(
         TransactionFormSheet(
             // Archived ones too: an edited transaction may sit on one (the form decides which are offered).
             accounts = accounts + archivedAccounts,
+            subcategories = subcategories,
             form = form,
             showErrors = formState.showErrors,
             failure = formState.failure,
             onFormChange = formViewModel::update,
             onSubmit = formViewModel::submit,
             onDelete = formViewModel::askToDelete,
+            onCreateSubcategory = formViewModel::askToCreateSubcategory,
             onDismiss = formViewModel::close,
         )
+    }
+    formState.newSubcategory?.let { draft ->
+        formState.form?.subcategoryKind?.let { kind ->
+            NewSubcategoryDialog(
+                palette = palette,
+                kind = kind,
+                draft = draft,
+                onNameChange = formViewModel::updateNewSubcategoryName,
+                onEmojiChange = formViewModel::selectNewSubcategoryEmoji,
+                onConfirm = formViewModel::confirmNewSubcategory,
+                onDismiss = formViewModel::dismissNewSubcategory,
+            )
+        }
     }
     formState.confirmingDelete?.let { transaction ->
         DeleteTransactionDialog(

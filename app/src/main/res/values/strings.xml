@@ -145,6 +145,16 @@
     <string name="transaction_form_less_details">Moins de détails</string>
     <string name="transaction_form_subcategory_label">Sous-catégorie</string>
     <string name="transaction_form_subcategory_none">Aucune</string>
+    <string name="transaction_form_subcategory_create">+ Nouvelle sous-catégorie</string>
+    <string name="new_subcategory_title_expense">Nouvelle sous-catégorie de dépense</string>
+    <string name="new_subcategory_title_income">Nouvelle sous-catégorie de revenu</string>
+    <string name="new_subcategory_name_placeholder">Nom (ex. Loisirs)</string>
+    <string name="new_subcategory_emoji_label">Emoji</string>
+    <string name="new_subcategory_emoji_none">Aucun</string>
+    <string name="new_subcategory_create">Créer</string>
+    <string name="new_subcategory_error_name_required">Donnez un nom à la sous-catégorie.</string>
+    <string name="new_subcategory_error_emoji_invalid">Cet emoji n\'est pas valide.</string>
+    <string name="new_subcategory_error_name_taken">Une sous-catégorie de ce type porte déjà ce nom.</string>
     <string name="transaction_form_description_placeholder">Description (facultatif)</string>
     <string name="transaction_form_submit">Enregistrer</string>
     <string name="transaction_form_error_amount">Saisissez un montant supérieur à 0 (2 décimales maximum).</string>

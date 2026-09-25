@@ -51,9 +51,10 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
-import com.kyovo.cents.domain.model.TransactionSubcategory
+import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
+import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.formatEuroCents
 import java.time.Instant
@@ -70,6 +71,7 @@ fun AccountDetailsScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    listSubcategories: ListSubcategoriesUseCase,
     revision: Int,
     onBack: () -> Unit,
     onArchive: () -> Unit,
@@ -102,15 +104,20 @@ fun AccountDetailsScreen(
         return
     }
 
-    val balanceCents = remember(accountId, revision) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
-    val accountTransactions = remember(accountId, revision) { listTransactions.list(accountId = accountId) }
+    val balanceCents =
+        remember(accountId, revision) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
+    val accountTransactions =
+        remember(accountId, revision) { listTransactions.list(accountId = accountId) }
+    // Already ordered by name by the use case.
+    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
     // Unlike the global tab (30 days by default), an account's page opens on its full history:
     // the opening deposit is often far in the past and would otherwise be hidden at first glance.
     var selectedPeriod by remember { mutableStateOf(TransactionsPeriod.ALL_TIME) }
     var customFrom by remember { mutableStateOf<LocalDate?>(null) }
     var customTo by remember { mutableStateOf<LocalDate?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<TransactionSubcategory?>(null) }
+    var selectedSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
     var periodMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -132,15 +139,16 @@ fun AccountDetailsScreen(
             .sumOf { it.amount.value }
     }
     // Chips only offer subcategories that exist in the period, so a chip never yields an empty list.
-    val availableSubcategories = remember(transactionsInPeriod) {
-        transactionsInPeriod.mapNotNull { it.subcategory }.distinct()
+    val availableSubcategories = remember(transactionsInPeriod, subcategories) {
+        val usedIds = transactionsInPeriod.mapNotNull { it.subcategoryId }.toSet()
+        subcategories.filter { it.id in usedIds }
     }
 
     val filteredTransactions =
         remember(accountId, revision, selectedSubcategory, searchQuery, periodFrom, periodTo) {
             listTransactions.list(
                 accountId = accountId,
-                subcategory = selectedSubcategory,
+                subcategoryId = selectedSubcategory,
                 titleFilter = searchQuery,
                 from = periodFrom,
                 to = periodTo,
@@ -228,7 +236,14 @@ fun AccountDetailsScreen(
                 groupedByDay.forEach { (date, dayTransactions) ->
                     // No account lookup: every row is on this account, so repeating its name in
                     // each row's subtitle would just be noise.
-                    DayGroup(palette, date, dayTransactions, accountsById = emptyMap(), onTransactionClick = onTransactionClick)
+                    DayGroup(
+                        palette,
+                        date,
+                        dayTransactions,
+                        accountsById = emptyMap(),
+                        subcategoriesById = subcategoriesById,
+                        onTransactionClick = onTransactionClick
+                    )
                 }
             }
         }
@@ -236,7 +251,8 @@ fun AccountDetailsScreen(
 
     if (showDeleteDialog)
     {
-        val deletesTransactions = deleteChoices(accountTransactions.size, alreadyArchived = false).deletesTransactions
+        val deletesTransactions =
+            deleteChoices(accountTransactions.size, alreadyArchived = false).deletesTransactions
         DeleteAccountDialog(
             palette = palette,
             accountName = account.name.value,
@@ -302,7 +318,8 @@ private fun AccountSummaryCard(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val isArchived = account.archivedAt != null
-        val typeLabel = "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}"
+        val typeLabel =
+            "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}"
         Text(
             // No "active" badge — that is the normal state; only the exception is spelled out.
             text = if (isArchived) "$typeLabel · ${stringResource(R.string.accounts_status_archived)}" else typeLabel,
@@ -376,13 +393,19 @@ private fun AccountActionsMenu(
             }
             if (isArchived)
             {
-                ActionMenuItem(stringResource(R.string.account_details_unarchive_button), palette.textPrimary) {
+                ActionMenuItem(
+                    stringResource(R.string.account_details_unarchive_button),
+                    palette.textPrimary
+                ) {
                     expanded = false
                     onUnarchive()
                 }
             } else
             {
-                ActionMenuItem(stringResource(R.string.account_details_archive_button), palette.textPrimary) {
+                ActionMenuItem(
+                    stringResource(R.string.account_details_archive_button),
+                    palette.textPrimary
+                ) {
                     expanded = false
                     onArchive()
                 }

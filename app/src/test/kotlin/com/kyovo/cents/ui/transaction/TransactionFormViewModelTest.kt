@@ -2,9 +2,9 @@ package com.kyovo.cents.ui.transaction
 
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
-import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
 import com.kyovo.cents.domain.exception.CannotDeleteTransferException
+import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
 import com.kyovo.cents.domain.exception.CannotUpdateTransferException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
@@ -13,13 +13,16 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
-import com.kyovo.cents.domain.model.ExpenseSubcategory
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Subcategory
+import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
+import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
+import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
@@ -54,7 +57,7 @@ private class FakeRecordTransaction : RecordTransactionUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return command.toTransaction(TransactionId(Uuid.random()))
+        return command.toTransaction(TransactionId(Uuid.random()), subcategoryFor(command.subcategoryId))
     }
 }
 
@@ -66,8 +69,20 @@ private class FakeRecordTransfer : RecordTransferUseCase
     {
         commands += command
         return TransferResult(
-            Transaction.transferOut(TransactionId(Uuid.random()), command.fromAccountId, command.amount, command.title, command.date),
-            Transaction.transferIn(TransactionId(Uuid.random()), command.toAccountId, command.amount, command.title, command.date),
+            Transaction.transferOut(
+                TransactionId(Uuid.random()),
+                command.fromAccountId,
+                command.amount,
+                command.title,
+                command.date
+            ),
+            Transaction.transferIn(
+                TransactionId(Uuid.random()),
+                command.toAccountId,
+                command.amount,
+                command.title,
+                command.date
+            ),
         )
     }
 }
@@ -84,7 +99,7 @@ private class FakeUpdateTransaction : UpdateTransactionUseCase
         commands += command
         return Transaction.recorded(
             command.id, command.accountId, command.amount, command.title, command.category,
-            command.subcategory, command.description, command.date,
+            subcategoryFor(command.subcategoryId), command.description, command.date,
         )
     }
 }
@@ -102,13 +117,20 @@ private class FakeDeleteTransaction : DeleteTransactionUseCase
     }
 }
 
+/** Not what these tests are about (see [TransactionFormNewSubcategoryTest]): only has to exist. */
+private class FakeCreateSubcategory : CreateSubcategoryUseCase
+{
+    override fun create(command: CreateSubcategoryCommand): Subcategory =
+        Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+}
+
 private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Transaction.recorded(
     id = TransactionId(Uuid.random()),
     accountId = AccountId(Uuid.random()),
     amount = Money(1_250),
     title = TransactionTitle("Courses"),
     category = RecordableTransactionCategory.EXPENSE,
-    subcategory = ExpenseSubcategory.GROCERIES,
+    subcategory = GROCERIES_SUBCATEGORY,
     description = null,
     date = date,
 )
@@ -120,8 +142,15 @@ class TransactionFormViewModelTest
     private val revision = DataRevision()
     private val updateTransaction = FakeUpdateTransaction()
     private val deleteTransaction = FakeDeleteTransaction()
+    private val createSubcategory = FakeCreateSubcategory()
     private val viewModel = TransactionFormViewModel(
-        recordTransaction, recordTransfer, updateTransaction, deleteTransaction, revision, now = { NOW },
+        recordTransaction,
+        recordTransfer,
+        updateTransaction,
+        deleteTransaction,
+        createSubcategory,
+        revision,
+        now = { NOW },
     )
 
     private val checking = anAccount()
@@ -179,7 +208,7 @@ class TransactionFormViewModelTest
     {
         // GIVEN
         openAndFillExpense()
-        viewModel.update(form!!.copy(subcategory = ExpenseSubcategory.GROCERIES))
+        viewModel.update(form!!.copy(subcategory = GROCERIES_SUBCATEGORY))
         val revisionBefore = revision.value.value
 
         // WHEN
@@ -192,7 +221,7 @@ class TransactionFormViewModelTest
                 amount = Money(1250),
                 title = TransactionTitle("Courses"),
                 category = RecordableTransactionCategory.EXPENSE,
-                subcategory = ExpenseSubcategory.GROCERIES,
+                subcategoryId = GROCERIES_SUBCATEGORY.id,
                 description = null,
                 date = NOW,
             ),
@@ -348,8 +377,15 @@ class TransactionFormViewModelTest
     fun `a transfer leg or an opening deposit is not opened for editing`()
     {
         // GIVEN
-        val leg = Transaction.transferOut(TransactionId(Uuid.random()), checking.id, Money(100), TransactionTitle("Retrait"), NOW)
-        val deposit = Transaction.openingDeposit(TransactionId(Uuid.random()), checking.id, Money(100), NOW)
+        val leg = Transaction.transferOut(
+            TransactionId(Uuid.random()),
+            checking.id,
+            Money(100),
+            TransactionTitle("Retrait"),
+            NOW
+        )
+        val deposit =
+            Transaction.openingDeposit(TransactionId(Uuid.random()), checking.id, Money(100), NOW)
 
         // WHEN
         viewModel.openForEdit(leg)
@@ -515,7 +551,12 @@ class TransactionFormViewModelTest
         viewModel.askToDelete()
 
         // THEN an expense weighs negatively
-        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Courses", -1_250))
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(
+            TransactionToDelete(
+                "Courses",
+                -1_250
+            )
+        )
         assertThat(form).isNotNull()
         assertThat(deleteTransaction.deleted).isEmpty()
     }
@@ -535,7 +576,12 @@ class TransactionFormViewModelTest
         viewModel.askToDelete()
 
         // THEN
-        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Salaire", 245_000))
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(
+            TransactionToDelete(
+                "Salaire",
+                245_000
+            )
+        )
     }
 
     @Test
@@ -549,7 +595,12 @@ class TransactionFormViewModelTest
         viewModel.askToDelete()
 
         // THEN what would be erased is the stored transaction
-        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Courses", -1_250))
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(
+            TransactionToDelete(
+                "Courses",
+                -1_250
+            )
+        )
     }
 
     @Test

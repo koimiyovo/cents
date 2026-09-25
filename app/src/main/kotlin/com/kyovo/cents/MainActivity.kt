@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
                     recordTransfer = appContainer.recordTransfer,
                     updateTransaction = appContainer.updateTransaction,
                     deleteTransaction = appContainer.deleteTransaction,
+                    createSubcategory = appContainer.createSubcategory,
                     dataRevision = appContainer.dataRevision,
                 )
             }
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
                     getAccount = appContainer.getAccount,
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
+                    listSubcategories = appContainer.listSubcategories,
                     dataRevision = appContainer.dataRevision,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
