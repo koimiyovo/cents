@@ -520,41 +520,27 @@ private fun NewAccountButton(palette: AccountsPalette, onClick: () -> Unit)
 @Composable
 private fun AccountsSectionHeader(palette: AccountsPalette, count: Int)
 {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.accounts_section_title),
-                color = palette.textPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(palette.badgeBackground)
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = count.toString(),
-                    color = palette.textPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = stringResource(R.string.accounts_manage_link),
-            color = palette.tipIconTone,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            // Account management isn't built yet — this link is a visual placeholder for now.
-            modifier = Modifier.clickable(onClick = {}),
+            text = stringResource(R.string.accounts_section_title),
+            color = palette.textPrimary,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
         )
+        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(palette.badgeBackground)
+                .padding(horizontal = 10.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = count.toString(),
+                color = palette.textPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
