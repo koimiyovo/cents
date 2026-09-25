@@ -6,15 +6,17 @@ import com.kyovo.cents.domain.model.AccountDescription
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
-import com.kyovo.cents.domain.model.ExpenseSubcategory
-import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Subcategory
+import com.kyovo.cents.domain.model.SubcategoryEmoji
+import com.kyovo.cents.domain.model.SubcategoryId
+import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
-import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -28,7 +30,8 @@ import kotlin.uuid.Uuid
  */
 fun seedHardcodedData(
     accountRepository: AccountRepository,
-    transactionRepository: TransactionRepository
+    transactionRepository: TransactionRepository,
+    subcategoryRepository: SubcategoryRepository
 )
 {
     val now = Instant.now()
@@ -83,7 +86,7 @@ fun seedHardcodedData(
         accountId: AccountId,
         amountCents: Long,
         category: RecordableTransactionCategory,
-        subcategory: TransactionSubcategory?,
+        subcategory: Subcategory?,
         title: String,
         date: Instant,
     )
@@ -128,33 +131,46 @@ fun seedHardcodedData(
     val income = RecordableTransactionCategory.INCOME
     val expense = RecordableTransactionCategory.EXPENSE
 
+    // The subcategories the app starts with (the user will manage their own): what used to be
+    // hardcoded in the domain and the UI, now plain data with the emoji stored on each.
+    fun subcategory(kind: RecordableTransactionCategory, name: String, emoji: String): Subcategory =
+        Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName(name), SubcategoryEmoji(emoji))
+            .also(subcategoryRepository::save)
+
+    val groceries = subcategory(expense, "Alimentation", "\uD83D\uDED2")
+    val fuel = subcategory(expense, "Transport", "\u26FD")
+    val hairdresser = subcategory(expense, "Coiffeur", "\uD83D\uDC87")
+    val salary = subcategory(income, "Salaire", "\uD83D\uDCB0")
+    val gift = subcategory(income, "Cadeau", "\uD83C\uDF81")
+    val refund = subcategory(income, "Remboursement", "\uD83D\uDCB8")
+
     // Compte Courant: balance built entirely from its recent recorded activity (no opening
     // deposit), so it doubles as the "recent transactions" example on the accounts screen. Two
     // months of a typical routine: monthly salary and rent, weekly groceries, fuel, small outings.
-    recorded(checking.id, 460, expense, ExpenseSubcategory.GROCERIES, "Boulangerie", ago(0, 2))
+    recorded(checking.id, 460, expense, groceries, "Boulangerie", ago(0, 2))
     recorded(checking.id, 3800, expense, null, "Restaurant", ago(1, 5))
-    recorded(checking.id, 5950, expense, ExpenseSubcategory.HAIRDRESSER, "Coiffeur", ago(2))
-    recorded(checking.id, 7025, expense, ExpenseSubcategory.FUEL, "Essence", ago(3))
-    recorded(checking.id, 18000, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(4))
-    recorded(checking.id, 245000, income, IncomeSubcategory.SALARY, "Salaire", ago(5))
-    recorded(checking.id, 6435, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(6))
+    recorded(checking.id, 5950, expense, hairdresser, "Coiffeur", ago(2))
+    recorded(checking.id, 7025, expense, fuel, "Essence", ago(3))
+    recorded(checking.id, 18000, expense, groceries, "Courses", ago(4))
+    recorded(checking.id, 245000, income, salary, "Salaire", ago(5))
+    recorded(checking.id, 6435, expense, groceries, "Courses", ago(6))
     recorded(checking.id, 1399, expense, null, "Abonnement streaming", ago(7))
-    recorded(checking.id, 2640, income, IncomeSubcategory.REFUND, "Remboursement mutuelle", ago(8))
-    recorded(checking.id, 5210, expense, ExpenseSubcategory.FUEL, "Essence", ago(9))
+    recorded(checking.id, 2640, income, refund, "Remboursement mutuelle", ago(8))
+    recorded(checking.id, 5210, expense, fuel, "Essence", ago(9))
     recorded(checking.id, 1780, expense, null, "Pharmacie", ago(11))
-    recorded(checking.id, 9275, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(12))
+    recorded(checking.id, 9275, expense, groceries, "Courses", ago(12))
     recorded(checking.id, 2400, expense, null, "Cinéma", ago(14))
     recorded(checking.id, 72000, expense, null, "Loyer", ago(16))
-    recorded(checking.id, 7820, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(20))
-    recorded(checking.id, 5000, income, IncomeSubcategory.GIFT, "Cadeau de Mamie", ago(23))
-    recorded(checking.id, 6140, expense, ExpenseSubcategory.FUEL, "Essence", ago(25))
+    recorded(checking.id, 7820, expense, groceries, "Courses", ago(20))
+    recorded(checking.id, 5000, income, gift, "Cadeau de Mamie", ago(23))
+    recorded(checking.id, 6140, expense, fuel, "Essence", ago(25))
     recorded(checking.id, 1999, expense, null, "Abonnement téléphone", ago(27))
-    recorded(checking.id, 10560, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(29))
+    recorded(checking.id, 10560, expense, groceries, "Courses", ago(29))
     recorded(checking.id, 72000, expense, null, "Loyer", ago(31))
-    recorded(checking.id, 245000, income, IncomeSubcategory.SALARY, "Salaire", ago(35))
-    recorded(checking.id, 8890, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(38))
-    recorded(checking.id, 5500, expense, ExpenseSubcategory.HAIRDRESSER, "Coiffeur", ago(40))
-    recorded(checking.id, 4875, expense, ExpenseSubcategory.FUEL, "Essence", ago(42))
+    recorded(checking.id, 245000, income, salary, "Salaire", ago(35))
+    recorded(checking.id, 8890, expense, groceries, "Courses", ago(38))
+    recorded(checking.id, 5500, expense, hairdresser, "Coiffeur", ago(40))
+    recorded(checking.id, 4875, expense, fuel, "Essence", ago(42))
     recorded(checking.id, 4650, expense, null, "Restaurant", ago(45))
 
     // Portefeuille Espèces: an opening float, two cash withdrawals from Compte Courant (modeled
@@ -162,19 +178,19 @@ fun seedHardcodedData(
     deposit(cash.id, 10550, ago(200))
     transferred(checking.id, cash.id, 4000, "Retrait espèces", ago(30))
     transferred(checking.id, cash.id, 2000, "Retrait espèces", ago(1))
-    recorded(cash.id, 1240, expense, ExpenseSubcategory.GROCERIES, "Marché", ago(2))
+    recorded(cash.id, 1240, expense, groceries, "Marché", ago(2))
     recorded(cash.id, 350, expense, null, "Café", ago(5))
     recorded(cash.id, 600, expense, null, "Parking", ago(9))
-    recorded(cash.id, 820, expense, ExpenseSubcategory.GROCERIES, "Boulangerie", ago(13))
+    recorded(cash.id, 820, expense, groceries, "Boulangerie", ago(13))
     recorded(cash.id, 500, expense, null, "Pourboire", ago(19))
-    recorded(cash.id, 3000, income, IncomeSubcategory.REFUND, "Remboursement ami", ago(21))
-    recorded(cash.id, 1580, expense, ExpenseSubcategory.GROCERIES, "Marché", ago(26))
+    recorded(cash.id, 3000, income, refund, "Remboursement ami", ago(21))
+    recorded(cash.id, 1580, expense, groceries, "Marché", ago(26))
 
     // Ancien Compte Joint (archived): 850,00 + 45,00 - 120,00 - 60,00 = 715,00, all moved to
     // Compte Courant when it was closed.
     deposit(oldJoint.id, 85000, ago(520))
-    recorded(oldJoint.id, 12000, expense, ExpenseSubcategory.GROCERIES, "Courses", ago(400))
-    recorded(oldJoint.id, 4500, income, IncomeSubcategory.REFUND, "Remboursement", ago(380))
-    recorded(oldJoint.id, 6000, expense, ExpenseSubcategory.FUEL, "Essence", ago(350))
+    recorded(oldJoint.id, 12000, expense, groceries, "Courses", ago(400))
+    recorded(oldJoint.id, 4500, income, refund, "Remboursement", ago(380))
+    recorded(oldJoint.id, 6000, expense, fuel, "Essence", ago(350))
     transferred(oldJoint.id, checking.id, 71500, "Clôture du compte", ago(300))
 }

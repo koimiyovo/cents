@@ -5,8 +5,6 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
-import com.kyovo.cents.domain.model.ExpenseSubcategory
-import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
@@ -70,7 +68,7 @@ class TransactionFormSubmitTest
     {
         // GIVEN
         val form = anExpenseForm().copy(
-            subcategory = ExpenseSubcategory.GROCERIES,
+            subcategory = GROCERIES_SUBCATEGORY,
             description = "Marché du samedi",
         )
 
@@ -85,7 +83,7 @@ class TransactionFormSubmitTest
                     amount = Money(1250),
                     title = TransactionTitle("Courses"),
                     category = RecordableTransactionCategory.EXPENSE,
-                    subcategory = ExpenseSubcategory.GROCERIES,
+                    subcategoryId = GROCERIES_SUBCATEGORY.id,
                     description = TransactionDescription.of("Marché du samedi"),
                     date = NOW,
                 ),
@@ -99,7 +97,7 @@ class TransactionFormSubmitTest
         // GIVEN
         val form = anExpenseForm().copy(
             type = TransactionFormType.INCOME,
-            subcategory = IncomeSubcategory.SALARY,
+            subcategory = SALARY_SUBCATEGORY,
         )
 
         // WHEN
@@ -107,7 +105,7 @@ class TransactionFormSubmitTest
 
         // THEN
         assertThat(submission.command.category).isEqualTo(RecordableTransactionCategory.INCOME)
-        assertThat(submission.command.subcategory).isEqualTo(IncomeSubcategory.SALARY)
+        assertThat(submission.command.subcategoryId).isEqualTo(SALARY_SUBCATEGORY.id)
     }
 
     @Test
@@ -182,7 +180,7 @@ class TransactionFormSubmitTest
     fun `a subcategory that does not belong to the category is rejected`()
     {
         // GIVEN
-        val form = anExpenseForm().copy(subcategory = IncomeSubcategory.SALARY)
+        val form = anExpenseForm().copy(subcategory = SALARY_SUBCATEGORY)
 
         // WHEN
         val submission = form.submit()
@@ -281,7 +279,7 @@ class TransactionFormTypeSwitchTest
     fun `switching from expense to income drops an expense subcategory`()
     {
         // GIVEN
-        val form = anExpenseForm().copy(subcategory = ExpenseSubcategory.GROCERIES)
+        val form = anExpenseForm().copy(subcategory = GROCERIES_SUBCATEGORY)
 
         // WHEN
         val switched = form.withType(TransactionFormType.INCOME)
@@ -295,7 +293,7 @@ class TransactionFormTypeSwitchTest
     fun `switching to transfer drops the subcategory`()
     {
         // GIVEN
-        val form = anExpenseForm().copy(subcategory = ExpenseSubcategory.FUEL)
+        val form = anExpenseForm().copy(subcategory = FUEL_SUBCATEGORY)
 
         // WHEN
         val switched = form.withType(TransactionFormType.TRANSFER)
@@ -324,13 +322,13 @@ class TransactionFormTypeSwitchTest
     fun `a subcategory that still fits the new type is kept`()
     {
         // GIVEN
-        val form = anExpenseForm().copy(subcategory = ExpenseSubcategory.GROCERIES)
+        val form = anExpenseForm().copy(subcategory = GROCERIES_SUBCATEGORY)
 
         // WHEN
         val switched = form.withType(TransactionFormType.EXPENSE)
 
         // THEN
-        assertThat(switched.subcategory).isEqualTo(ExpenseSubcategory.GROCERIES)
+        assertThat(switched.subcategory).isEqualTo(GROCERIES_SUBCATEGORY)
     }
 
     @Test
@@ -436,7 +434,11 @@ class TransactionFormInitialTest
     fun `starts on the account the user came from`()
     {
         // WHEN
-        val form = TransactionFormState.initial(listOf(active, other), preselectedAccountId = SAVINGS, now = NOW)
+        val form = TransactionFormState.initial(
+            listOf(active, other),
+            preselectedAccountId = SAVINGS,
+            now = NOW
+        )
 
         // THEN
         assertThat(form.accountId).isEqualTo(SAVINGS)
@@ -446,7 +448,11 @@ class TransactionFormInitialTest
     fun `starts on no account when none was preselected`()
     {
         // WHEN
-        val form = TransactionFormState.initial(listOf(active, other), preselectedAccountId = null, now = NOW)
+        val form = TransactionFormState.initial(
+            listOf(active, other),
+            preselectedAccountId = null,
+            now = NOW
+        )
 
         // THEN
         assertThat(form.accountId).isNull()
@@ -470,7 +476,8 @@ class TransactionFormInitialTest
     fun `starts as an empty expense dated now`()
     {
         // WHEN
-        val form = TransactionFormState.initial(listOf(active), preselectedAccountId = null, now = NOW)
+        val form =
+            TransactionFormState.initial(listOf(active), preselectedAccountId = null, now = NOW)
 
         // THEN
         assertThat(form.type).isEqualTo(TransactionFormType.EXPENSE)

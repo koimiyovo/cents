@@ -5,10 +5,9 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
-import com.kyovo.cents.domain.model.ExpenseSubcategory
-import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
@@ -33,7 +32,7 @@ private val EARLIER = Instant.parse("2026-09-20T08:30:00Z")
 
 private fun anExpense(
     date: Instant = EARLIER,
-    subcategory: ExpenseSubcategory? = ExpenseSubcategory.GROCERIES,
+    subcategory: Subcategory? = GROCERIES_SUBCATEGORY,
     description: String? = "Marché du samedi",
 ) = Transaction.recorded(
     id = TRANSACTION_ID,
@@ -52,7 +51,7 @@ private fun anIncome() = Transaction.recorded(
     amount = Money(245_000),
     title = TransactionTitle("Salaire"),
     category = RecordableTransactionCategory.INCOME,
-    subcategory = IncomeSubcategory.SALARY,
+    subcategory = SALARY_SUBCATEGORY,
     description = null,
     date = EARLIER,
 )
@@ -106,7 +105,7 @@ class TransactionFormEditTest
         assertThat(form.accountId).isEqualTo(ACCOUNT)
         assertThat(form.amountText).isEqualTo("12,50")
         assertThat(form.title).isEqualTo("Courses")
-        assertThat(form.subcategory).isEqualTo(ExpenseSubcategory.GROCERIES)
+        assertThat(form.subcategory).isEqualTo(GROCERIES_SUBCATEGORY)
         assertThat(form.description).isEqualTo("Marché du samedi")
         assertThat(form.date).isEqualTo(EARLIER)
         assertThat(form.editingId).isEqualTo(TRANSACTION_ID)
@@ -162,7 +161,7 @@ class TransactionFormEditTest
                     amount = Money(1_250),
                     title = TransactionTitle("Courses"),
                     category = RecordableTransactionCategory.EXPENSE,
-                    subcategory = ExpenseSubcategory.GROCERIES,
+                    subcategoryId = GROCERIES_SUBCATEGORY.id,
                     description = TransactionDescription.of("Marché du samedi"),
                     date = EARLIER,
                 ),
@@ -186,7 +185,7 @@ class TransactionFormEditTest
         assertThat(command.title).isEqualTo(TransactionTitle("Courses du mois"))
         assertThat(command.category).isEqualTo(RecordableTransactionCategory.INCOME)
         // an expense subcategory doesn't survive becoming an income
-        assertThat(command.subcategory).isNull()
+        assertThat(command.subcategoryId).isNull()
     }
 
     @Test
@@ -272,7 +271,7 @@ class TransactionFormEditTest
     fun `a subcategory that does not fit the type is rejected`()
     {
         // GIVEN an expense given an income subcategory
-        val form = TransactionFormState.editing(anExpense()).copy(subcategory = IncomeSubcategory.SALARY)
+        val form = TransactionFormState.editing(anExpense()).copy(subcategory = SALARY_SUBCATEGORY)
 
         // WHEN
         val submission = form.submit()

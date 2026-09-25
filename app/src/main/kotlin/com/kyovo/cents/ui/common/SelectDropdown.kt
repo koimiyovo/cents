@@ -22,12 +22,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +45,12 @@ internal class SelectOption<T>(val value: T, val label: String)
  * a long list is capped in height and scrolls inside itself, so the screen doesn't stretch.
  *
  * [fillWidth] picks the trigger's look: a pill for filters, a full-width field inside forms.
+ *
+ * Unfolding hides the keyboard: inside a form the amount field is focused and its keyboard would
+ * cover the very options that were just unfolded.
+ *
+ * [footerLabel] adds an action after the options ("+ New ..."): it is not a value to select, so it
+ * calls [onFooterClick] instead of [onSelect], and closes the list.
  */
 @Composable
 internal fun <T> SelectDropdown(
@@ -54,13 +62,24 @@ internal fun <T> SelectDropdown(
     fillWidth: Boolean = false,
     labelPrefix: String = "",
     placeholder: String = "",
+    footerLabel: String? = null,
+    onFooterClick: (() -> Unit)? = null,
 )
 {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val selectedLabel = options.firstOrNull { it.value == selected }?.label
 
     Column(modifier = modifier) {
-        val trigger = Modifier.clickable { expanded = !expanded }
+        val trigger = Modifier.clickable {
+            if (!expanded)
+            {
+                focusManager.clearFocus()
+                keyboard?.hide()
+            }
+            expanded = !expanded
+        }
         if (fillWidth)
         {
             DropdownField(selectedLabel ?: placeholder, selectedLabel == null, palette, trigger)
@@ -88,6 +107,22 @@ internal fun <T> SelectDropdown(
                             expanded = false
                             onSelect(option.value)
                         },
+                    )
+                }
+                if (footerLabel != null && onFooterClick != null)
+                {
+                    Text(
+                        text = footerLabel,
+                        color = palette.kicker,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expanded = false
+                                onFooterClick()
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                 }
             }

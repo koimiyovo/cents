@@ -8,11 +8,19 @@ import com.kyovo.cents.domain.exception.CannotDeleteTransferException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
 import com.kyovo.cents.domain.exception.CannotUpdateTransferException
+import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
+import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
+import com.kyovo.cents.domain.exception.InvalidSubcategoryNameException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Subcategory
+import com.kyovo.cents.domain.model.SubcategoryEmoji
+import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
+import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
@@ -40,15 +48,39 @@ enum class SubmitFailure
  */
 data class TransactionToDelete(val title: String, val signedAmountCents: Long)
 
+/** Why the new subcategory is refused. */
+enum class NewSubcategoryError
+{
+    NAME_REQUIRED,
+
+    /** A subcategory of the same kind already has that name. */
+    NAME_TAKEN,
+
+    /** Not reachable from the picker (a fixed list of valid emojis), but the domain's "no" must be an answer, not a crash. */
+    EMOJI_INVALID,
+}
+
+/**
+ * What is being filled in the "new subcategory" dialog: the name, the emoji picked (none by default),
+ * and what is wrong with it, if anything.
+ */
+data class NewSubcategoryDraft(
+    val name: String = "",
+    val error: NewSubcategoryError? = null,
+    val emoji: String? = null,
+)
+
 /**
  * [form] is null while the sheet is closed, so "is the sheet open" and its content can't disagree.
  * [confirmingDelete] is set while the user is being asked whether to delete the edited transaction.
+ * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up.
  */
 data class TransactionFormUiState(
     val form: TransactionFormState? = null,
     val showErrors: Boolean = false,
     val failure: SubmitFailure? = null,
     val confirmingDelete: TransactionToDelete? = null,
+    val newSubcategory: NewSubcategoryDraft? = null,
 )
 
 /**
@@ -65,6 +97,7 @@ class TransactionFormViewModel(
     private val recordTransfer: RecordTransferUseCase,
     private val updateTransaction: UpdateTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
+    private val createSubcategory: CreateSubcategoryUseCase,
     private val dataRevision: DataRevision,
     private val now: () -> Instant = { Instant.now() },
 ) : ViewModel()
@@ -90,13 +123,16 @@ class TransactionFormViewModel(
         )
     }
 
-    /** Opens the form pre-filled with [transaction]'s values, to change them. */
-    fun openForEdit(transaction: Transaction)
+    /**
+     * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] is the one
+     * it points to (null when it has none).
+     */
+    fun openForEdit(transaction: Transaction, subcategory: Subcategory?)
     {
         // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
-        _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction))
+        _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
     }
 
     fun update(form: TransactionFormState)
@@ -108,6 +144,63 @@ class TransactionFormViewModel(
     {
         editedTransaction = null
         _uiState.value = TransactionFormUiState()
+    }
+
+    /** Opens the "new subcategory" dialog. Nothing to do for a transfer, which has no subcategory. */
+    fun askToCreateSubcategory()
+    {
+        if (_uiState.value.form?.subcategoryKind == null) return
+        _uiState.update { it.copy(newSubcategory = NewSubcategoryDraft()) }
+    }
+
+    fun updateNewSubcategoryName(name: String)
+    {
+        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(name = name, error = null)) }
+    }
+
+    /** Picks the emoji of the subcategory being created; null removes the one picked. */
+    fun selectNewSubcategoryEmoji(emoji: String?)
+    {
+        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(emoji = emoji, error = null)) }
+    }
+
+    fun dismissNewSubcategory()
+    {
+        _uiState.update { it.copy(newSubcategory = null) }
+    }
+
+    /**
+     * Creates the subcategory, of the kind the form records (with the emoji picked, if any), and selects it in the form. A blank or
+     * already-used name leaves the dialog open and says why; on success the lists refresh so the
+     * new subcategory shows up in every dropdown.
+     */
+    fun confirmNewSubcategory()
+    {
+        val state = _uiState.value
+        val kind = state.form?.subcategoryKind ?: return
+        val draft = state.newSubcategory ?: return
+
+        val created = try
+        {
+            createSubcategory.create(
+                CreateSubcategoryCommand(kind, SubcategoryName(draft.name), draft.emoji?.let { SubcategoryEmoji(it) }),
+            )
+        } catch (_: InvalidSubcategoryNameException)
+        {
+            _uiState.update { it.copy(newSubcategory = draft.copy(error = NewSubcategoryError.NAME_REQUIRED)) }
+            return
+        } catch (_: DuplicateSubcategoryNameException)
+        {
+            _uiState.update { it.copy(newSubcategory = draft.copy(error = NewSubcategoryError.NAME_TAKEN)) }
+            return
+        } catch (_: InvalidSubcategoryEmojiException)
+        {
+            _uiState.update { it.copy(newSubcategory = draft.copy(error = NewSubcategoryError.EMOJI_INVALID)) }
+            return
+        }
+
+        dataRevision.bump()
+        _uiState.update { it.copy(form = it.form?.copy(subcategory = created), newSubcategory = null) }
     }
 
     /** Asks for confirmation before deleting the edited transaction. Does nothing on a new one. */
