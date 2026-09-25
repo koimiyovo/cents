@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -54,7 +55,6 @@ import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
-import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.formatEuroCents
 import java.time.Instant
 import java.time.LocalDate
@@ -159,18 +159,22 @@ fun AccountDetailsScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             BackButton(palette, onBack)
             Spacer(Modifier.width(12.dp))
-            HomeTopBar(palette, account.name.value)
+            Box(modifier = Modifier.weight(1f)) {
+                HomeTopBar(palette, account.name.value)
+            }
+            Spacer(Modifier.width(12.dp))
+            // Top right of the screen, where the "more" menu of an app bar is expected.
+            AccountActionsMenu(
+                palette = palette,
+                isArchived = account.archivedAt != null,
+                onEdit = onEdit,
+                onArchive = { showArchiveConfirmation = true },
+                // No confirmation: unarchiving destroys nothing and is undone by archiving again.
+                onUnarchive = onUnarchive,
+                onDelete = { showDeleteDialog = true },
+            )
         }
-        AccountSummaryCard(
-            palette = palette,
-            account = account,
-            balanceCents = balanceCents,
-            onEditClick = onEdit,
-            onDeleteClick = { showDeleteDialog = true },
-            onArchiveClick = { showArchiveConfirmation = true },
-            // No confirmation: unarchiving destroys nothing and is undone by archiving again.
-            onUnarchiveClick = onUnarchive,
-        )
+        AccountSummaryCard(palette = palette, account = account, balanceCents = balanceCents)
         PeriodFilterRow(
             palette = palette,
             selected = selectedPeriod,
@@ -287,10 +291,6 @@ private fun AccountSummaryCard(
     palette: AccountsPalette,
     account: Account,
     balanceCents: Long,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onArchiveClick: () -> Unit,
-    onUnarchiveClick: () -> Unit,
 )
 {
     Column(
@@ -301,35 +301,17 @@ private fun AccountSummaryCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val isArchived = account.archivedAt != null
-            val typeLabel = "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}"
-            Text(
-                // No "active" badge — that is the normal state; only the exception is spelled out.
-                text = if (isArchived) "$typeLabel · ${stringResource(R.string.accounts_status_archived)}" else typeLabel,
-                color = palette.heroOnCardSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                // Takes what the buttons leave, so a long label can't push them off the card.
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            // Three actions no longer fit on one line next to the type: they live in a menu.
-            AccountActionsMenu(
-                palette = palette,
-                isArchived = isArchived,
-                onEdit = onEditClick,
-                onArchive = onArchiveClick,
-                onUnarchive = onUnarchiveClick,
-                onDelete = onDeleteClick,
-            )
-        }
+        val isArchived = account.archivedAt != null
+        val typeLabel = "${accountEmoji(account.type)} ${stringResource(accountTypeLabelRes(account.type))}"
+        Text(
+            // No "active" badge — that is the normal state; only the exception is spelled out.
+            text = if (isArchived) "$typeLabel · ${stringResource(R.string.accounts_status_archived)}" else typeLabel,
+            color = palette.heroOnCardSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Column {
             Text(
                 text = stringResource(R.string.account_details_balance_label),
@@ -351,9 +333,10 @@ private fun AccountSummaryCard(
 }
 
 /**
- * One "Actions" pill that opens a menu: edit, archive (or unarchive, for an archived account) and
- * delete. A popup menu rather than a row of buttons, so the card's header stays one short line
- * whatever the width of the screen — and the destructive entry is set apart, in the error colour.
+ * The account's actions — edit, archive (or unarchive, for an archived account) and delete — behind
+ * a round "three dots" button in the top right corner, next to the back button's twin on the left.
+ * A popup menu rather than a row of buttons keeps the header to one line whatever the screen width,
+ * and sets the destructive entry apart in the error colour.
  */
 @Composable
 private fun AccountActionsMenu(
@@ -366,47 +349,45 @@ private fun AccountActionsMenu(
 )
 {
     var expanded by remember { mutableStateOf(false) }
+    val description = stringResource(R.string.account_actions_menu)
     Box {
-        Row(
+        // Hand-drawn like the back button: three dots, one above the other.
+        Canvas(
             modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(palette.heroPillBackground)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(palette.surface)
                 .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .semantics { contentDescription = description },
         ) {
-            Text(
-                text = stringResource(R.string.account_actions_menu),
-                color = palette.heroOnCardPrimary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.width(6.dp))
-            ChevronDownIcon(tint = palette.heroOnCardPrimary, modifier = Modifier.size(11.dp))
+            val radius = size.width * 0.06f
+            listOf(0.3f, 0.5f, 0.7f).forEach { y ->
+                drawCircle(palette.textPrimary, radius, Offset(size.width / 2, size.height * y))
+            }
         }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             containerColor = palette.surface,
         ) {
-            ActionMenuItem("✏️ ${stringResource(R.string.account_edit_action)}", palette.textPrimary) {
+            ActionMenuItem(stringResource(R.string.account_edit_action), palette.textPrimary) {
                 expanded = false
                 onEdit()
             }
             if (isArchived)
             {
-                ActionMenuItem("↩️ ${stringResource(R.string.account_details_unarchive_button)}", palette.textPrimary) {
+                ActionMenuItem(stringResource(R.string.account_details_unarchive_button), palette.textPrimary) {
                     expanded = false
                     onUnarchive()
                 }
             } else
             {
-                ActionMenuItem("🗄️ ${stringResource(R.string.account_details_archive_button)}", palette.textPrimary) {
+                ActionMenuItem(stringResource(R.string.account_details_archive_button), palette.textPrimary) {
                     expanded = false
                     onArchive()
                 }
             }
-            ActionMenuItem("🗑️ ${stringResource(R.string.account_delete_action)}", palette.error) {
+            ActionMenuItem(stringResource(R.string.account_delete_action), palette.error) {
                 expanded = false
                 onDelete()
             }

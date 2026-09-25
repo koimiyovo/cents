@@ -65,6 +65,7 @@ import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectableOptionRow
 import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.ui.transaction.canEditInitialDeposit
 import com.kyovo.cents.ui.transaction.canEditTransaction
 import java.time.Instant
 import java.time.LocalDate
@@ -713,9 +714,10 @@ internal fun DayGroup(
                     palette = palette,
                     transaction = transaction,
                     account = accountsById[transaction.accountId],
-                    // Only what can be edited reacts to a tap: a transfer or an opening deposit doesn't.
+                    // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
+                    // does, but only for its amount (it opens its own, one-field form).
                     onClick = onTransactionClick
-                        ?.takeIf { canEditTransaction(transaction) }
+                        ?.takeIf { canEditTransaction(transaction) || canEditInitialDeposit(transaction) }
                         ?.let { open -> { open(transaction) } },
                 )
                 if (index != transactions.lastIndex)

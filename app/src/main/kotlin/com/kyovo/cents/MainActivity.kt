@@ -15,6 +15,7 @@ import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
+import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 
 // A plain enum (rather than a sealed interface of data objects) so rememberSaveable can persist
@@ -35,6 +36,17 @@ class MainActivity : ComponentActivity() {
                     recordTransfer = appContainer.recordTransfer,
                     updateTransaction = appContainer.updateTransaction,
                     deleteTransaction = appContainer.deleteTransaction,
+                    dataRevision = appContainer.dataRevision,
+                )
+            }
+        }
+    }
+
+    private val initialDepositFormViewModel: InitialDepositFormViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                InitialDepositFormViewModel(
+                    updateInitialDeposit = appContainer.updateInitialDeposit,
                     dataRevision = appContainer.dataRevision,
                 )
             }
@@ -76,6 +88,7 @@ class MainActivity : ComponentActivity() {
                     listTransactions = appContainer.listTransactions,
                     dataRevision = appContainer.dataRevision,
                     formViewModel = formViewModel,
+                    initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
                 )
             }
