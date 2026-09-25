@@ -11,11 +11,11 @@ import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryCommand
 import com.kyovo.cents.domain.port.output.SubcategoryIdGenerator
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 fun aSubcategoryId(value: String = "55555555-5555-5555-5555-555555555555"): SubcategoryId
 {
-    return SubcategoryId(Uuid.parse(value))
+    return SubcategoryId(UUID.fromString(value))
 }
 
 fun aSubcategory(

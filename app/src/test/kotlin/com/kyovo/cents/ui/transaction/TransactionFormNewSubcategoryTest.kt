@@ -29,14 +29,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val MOMENT = Instant.parse("2026-09-23T12:00:00Z")
 
 private const val CART = "🛒"
 
 private fun anActiveAccount() = Account(
-    id = AccountId(Uuid.random()),
+    id = AccountId(UUID.randomUUID()),
     name = AccountName("Compte"),
     type = AccountType.CHECKING,
     currency = AccountCurrency(Currency.getInstance("EUR")),
@@ -53,7 +53,7 @@ private class RecordingCreateSubcategory : CreateSubcategoryUseCase
     {
         if (refuseName) throw DuplicateSubcategoryNameException()
         commands += command
-        return Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+        return Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
     }
 }
 
@@ -400,8 +400,8 @@ class TransactionFormNewSubcategoryTest
     }
 
     private fun anExistingExpense() = Transaction.recorded(
-        id = TransactionId(Uuid.random()),
-        accountId = AccountId(Uuid.random()),
+        id = TransactionId(UUID.randomUUID()),
+        accountId = AccountId(UUID.randomUUID()),
         amount = Money(1_250),
         title = TransactionTitle("Courses"),
         category = RecordableTransactionCategory.EXPENSE,

@@ -11,14 +11,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private const val CART = "🛒"
 private val EXPENSE = RecordableTransactionCategory.EXPENSE
 private val INCOME = RecordableTransactionCategory.INCOME
 
 private fun aSubcategory(emoji: String? = CART, kind: RecordableTransactionCategory = EXPENSE) = Subcategory(
-    SubcategoryId(Uuid.parse("aaaaaaaa-0000-0000-0000-000000000001")),
+    SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001")),
     kind,
     SubcategoryName("Alimentation"),
     emoji?.let { SubcategoryEmoji(it) },

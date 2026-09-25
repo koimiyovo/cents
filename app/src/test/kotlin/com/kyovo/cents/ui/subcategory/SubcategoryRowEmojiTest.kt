@@ -7,10 +7,10 @@ import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private fun aRow(kind: RecordableTransactionCategory, emoji: String?) = SubcategoryRow(
-    Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName("Nom"), emoji?.let { SubcategoryEmoji(it) }),
+    Subcategory(SubcategoryId(UUID.randomUUID()), kind, SubcategoryName("Nom"), emoji?.let { SubcategoryEmoji(it) }),
     transactionCount = 0,
 )
 

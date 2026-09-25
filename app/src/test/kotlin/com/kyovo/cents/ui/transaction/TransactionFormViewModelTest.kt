@@ -35,13 +35,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val NOW = Instant.parse("2026-09-23T12:00:00Z")
 
 private fun anAccount(archived: Boolean = false) = Account(
-    id = AccountId(Uuid.random()),
-    name = AccountName("Account ${Uuid.random()}"),
+    id = AccountId(UUID.randomUUID()),
+    name = AccountName("Account ${UUID.randomUUID()}"),
     type = AccountType.CHECKING,
     currency = AccountCurrency(Currency.getInstance("EUR")),
     createdAt = NOW,
@@ -59,7 +59,7 @@ private class FakeRecordTransaction : RecordTransactionUseCase
         failWith?.let { throw it }
         commands += command
         return command.toTransaction(
-            TransactionId(Uuid.random()),
+            TransactionId(UUID.randomUUID()),
             subcategoryFor(command.subcategoryId)
         )
     }
@@ -74,14 +74,14 @@ private class FakeRecordTransfer : RecordTransferUseCase
         commands += command
         return TransferResult(
             Transaction.transferOut(
-                TransactionId(Uuid.random()),
+                TransactionId(UUID.randomUUID()),
                 command.fromAccountId,
                 command.amount,
                 command.title,
                 command.date
             ),
             Transaction.transferIn(
-                TransactionId(Uuid.random()),
+                TransactionId(UUID.randomUUID()),
                 command.toAccountId,
                 command.amount,
                 command.title,
@@ -125,12 +125,12 @@ private class FakeDeleteTransaction : DeleteTransactionUseCase
 private class FakeCreateSubcategory : CreateSubcategoryUseCase
 {
     override suspend fun create(command: CreateSubcategoryCommand): Subcategory =
-        Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+        Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
 }
 
 private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Transaction.recorded(
-    id = TransactionId(Uuid.random()),
-    accountId = AccountId(Uuid.random()),
+    id = TransactionId(UUID.randomUUID()),
+    accountId = AccountId(UUID.randomUUID()),
     amount = Money(1_250),
     title = TransactionTitle("Courses"),
     category = RecordableTransactionCategory.EXPENSE,
@@ -375,14 +375,14 @@ class TransactionFormViewModelTest
     {
         // GIVEN
         val leg = Transaction.transferOut(
-            TransactionId(Uuid.random()),
+            TransactionId(UUID.randomUUID()),
             checking.id,
             Money(100),
             TransactionTitle("Retrait"),
             NOW
         )
         val deposit =
-            Transaction.openingDeposit(TransactionId(Uuid.random()), checking.id, Money(100), NOW)
+            Transaction.openingDeposit(TransactionId(UUID.randomUUID()), checking.id, Money(100), NOW)
 
         // WHEN
         viewModel.openForEdit(leg)
@@ -557,7 +557,7 @@ class TransactionFormViewModelTest
     {
         // GIVEN
         val income = Transaction.recorded(
-            id = TransactionId(Uuid.random()), accountId = checking.id, amount = Money(245_000),
+            id = TransactionId(UUID.randomUUID()), accountId = checking.id, amount = Money(245_000),
             title = TransactionTitle("Salaire"), category = RecordableTransactionCategory.INCOME,
             subcategory = null, description = null, date = NOW,
         )
@@ -688,7 +688,7 @@ class TransactionFormViewModelTest
         viewModel.openForEdit(anExistingExpense())
         viewModel.close()
         val second = Transaction.recorded(
-            id = TransactionId(Uuid.random()), accountId = checking.id, amount = Money(500),
+            id = TransactionId(UUID.randomUUID()), accountId = checking.id, amount = Money(500),
             title = TransactionTitle("Café"), category = RecordableTransactionCategory.EXPENSE,
             subcategory = null, description = null, date = NOW,
         )

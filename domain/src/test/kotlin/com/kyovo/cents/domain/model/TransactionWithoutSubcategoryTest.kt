@@ -3,7 +3,7 @@ package com.kyovo.cents.domain.model
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * When a subcategory is deleted, the transactions that used it are kept and simply lose it. A
@@ -13,7 +13,7 @@ import kotlin.uuid.Uuid
 class TransactionWithoutSubcategoryTest
 {
     private val groceries = Subcategory(
-        SubcategoryId(Uuid.parse("55555555-5555-5555-5555-555555555555")),
+        SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555555")),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName("Alimentation"),
         null
@@ -21,8 +21,8 @@ class TransactionWithoutSubcategoryTest
 
     private fun aRecorded(category: RecordableTransactionCategory, subcategory: Subcategory?) =
         Transaction.recorded(
-            id = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333")),
-            accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
+            id = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333")),
+            accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")),
             amount = Money(1_250),
             title = TransactionTitle("Courses de la semaine"),
             category = category,

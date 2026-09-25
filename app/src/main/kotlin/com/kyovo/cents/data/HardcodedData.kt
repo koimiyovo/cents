@@ -21,7 +21,7 @@ import com.kyovo.cents.domain.port.output.TransactionRepository
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * Fixed demo data for the accounts/transactions screens, seeded straight into the in-memory
@@ -38,7 +38,7 @@ suspend fun seedHardcodedData(
     val eur = AccountCurrency(Currency.getInstance("EUR"))
 
     val checking = Account(
-        id = AccountId(Uuid.random()),
+        id = AccountId(UUID.randomUUID()),
         name = AccountName("Compte Courant"),
         type = AccountType.CHECKING,
         currency = eur,
@@ -48,7 +48,7 @@ suspend fun seedHardcodedData(
         ),
     )
     val cash = Account(
-        id = AccountId(Uuid.random()),
+        id = AccountId(UUID.randomUUID()),
         name = AccountName("Portefeuille Espèces"),
         type = AccountType.CASH,
         currency = eur,
@@ -59,7 +59,7 @@ suspend fun seedHardcodedData(
     // counts in the totals and takes no new transaction. Its last movement empties it into the
     // checking account, so it ends at a balance of zero, as a real closed account would.
     val oldJoint = Account(
-        id = AccountId(Uuid.random()),
+        id = AccountId(UUID.randomUUID()),
         name = AccountName("Ancien Compte Joint"),
         type = AccountType.CHECKING,
         currency = eur,
@@ -74,7 +74,7 @@ suspend fun seedHardcodedData(
     {
         transactionRepository.save(
             Transaction.openingDeposit(
-                id = TransactionId(Uuid.random()),
+                id = TransactionId(UUID.randomUUID()),
                 accountId = accountId,
                 amount = Money(amountCents),
                 date = date,
@@ -93,7 +93,7 @@ suspend fun seedHardcodedData(
     {
         transactionRepository.save(
             Transaction.recorded(
-                id = TransactionId(Uuid.random()),
+                id = TransactionId(UUID.randomUUID()),
                 accountId = accountId,
                 amount = Money(amountCents),
                 title = TransactionTitle(title),
@@ -118,10 +118,10 @@ suspend fun seedHardcodedData(
         val amount = Money(amountCents)
         val transferTitle = TransactionTitle(title)
         transactionRepository.save(
-            Transaction.transferOut(TransactionId(Uuid.random()), fromAccountId, amount, transferTitle, date),
+            Transaction.transferOut(TransactionId(UUID.randomUUID()), fromAccountId, amount, transferTitle, date),
         )
         transactionRepository.save(
-            Transaction.transferIn(TransactionId(Uuid.random()), toAccountId, amount, transferTitle, date),
+            Transaction.transferIn(TransactionId(UUID.randomUUID()), toAccountId, amount, transferTitle, date),
         )
     }
 
@@ -134,7 +134,7 @@ suspend fun seedHardcodedData(
     // The subcategories the app starts with (the user will manage their own): what used to be
     // hardcoded in the domain and the UI, now plain data with the emoji stored on each.
     suspend fun subcategory(kind: RecordableTransactionCategory, name: String, emoji: String): Subcategory =
-        Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName(name), SubcategoryEmoji(emoji))
+        Subcategory(SubcategoryId(UUID.randomUUID()), kind, SubcategoryName(name), SubcategoryEmoji(emoji))
             .also { subcategoryRepository.save(it) }
 
     val groceries = subcategory(expense, "Alimentation", "\uD83D\uDED2")

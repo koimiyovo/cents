@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 class ListAccountRepositoryTest
 {
@@ -98,7 +98,7 @@ class ListAccountRepositoryTest
         val repository = ListAccountRepository()
 
         // WHEN / THEN
-        repository.deleteById(AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")))
+        repository.deleteById(AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")))
     }
 
     @Test
@@ -117,7 +117,7 @@ class ListAccountRepositoryTest
     private fun anAccount(name: AccountName, archivedAt: Instant? = null): Account
     {
         return Account(
-            id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
+            id = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")),
             name = name,
             type = AccountType.CHECKING,
             currency = AccountCurrency(Currency.getInstance("EUR")),

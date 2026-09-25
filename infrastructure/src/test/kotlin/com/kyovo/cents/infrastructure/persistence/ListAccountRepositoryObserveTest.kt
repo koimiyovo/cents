@@ -14,7 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * What a screen collecting the accounts sees: the stored list now, then every change to it, in the
@@ -25,9 +25,9 @@ class ListAccountRepositoryObserveTest
 {
     private val repository = ListAccountRepository()
 
-    private val idA = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
-    private val idB = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222"))
-    private val idC = AccountId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
+    private val idA = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
+    private val idB = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222"))
+    private val idC = AccountId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
 
     private fun anAccount(id: AccountId, name: String) = Account(
         id = id,

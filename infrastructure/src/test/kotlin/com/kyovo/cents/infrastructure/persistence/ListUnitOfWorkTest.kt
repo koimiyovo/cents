@@ -18,7 +18,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ListUnitOfWorkTest
@@ -73,12 +73,12 @@ class ListUnitOfWorkTest
         val transactionRepository = ListTransactionRepository()
         val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, ListSubcategoryRepository())
         val existingAccount = anAccount(
-            id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
+            id = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")),
             name = AccountName("Livret A")
         )
         accountRepository.save(existingAccount)
         val newAccount = anAccount(
-            id = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222")),
+            id = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222")),
             name = AccountName("Compte courant")
         )
 
@@ -114,7 +114,7 @@ class ListUnitOfWorkTest
         assertThatThrownBySuspending {
             unitOfWork.execute {
                 accountRepository.save(
-                    anAccount(id = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222")), name = AccountName("Compte courant")),
+                    anAccount(id = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222")), name = AccountName("Compte courant")),
                 )
                 throw RuntimeException("boom")
             }
@@ -130,8 +130,8 @@ class ListUnitOfWorkTest
         // GIVEN
         val accountRepository = ListAccountRepository()
         val unitOfWork = ListUnitOfWork(accountRepository, ListTransactionRepository(), ListSubcategoryRepository())
-        val first = anAccount(id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")), name = AccountName("A"))
-        val second = anAccount(id = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222")), name = AccountName("B"))
+        val first = anAccount(id = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")), name = AccountName("A"))
+        val second = anAccount(id = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222")), name = AccountName("B"))
         accountRepository.save(first)
         accountRepository.save(second)
 
@@ -168,7 +168,7 @@ class ListUnitOfWorkTest
             unitOfWork.execute {
                 transactionRepository.save(
                     Transaction.openingDeposit(
-                        id = TransactionId(Uuid.parse("44444444-4444-4444-4444-444444444444")),
+                        id = TransactionId(UUID.fromString("44444444-4444-4444-4444-444444444444")),
                         accountId = account.id,
                         amount = Money(1_000),
                         date = Instant.parse("2026-09-22T10:00:00Z"),
@@ -184,7 +184,7 @@ class ListUnitOfWorkTest
     }
 
     private fun anAccount(
-        id: AccountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
+        id: AccountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")),
         name: AccountName
     ): Account
     {
@@ -200,7 +200,7 @@ class ListUnitOfWorkTest
     private fun anOpeningDeposit(accountId: AccountId): Transaction
     {
         return Transaction.openingDeposit(
-            id = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333")),
+            id = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333")),
             accountId = accountId,
             amount = Money(15_000),
             date = Instant.parse("2026-09-22T10:00:00Z")

@@ -9,12 +9,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 class ListTransactionRepositoryTest
 {
-    private val id = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
-    private val accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+    private val id = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
+    private val accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
     private val date = Instant.parse("2026-09-22T10:00:00Z")
 
     @Test
