@@ -1,6 +1,7 @@
 package com.kyovo.cents
 
 import com.kyovo.cents.application.usecase.ArchiveAccountService
+import com.kyovo.cents.application.usecase.DeleteAccountService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.ListAccountsService
@@ -15,6 +16,7 @@ import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
+import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
@@ -50,6 +52,8 @@ class AppContainer {
     val unarchiveAccount: UnarchiveAccountUseCase = UnarchiveAccountService(accountRepository)
     val updateAccount: UpdateAccountUseCase = UpdateAccountService(accountRepository)
     val reorderAccounts: ReorderAccountsUseCase = ReorderAccountsService(accountRepository)
+    val deleteAccount: DeleteAccountUseCase =
+        DeleteAccountService(accountRepository, transactionRepository, unitOfWork)
     val getAccount: GetAccountUseCase = GetAccountService(accountRepository)
     val getAccountBalance: GetAccountBalanceUseCase =
         GetAccountBalanceService(accountRepository, transactionRepository)

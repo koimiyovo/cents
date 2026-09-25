@@ -163,6 +163,18 @@
     <string name="account_form_title_edit">Modifier le compte</string>
     <string name="account_form_submit_edit">Enregistrer</string>
     <string name="account_edit_action">Modifier</string>
+    <string name="account_delete_action">Supprimer</string>
+    <string name="account_actions_menu">Actions</string>
+    <string name="account_delete_title">Supprimer ce compte ?</string>
+    <string name="account_delete_body_empty">« %1$s » sera supprimé définitivement.</string>
+    <plurals name="account_delete_body_transactions">
+        <item quantity="one">« %1$s » contient %2$d transaction. Supprimer le compte efface aussi cette transaction, définitivement.</item>
+        <item quantity="other">« %1$s » contient %2$d transactions. Supprimer le compte efface aussi toutes ses transactions, définitivement.</item>
+    </plurals>
+    <string name="account_delete_archive_hint">Vous pouvez plutôt l\'archiver : il disparaît de la liste, mais tout son historique est conservé.</string>
+    <string name="account_delete_archive_instead">Archiver à la place</string>
+    <string name="account_delete_confirm">Supprimer</string>
+    <string name="account_delete_confirm_all">Tout supprimer</string>
     <string name="account_move_up">Monter</string>
     <string name="account_move_down">Descendre</string>
     <string name="account_form_error_name">Le nom est obligatoire.</string>
