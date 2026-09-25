@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
@@ -57,7 +59,10 @@ private class FakeRecordTransaction : RecordTransactionUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return command.toTransaction(TransactionId(Uuid.random()), subcategoryFor(command.subcategoryId))
+        return command.toTransaction(
+            TransactionId(Uuid.random()),
+            subcategoryFor(command.subcategoryId)
+        )
     }
 }
 
@@ -65,7 +70,7 @@ private class FakeRecordTransfer : RecordTransferUseCase
 {
     val commands = mutableListOf<RecordTransferCommand>()
 
-    override fun record(command: RecordTransferCommand): TransferResult
+    override suspend fun record(command: RecordTransferCommand): TransferResult
     {
         commands += command
         return TransferResult(
@@ -135,6 +140,7 @@ private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Tran
     date = date,
 )
 
+@ExtendWith(MainDispatcherExtension::class)
 class TransactionFormViewModelTest
 {
     private val recordTransaction = FakeRecordTransaction()

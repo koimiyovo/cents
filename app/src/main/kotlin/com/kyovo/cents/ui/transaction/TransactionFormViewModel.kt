@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /** Why a syntactically valid form still couldn't be saved (rules only the use cases can check). */
@@ -287,6 +289,12 @@ class TransactionFormViewModel(
 
     /** Saves the form. On success the sheet closes; otherwise the state says what to show. */
     fun submit()
+    {
+        // A transfer is recorded by a suspend use case: the whole save runs in the view model's scope.
+        viewModelScope.launch { save() }
+    }
+
+    private suspend fun save()
     {
         val form = _uiState.value.form ?: return
         val submission = form.stampedAt(now()).submit()

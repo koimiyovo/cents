@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -69,7 +71,7 @@ class SubcategoryScenariosTest
         )
 
     @Test
-    fun `deleting a subcategory keeps its transactions listed, uncategorised`()
+    fun `deleting a subcategory keeps its transactions listed, uncategorised`() = runTest()
     {
         // GIVEN two expenses in a subcategory, and one with none
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -87,7 +89,7 @@ class SubcategoryScenariosTest
     }
 
     @Test
-    fun `deleting a subcategory changes no balance`()
+    fun `deleting a subcategory changes no balance`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -103,7 +105,7 @@ class SubcategoryScenariosTest
     }
 
     @Test
-    fun `renaming a subcategory keeps its transactions attached to it`()
+    fun `renaming a subcategory keeps its transactions attached to it`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -118,7 +120,7 @@ class SubcategoryScenariosTest
     }
 
     @Test
-    fun `a name freed by a deletion can be used again, by a subcategory of its own`()
+    fun `a name freed by a deletion can be used again, by a subcategory of its own`() = runTest()
     {
         // GIVEN a transaction recorded under "Alimentation", which is then deleted
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
@@ -135,14 +137,14 @@ class SubcategoryScenariosTest
     }
 
     @Test
-    fun `a deleted subcategory can no longer be used to record a transaction`()
+    fun `a deleted subcategory can no longer be used to record a transaction`() = runTest()
     {
         // GIVEN
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
         deleteSubcategory.delete(first)
 
         // WHEN / THEN
-        assertThatThrownBy { spend(1_000, first) }
+        assertThatThrownBySuspending { spend(1_000, first) }
             .isInstanceOf(SubcategoryNotFoundException::class.java)
         assertThat(transactionRepository.saved).isEmpty()
     }

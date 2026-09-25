@@ -8,7 +8,7 @@ class ListUnitOfWork(
     private val subcategoryRepository: ListSubcategoryRepository
 ) : UnitOfWork
 {
-    override fun <T> execute(block: () -> T): T
+    override suspend fun <T> execute(block: suspend () -> T): T
     {
         val accountsSnapshot = accountRepository.snapshot()
         val transactionsSnapshot = transactionRepository.snapshot()
@@ -16,8 +16,7 @@ class ListUnitOfWork(
         return try
         {
             block()
-        }
-        catch (e: Exception)
+        } catch (e: Exception)
         {
             accountRepository.restore(accountsSnapshot)
             transactionRepository.restore(transactionsSnapshot)

@@ -8,5 +8,5 @@ interface DeleteSubcategoryUseCase
      * Never refused: the transactions that used the subcategory are kept and left uncategorised.
      * An unknown id is not an error.
      */
-    fun delete(id: SubcategoryId)
+    suspend fun delete(id: SubcategoryId)
 }

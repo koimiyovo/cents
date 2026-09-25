@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.account
 
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
@@ -24,7 +26,7 @@ private class FakeOpenAccount : OpenAccountUseCase
     val commands = mutableListOf<OpenAccountCommand>()
     var failWith: RuntimeException? = null
 
-    override fun open(command: OpenAccountCommand): Account
+    override suspend fun open(command: OpenAccountCommand): Account
     {
         failWith?.let { throw it }
         commands += command
@@ -55,6 +57,7 @@ private fun anExistingAccount(id: AccountId = AccountId(Uuid.random())) = Accoun
     description = AccountDescription.of("Épargne de précaution"),
 )
 
+@ExtendWith(MainDispatcherExtension::class)
 class AccountFormViewModelTest
 {
     private val openAccount = FakeOpenAccount()
@@ -67,7 +70,13 @@ class AccountFormViewModelTest
     private fun openAndFill(name: String = "Livret A")
     {
         viewModel.open()
-        viewModel.update(form!!.copy(name = name, type = AccountType.SAVINGS, initialAmountText = "100"))
+        viewModel.update(
+            form!!.copy(
+                name = name,
+                type = AccountType.SAVINGS,
+                initialAmountText = "100"
+            )
+        )
     }
 
     @Test

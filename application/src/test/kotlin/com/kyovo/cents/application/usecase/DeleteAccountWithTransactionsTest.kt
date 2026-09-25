@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
@@ -42,19 +44,19 @@ class DeleteAccountWithTransactionsTest
         )
 
     @Test
-    fun `still refuses an account with transactions when not asked to delete them`()
+    fun `still refuses an account with transactions when not asked to delete them`() = runTest()
     {
         // GIVEN
         accountRepository.save(anAccount(id = id))
         transactionRepository.save(transactionOf(id, 1))
 
         // WHEN / THEN
-        assertThatThrownBy { service.delete(id, deleteTransactions = false) }
+        assertThatThrownBySuspending { service.delete(id, deleteTransactions = false) }
             .isInstanceOf(CannotDeleteAccountWithTransactionsException::class.java)
     }
 
     @Test
-    fun `changes nothing when it refuses`()
+    fun `changes nothing when it refuses`() = runTest()
     {
         // GIVEN
         val account = anAccount(id = id)
@@ -63,7 +65,7 @@ class DeleteAccountWithTransactionsTest
         transactionRepository.save(transaction)
 
         // WHEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteAccountWithTransactionsException::class.java)
 
         // THEN
@@ -72,7 +74,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `deletes the account together with all its transactions when asked to`()
+    fun `deletes the account together with all its transactions when asked to`() = runTest()
     {
         // GIVEN
         accountRepository.save(anAccount(id = id))
@@ -89,7 +91,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `only deletes what belongs to that account`()
+    fun `only deletes what belongs to that account`() = runTest()
     {
         // GIVEN
         val other = anAccount(id = otherId, name = AccountName("Compte courant"))
@@ -108,7 +110,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `keeps the other side of a transfer`()
+    fun `keeps the other side of a transfer`() = runTest()
     {
         // GIVEN a transfer from the account to delete to another one: two legs, one on each account
         val other = anAccount(id = otherId, name = AccountName("Compte courant"))
@@ -137,7 +139,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `deletes an account that has no transactions the same way`()
+    fun `deletes an account that has no transactions the same way`() = runTest()
     {
         // GIVEN
         accountRepository.save(anAccount(id = id))
@@ -150,7 +152,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `deletes an archived account and its transactions too`()
+    fun `deletes an archived account and its transactions too`() = runTest()
     {
         // GIVEN
         accountRepository.save(anAccount(id = id, archivedAt = anInstant("2026-01-01T00:00:00Z")))
@@ -165,7 +167,7 @@ class DeleteAccountWithTransactionsTest
     }
 
     @Test
-    fun `does nothing when no account matches the given id`()
+    fun `does nothing when no account matches the given id`() = runTest()
     {
         // GIVEN
         val other = anAccount(id = otherId, name = AccountName("Compte courant"))
@@ -174,13 +176,13 @@ class DeleteAccountWithTransactionsTest
         transactionRepository.save(othersTransaction)
 
         // WHEN / THEN
-        assertThatCode { service.delete(id, deleteTransactions = true) }.doesNotThrowAnyException()
+        service.delete(id, deleteTransactions = true)
         assertThat(accountRepository.saved).containsExactly(other)
         assertThat(transactionRepository.saved).containsExactly(othersTransaction)
     }
 
     @Test
-    fun `deletes the account and its transactions in a single unit of work`()
+    fun `deletes the account and its transactions in a single unit of work`() = runTest()
     {
         // GIVEN so that either both go or neither does
         accountRepository.save(anAccount(id = id))

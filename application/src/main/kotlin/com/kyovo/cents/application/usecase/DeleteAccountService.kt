@@ -13,7 +13,7 @@ class DeleteAccountService(
     private val unitOfWork: UnitOfWork
 ) : DeleteAccountUseCase
 {
-    override fun delete(id: AccountId, deleteTransactions: Boolean)
+    override suspend fun delete(id: AccountId, deleteTransactions: Boolean)
     {
         if (!deleteTransactions && transactionRepository.findAll().any { it.accountId == id })
         {

@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -18,7 +19,7 @@ import kotlin.uuid.Uuid
 class ListUnitOfWorkTest
 {
     @Test
-    fun `commits every write performed inside the block when it completes successfully`()
+    fun `commits every write performed inside the block when it completes successfully`() = runTest()
     {
         // GIVEN
         val accountRepository = ListAccountRepository()
@@ -40,7 +41,7 @@ class ListUnitOfWorkTest
     }
 
     @Test
-    fun `rolls back writes performed inside the block when it throws`()
+    fun `rolls back writes performed inside the block when it throws`() = runTest()
     {
         // GIVEN
         val accountRepository = ListAccountRepository()
@@ -49,7 +50,7 @@ class ListUnitOfWorkTest
         val account = anAccount(name = AccountName("Livret A"))
 
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             unitOfWork.execute {
                 accountRepository.save(account)
                 throw RuntimeException("boom")
@@ -60,7 +61,7 @@ class ListUnitOfWorkTest
     }
 
     @Test
-    fun `does not roll back writes committed before the failing unit of work started`()
+    fun `does not roll back writes committed before the failing unit of work started`() = runTest()
     {
         // GIVEN
         val accountRepository = ListAccountRepository()
@@ -77,7 +78,7 @@ class ListUnitOfWorkTest
         )
 
         // WHEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             unitOfWork.execute {
                 accountRepository.save(newAccount)
                 throw RuntimeException("boom")
