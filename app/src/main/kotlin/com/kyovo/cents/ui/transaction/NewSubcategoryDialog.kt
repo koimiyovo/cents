@@ -25,11 +25,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.ui.common.EmojiPickerField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
 import com.kyovo.cents.ui.common.SUBCATEGORY_EMOJIS
 import com.kyovo.cents.ui.common.SubmitButton
+import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DialogCancelButton
 
@@ -77,7 +79,7 @@ internal fun NewSubcategoryDialog(
             FormTextField(
                 palette = palette,
                 value = draft.name,
-                onValueChange = onNameChange,
+                onValueChange = { onNameChange(limitNameInput(it, SubcategoryName.MAX_LENGTH)) },
                 placeholder = stringResource(R.string.new_subcategory_name_placeholder),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
