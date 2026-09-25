@@ -4,13 +4,15 @@ import com.kyovo.cents.domain.port.output.UnitOfWork
 
 class ListUnitOfWork(
     private val accountRepository: ListAccountRepository,
-    private val transactionRepository: ListTransactionRepository
+    private val transactionRepository: ListTransactionRepository,
+    private val subcategoryRepository: ListSubcategoryRepository
 ) : UnitOfWork
 {
     override fun <T> execute(block: () -> T): T
     {
         val accountsSnapshot = accountRepository.snapshot()
         val transactionsSnapshot = transactionRepository.snapshot()
+        val subcategoriesSnapshot = subcategoryRepository.snapshot()
         return try
         {
             block()
@@ -19,6 +21,7 @@ class ListUnitOfWork(
         {
             accountRepository.restore(accountsSnapshot)
             transactionRepository.restore(transactionsSnapshot)
+            subcategoryRepository.restore(subcategoriesSnapshot)
             throw e
         }
     }

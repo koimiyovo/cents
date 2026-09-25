@@ -23,7 +23,7 @@ class ListUnitOfWorkTest
         // GIVEN
         val accountRepository = ListAccountRepository()
         val transactionRepository = ListTransactionRepository()
-        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository)
+        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, ListSubcategoryRepository())
         val account = anAccount(name = AccountName("Livret A"))
         val transaction = anOpeningDeposit(accountId = account.id)
 
@@ -45,7 +45,7 @@ class ListUnitOfWorkTest
         // GIVEN
         val accountRepository = ListAccountRepository()
         val transactionRepository = ListTransactionRepository()
-        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository)
+        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, ListSubcategoryRepository())
         val account = anAccount(name = AccountName("Livret A"))
 
         // WHEN / THEN
@@ -65,7 +65,7 @@ class ListUnitOfWorkTest
         // GIVEN
         val accountRepository = ListAccountRepository()
         val transactionRepository = ListTransactionRepository()
-        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository)
+        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, ListSubcategoryRepository())
         val existingAccount = anAccount(
             id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
             name = AccountName("Livret A")
