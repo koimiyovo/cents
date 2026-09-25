@@ -29,4 +29,15 @@ class ListSubcategoryRepository : SubcategoryRepository
     {
         subcategories.removeAll { it.id == id }
     }
+
+    internal fun snapshot(): List<Subcategory>
+    {
+        return subcategories.toList()
+    }
+
+    internal fun restore(snapshot: List<Subcategory>)
+    {
+        subcategories.clear()
+        subcategories.addAll(snapshot)
+    }
 }
