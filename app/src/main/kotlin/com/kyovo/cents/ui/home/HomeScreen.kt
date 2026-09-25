@@ -38,10 +38,12 @@ import com.kyovo.cents.R
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
 import com.kyovo.cents.domain.exception.AccountNotFoundException
+import com.kyovo.cents.domain.exception.CannotDeleteAccountWithTransactionsException
 import com.kyovo.cents.domain.exception.AccountNotArchivedException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
+import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
@@ -71,6 +73,7 @@ fun HomeScreen(
     listArchivedAccounts: ListArchivedAccountsUseCase,
     archiveAccount: ArchiveAccountUseCase,
     unarchiveAccount: UnarchiveAccountUseCase,
+    deleteAccount: DeleteAccountUseCase,
     reorderAccounts: ReorderAccountsUseCase,
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
@@ -113,6 +116,18 @@ fun HomeScreen(
         } catch (e: AccountNotFoundException)
         {
             // An account vanished since the list was read: nothing to reorder, just refresh.
+        }
+        dataRevision.bump()
+    }
+    val delete: (AccountId, Boolean) -> Unit = { id, deleteTransactions ->
+        try
+        {
+            deleteAccount.delete(id, deleteTransactions)
+        } catch (e: CannotDeleteAccountWithTransactionsException)
+        {
+            // Transactions appeared after the dialog was built (it said there were none): refuse
+            // rather than erase what the user was never told about. The refreshed screens show
+            // the account as it is now.
         }
         dataRevision.bump()
     }
@@ -171,6 +186,11 @@ fun HomeScreen(
                     // Stays on the page: the account is active again, so the "+" button reappears.
                     onUnarchive = { unarchive(openedAccountId) },
                     onEdit = { getAccount.get(openedAccountId)?.let(accountFormViewModel::openForEdit) },
+                    // The account is gone: back to the list.
+                    onDelete = { deleteTransactions ->
+                        delete(openedAccountId, deleteTransactions)
+                        openedAccountUuid = null
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
@@ -202,6 +222,7 @@ fun HomeScreen(
                             onUnarchiveAccount = unarchive,
                             onEditAccount = accountFormViewModel::openForEdit,
                             onReorderAccounts = reorder,
+                            onDeleteAccount = delete,
                             revision = revision,
                         )
                         HomeTab.Transactions ->

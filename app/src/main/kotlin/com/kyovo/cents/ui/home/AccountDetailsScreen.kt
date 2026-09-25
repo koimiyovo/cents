@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -49,6 +53,7 @@ import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.formatEuroCents
 import java.time.Instant
 import java.time.LocalDate
@@ -69,6 +74,7 @@ fun AccountDetailsScreen(
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,
     onEdit: () -> Unit,
+    onDelete: (deleteTransactions: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -107,6 +113,7 @@ fun AccountDetailsScreen(
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showArchiveConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
     val (periodFrom, periodTo) = remember(selectedPeriod, customFrom, customTo) {
         periodRange(selectedPeriod, customFrom, customTo, Instant.now())
@@ -157,6 +164,7 @@ fun AccountDetailsScreen(
             account = account,
             balanceCents = balanceCents,
             onEditClick = onEdit,
+            onDeleteClick = { showDeleteDialog = true },
             onArchiveClick = { showArchiveConfirmation = true },
             // No confirmation: unarchiving destroys nothing and is undone by archiving again.
             onUnarchiveClick = onUnarchive,
@@ -220,6 +228,28 @@ fun AccountDetailsScreen(
         }
     }
 
+    if (showDeleteDialog)
+    {
+        val deletesTransactions = deleteChoices(accountTransactions.size, alreadyArchived = false).deletesTransactions
+        DeleteAccountDialog(
+            palette = palette,
+            accountName = account.name.value,
+            transactionCount = accountTransactions.size,
+            alreadyArchived = account.archivedAt != null,
+            onDelete = {
+                showDeleteDialog = false
+                onDelete(deletesTransactions)
+            },
+            // The same archiving as the card's own menu (and the same confirmation-free path the
+            // list uses from here: the user has just been through a dialog about this account).
+            onArchive = {
+                showDeleteDialog = false
+                onArchive()
+            },
+            onDismiss = { showDeleteDialog = false },
+        )
+    }
+
     if (showArchiveConfirmation)
     {
         ArchiveConfirmationDialog(
@@ -256,6 +286,7 @@ private fun AccountSummaryCard(
     account: Account,
     balanceCents: Long,
     onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
     onArchiveClick: () -> Unit,
     onUnarchiveClick: () -> Unit,
 )
@@ -287,18 +318,15 @@ private fun AccountSummaryCard(
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
-            // The card's actions: the same edit as the row's left swipe, then the one move that
-            // makes sense in the account's current state.
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CardActionPill(palette, stringResource(R.string.account_edit_action), onEditClick)
-                CardActionPill(
-                    palette = palette,
-                    label = stringResource(
-                        if (isArchived) R.string.account_details_unarchive_button else R.string.account_details_archive_button,
-                    ),
-                    onClick = if (isArchived) onUnarchiveClick else onArchiveClick,
-                )
-            }
+            // Three actions no longer fit on one line next to the type: they live in a menu.
+            AccountActionsMenu(
+                palette = palette,
+                isArchived = isArchived,
+                onEdit = onEditClick,
+                onArchive = onArchiveClick,
+                onUnarchive = onUnarchiveClick,
+                onDelete = onDeleteClick,
+            )
         }
         Column {
             Text(
@@ -320,20 +348,74 @@ private fun AccountSummaryCard(
     }
 }
 
+/**
+ * One "Actions" pill that opens a menu: edit, archive (or unarchive, for an archived account) and
+ * delete. A popup menu rather than a row of buttons, so the card's header stays one short line
+ * whatever the width of the screen — and the destructive entry is set apart, in the error colour.
+ */
 @Composable
-private fun CardActionPill(palette: AccountsPalette, label: String, onClick: () -> Unit)
+private fun AccountActionsMenu(
+    palette: AccountsPalette,
+    isArchived: Boolean,
+    onEdit: () -> Unit,
+    onArchive: () -> Unit,
+    onUnarchive: () -> Unit,
+    onDelete: () -> Unit,
+)
 {
-    Text(
-        text = label,
-        color = palette.heroOnCardPrimary,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(palette.heroPillBackground)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(palette.heroPillBackground)
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.account_actions_menu),
+                color = palette.heroOnCardPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.width(6.dp))
+            ChevronDownIcon(tint = palette.heroOnCardPrimary, modifier = Modifier.size(11.dp))
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = palette.surface,
+        ) {
+            ActionMenuItem("✏️ ${stringResource(R.string.account_edit_action)}", palette.textPrimary) {
+                expanded = false
+                onEdit()
+            }
+            if (isArchived)
+            {
+                ActionMenuItem("↩️ ${stringResource(R.string.account_details_unarchive_button)}", palette.textPrimary) {
+                    expanded = false
+                    onUnarchive()
+                }
+            } else
+            {
+                ActionMenuItem("🗄️ ${stringResource(R.string.account_details_archive_button)}", palette.textPrimary) {
+                    expanded = false
+                    onArchive()
+                }
+            }
+            ActionMenuItem("🗑️ ${stringResource(R.string.account_delete_action)}", palette.error) {
+                expanded = false
+                onDelete()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionMenuItem(label: String, color: Color, onClick: () -> Unit)
+{
+    DropdownMenuItem(text = { Text(label, color = color, fontSize = 15.sp) }, onClick = onClick)
 }
 
 internal fun accountTypeLabelRes(type: AccountType): Int = when (type)

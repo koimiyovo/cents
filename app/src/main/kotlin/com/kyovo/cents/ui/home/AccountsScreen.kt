@@ -26,6 +26,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -94,6 +99,7 @@ fun AccountsScreen(
     onArchiveAccount: (AccountId) -> Unit,
     onUnarchiveAccount: (AccountId) -> Unit,
     onEditAccount: (Account) -> Unit,
+    onDeleteAccount: (AccountId, Boolean) -> Unit,
     onReorderAccounts: (List<AccountId>) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
@@ -136,6 +142,11 @@ fun AccountsScreen(
     var revealedId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    // The account whose deletion the user is being asked to confirm: from either list.
+    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
+    val pendingDelete = pendingDeleteId?.let { id ->
+        (accounts + archivedAccounts).firstOrNull { it.id.value.toString() == id }
+    }
     val balanceByAccountId = remember(accounts, archivedAccounts, revision) {
         (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
     }
@@ -219,6 +230,7 @@ fun AccountsScreen(
                             },
                             onSwipeRight = { pendingArchiveId = idText },
                             onEdit = { revealedId = null; onEditAccount(account) },
+                            onDelete = { revealedId = null; pendingDeleteId = idText },
                             // A row can't be swiped sideways while it is being carried up or down.
                             swipeEnabled = reorder.draggedId == null,
                             // The drag has an accessible equivalent, like the swipes.
@@ -252,6 +264,7 @@ fun AccountsScreen(
                 onAccountClick = onAccountClick,
                 onUnarchiveAccount = onUnarchiveAccount,
                 onEditAccount = onEditAccount,
+                onDeleteRequest = { pendingDeleteId = it.value.toString() },
                 revealedId = revealedId,
                 onRevealedIdChange = { revealedId = it },
             )
@@ -268,6 +281,30 @@ fun AccountsScreen(
                 onArchiveAccount(pendingArchive.id)
             },
             onDismiss = { pendingArchiveId = null },
+        )
+    }
+
+    if (pendingDelete != null)
+    {
+        // Counted when the question is asked (and again if the data changes underneath): it is what
+        // the dialog tells the user they are about to erase.
+        val transactionCount = remember(pendingDelete.id, revision) {
+            listTransactions.list(accountId = pendingDelete.id).size
+        }
+        DeleteAccountDialog(
+            palette = palette,
+            accountName = pendingDelete.name.value,
+            transactionCount = transactionCount,
+            alreadyArchived = pendingDelete.archivedAt != null,
+            onDelete = {
+                pendingDeleteId = null
+                onDeleteAccount(pendingDelete.id, deleteChoices(transactionCount, alreadyArchived = false).deletesTransactions)
+            },
+            onArchive = {
+                pendingDeleteId = null
+                onArchiveAccount(pendingDelete.id)
+            },
+            onDismiss = { pendingDeleteId = null },
         )
     }
 }
@@ -608,7 +645,7 @@ internal fun revealedIdAfter(current: String?, id: String, open: Boolean): Strin
 
 /**
  * One account in a list: the row itself, pulled aside by a swipe. Right = [onSwipeRight] (archive
- * or unarchive), left = the "Modifier" button.
+ * or unarchive), left = the "Modifier" and "Supprimer" buttons.
  */
 @Composable
 private fun AccountListRow(
@@ -623,6 +660,7 @@ private fun AccountListRow(
     onOpen: () -> Unit,
     onSwipeRight: () -> Unit,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
     swipeEnabled: Boolean = true,
     extraActions: List<CustomAccessibilityAction> = emptyList(),
 )
@@ -637,6 +675,7 @@ private fun AccountListRow(
         rightEmoji = if (archived) "↩️" else "🗄️",
         onSwipeRight = onSwipeRight,
         onEdit = onEdit,
+        onDelete = onDelete,
         swipeEnabled = swipeEnabled,
         extraActions = extraActions,
     ) {
@@ -656,17 +695,22 @@ private fun AccountListRow(
 /** The gap between the account rows: the drag arithmetic needs to know it. */
 private val ACCOUNT_ROW_SPACING = 12.dp
 
-/** How far a row slides to show its "Modifier" button: the button, plus a small gap. */
-private val EDIT_PANEL_WIDTH = 104.dp
-private val EDIT_PANEL_GAP = 8.dp
+/**
+ * How far a row slides to show its buttons. Icons only ("Modifier", "Supprimer"), so the pair
+ * takes little of the row; each label lives in the icon's content description instead.
+ */
+private val ACTION_BUTTON_WIDTH = 52.dp
+private val ACTION_BUTTON_GAP = 16.dp
+private val ACTIONS_PANEL_WIDTH = ACTION_BUTTON_WIDTH * 2 + ACTION_BUTTON_GAP
+private val ACTIONS_PANEL_GAP = 8.dp
 
 /**
  * A row that can be pulled sideways, in both directions:
  *
  *  - **right**: past a threshold, [onSwipeRight] is called and the row springs back — it never
  *    stays there (the action may open a confirmation, or move the row to the other list);
- *  - **left**: the row slides aside and *stays* open ([revealed]) on a "Modifier" button, until it
- *    is closed by a tap, by another swipe, or by opening another row.
+ *  - **left**: the row slides aside and *stays* open ([revealed]) on its "Modifier" and
+ *    "Supprimer" buttons, until it is closed by a tap, by another swipe, or by opening another row.
  *
  * Material's `SwipeToDismissBox` only knows the first behaviour (it dismisses, it can't rest
  * half-open), so this is built on the plain `draggable` modifier: one offset, driven by the finger
@@ -684,13 +728,14 @@ private fun SwipeableRow(
     rightEmoji: String,
     onSwipeRight: () -> Unit,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
     swipeEnabled: Boolean = true,
     extraActions: List<CustomAccessibilityAction> = emptyList(),
     content: @Composable () -> Unit,
 )
 {
     val density = LocalDensity.current
-    val revealPx = with(density) { (EDIT_PANEL_WIDTH + EDIT_PANEL_GAP).toPx() }
+    val revealPx = with(density) { (ACTIONS_PANEL_WIDTH + ACTIONS_PANEL_GAP).toPx() }
     var rowWidthPx by remember { mutableIntStateOf(0) }
     var offsetPx by remember { mutableFloatStateOf(0f) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
@@ -699,6 +744,7 @@ private fun SwipeableRow(
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
     val currentOnRevealedChange by rememberUpdatedState(onRevealedChange)
     val currentOnEdit by rememberUpdatedState(onEdit)
+    val currentOnDelete by rememberUpdatedState(onDelete)
 
     fun settleTo(target: Float)
     {
@@ -713,6 +759,7 @@ private fun SwipeableRow(
         offsetPx = (offsetPx + delta).coerceIn(-revealPx * 1.1f, rowWidthPx * 0.6f)
     }
     val editLabel = stringResource(R.string.account_edit_action)
+    val deleteLabel = stringResource(R.string.account_delete_action)
 
     Box(
         modifier = Modifier
@@ -722,6 +769,7 @@ private fun SwipeableRow(
                 customActions = listOf(
                     CustomAccessibilityAction(rightLabel) { currentOnSwipeRight(); true },
                     CustomAccessibilityAction(editLabel) { currentOnEdit(); true },
+                    CustomAccessibilityAction(deleteLabel) { currentOnDelete(); true },
                 ) + extraActions
             },
     ) {
@@ -747,23 +795,12 @@ private fun SwipeableRow(
         }
         if (offsetPx < 0f)
         {
-            Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
-                Box(
-                    modifier = Modifier
-                        .width(EDIT_PANEL_WIDTH)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(palette.badgeBackground)
-                        .clickable { currentOnEdit() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "✏️ $editLabel",
-                        color = palette.textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+            Row(
+                modifier = Modifier.matchParentSize(),
+                horizontalArrangement = Arrangement.spacedBy(ACTION_BUTTON_GAP, Alignment.End),
+            ) {
+                SwipeActionButton(palette, Icons.Filled.Edit, editLabel, palette.textPrimary) { currentOnEdit() }
+                SwipeActionButton(palette, Icons.Filled.Delete, deleteLabel, palette.error) { currentOnDelete() }
             }
         }
         Box(
@@ -808,6 +845,33 @@ private fun SwipeableRow(
     }
 }
 
+/**
+ * An icon-only button of the row's left panel. The label is not shown but read out by screen
+ * readers (the content description), and the delete one is in the error colour so that the two,
+ * side by side, can't be mistaken for each other.
+ */
+@Composable
+private fun SwipeActionButton(
+    palette: AccountsPalette,
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
+)
+{
+    Box(
+        modifier = Modifier
+            .width(ACTION_BUTTON_WIDTH)
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(18.dp))
+            .background(palette.badgeBackground)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+    }
+}
+
 /** Share of the row's width a right swipe must cross before it triggers its action. */
 private const val SWIPE_RIGHT_THRESHOLD = 0.35f
 private const val FLING_VELOCITY = 1200f
@@ -827,6 +891,7 @@ private fun ArchivedAccountsSection(
     onAccountClick: (AccountId) -> Unit,
     onUnarchiveAccount: (AccountId) -> Unit,
     onEditAccount: (Account) -> Unit,
+    onDeleteRequest: (AccountId) -> Unit,
     revealedId: String?,
     onRevealedIdChange: (String?) -> Unit,
 )
@@ -873,6 +938,7 @@ private fun ArchivedAccountsSection(
                         onOpen = { onRevealedIdChange(null); onAccountClick(account.id) },
                         onSwipeRight = { onUnarchiveAccount(account.id) },
                         onEdit = { onRevealedIdChange(null); onEditAccount(account) },
+                        onDelete = { onRevealedIdChange(null); onDeleteRequest(account.id) },
                     )
                 }
             }
