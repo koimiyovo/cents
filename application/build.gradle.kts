@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":domain"))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.kotlinx.coroutines.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 tasks.test {
