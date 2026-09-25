@@ -8,7 +8,7 @@ import org.junit.jupiter.api.AfterEach
 
 /**
  * The Room adapter, against a real SQLite (in memory, through the bundled driver: the one Android
- * ships only loads on a device) — same tests as the in-memory list.
+ * ships only loads on a device).
  */
 class RoomSubcategoryRepositoryContractTest : SubcategoryRepositoryContract()
 {

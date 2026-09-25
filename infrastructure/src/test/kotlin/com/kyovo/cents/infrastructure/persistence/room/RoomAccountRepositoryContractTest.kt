@@ -6,7 +6,7 @@ import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.infrastructure.persistence.AccountRepositoryContract
 import org.junit.jupiter.api.AfterEach
 
-/** The Room adapter, against a real SQLite: same tests as the in-memory list. */
+/** The Room adapter, against a real SQLite. */
 class RoomAccountRepositoryContractTest : AccountRepositoryContract()
 {
     private lateinit var database: CentsDatabase

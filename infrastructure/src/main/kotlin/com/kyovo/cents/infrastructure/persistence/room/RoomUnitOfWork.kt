@@ -9,8 +9,7 @@ import com.kyovo.cents.domain.port.output.UnitOfWork
  *
  * The repositories used inside the block need nothing special: Room notices that the coroutine is
  * inside a transaction and runs their queries on that same connection, so the block also reads what
- * it has just written. And nobody else sees the writes before the end, unlike with the in-memory lists
- * (which write straight away and restore a snapshot on failure).
+ * it has just written. And nobody else sees the writes before the end.
  */
 class RoomUnitOfWork(private val database: CentsDatabase) : UnitOfWork
 {

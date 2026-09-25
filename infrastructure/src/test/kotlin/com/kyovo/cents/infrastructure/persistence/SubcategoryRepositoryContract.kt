@@ -21,15 +21,15 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * What every [SubcategoryRepository] must do, whatever it stores the subcategories in. Each adapter
- * has a small test class extending this one and saying how to build itself: the in-memory list the
- * app started with, and the Room database that replaces it. If both pass the same tests, swapping one
- * for the other changes nothing for the services above.
+ * What every [SubcategoryRepository] must do, whatever it stores the subcategories in: the port's
+ * specification, written as tests. An adapter has a small test class extending this one and saying how
+ * to build itself (today Room's, `RoomSubcategoryRepositoryContractTest`); another adapter that passes
+ * the same tests could replace it without the services above noticing.
  *
  * The tests run in real time (`runBlocking`, not `runTest`): a database answers on its own threads,
  * and a virtual clock would run out while it does. For the same reason the observation tests wait
  * until the wanted list shows up, instead of counting the emissions: a database may fold several
- * quick changes into one emission. (The in-memory list's exact sequence is tested by its own class.)
+ * quick changes into one emission.
  */
 abstract class SubcategoryRepositoryContract
 {

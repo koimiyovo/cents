@@ -41,8 +41,8 @@ class Stores(
 )
 
 /**
- * What every [TransactionRepository] must do, whatever it stores the transactions in (the in-memory
- * list, the Room database). What only a database does — refusing a transaction of an unknown
+ * What every [TransactionRepository] must do, whatever it stores the transactions in (today Room).
+ * What only a database does — refusing a transaction of an unknown
  * account, for instance — is tested by the Room adapter's own class.
  */
 abstract class TransactionRepositoryContract
