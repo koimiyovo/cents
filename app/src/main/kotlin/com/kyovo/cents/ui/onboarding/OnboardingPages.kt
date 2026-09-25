@@ -36,11 +36,6 @@ fun OnboardingPage1(palette: OnboardingPalette, modifier: Modifier = Modifier) {
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(
-            text = stringResource(R.string.onboarding_page1_subtitle),
-            color = palette.textSecondary,
-            fontSize = 15.sp,
-        )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             FeatureRow(
                 tone = IconTone.Green,
@@ -61,37 +56,34 @@ fun OnboardingPage1(palette: OnboardingPalette, modifier: Modifier = Modifier) {
                 palette = palette,
             )
         }
-        Pill(
-            text = stringResource(R.string.onboarding_page1_rating),
-            palette = palette,
-            backgroundColor = palette.surfaceAlt,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
 @Composable
 fun OnboardingPage2(palette: OnboardingPalette, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Pill(text = stringResource(R.string.onboarding_page2_badge), palette = palette)
         Text(
             text = stringResource(R.string.onboarding_page2_title),
             color = palette.textPrimary,
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(
-            text = stringResource(R.string.onboarding_page2_subtitle),
-            color = palette.textSecondary,
-            fontSize = 15.sp,
-        )
         AccountsPreviewCard(palette)
-        FeatureRow(
-            tone = IconTone.Gold,
-            title = stringResource(R.string.onboarding_page2_feature2_title),
-            description = stringResource(R.string.onboarding_page2_feature2_description),
-            palette = palette,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FeatureRow(
+                tone = IconTone.Gold,
+                title = stringResource(R.string.onboarding_page2_feature2_title),
+                description = stringResource(R.string.onboarding_page2_feature2_description),
+                palette = palette,
+            )
+            FeatureRow(
+                tone = IconTone.Mint,
+                title = stringResource(R.string.onboarding_page2_feature3_title),
+                description = stringResource(R.string.onboarding_page2_feature3_description),
+                palette = palette,
+            )
+        }
     }
 }
 
@@ -105,29 +97,15 @@ fun OnboardingPage3(palette: OnboardingPalette, modifier: Modifier = Modifier) {
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(
-            text = stringResource(R.string.onboarding_page3_subtitle),
-            color = palette.textSecondary,
-            fontSize = 13.sp,
-        )
         EntryPreviewCard(palette)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FeatureRow(
-                tone = IconTone.Gold,
-                title = stringResource(R.string.onboarding_page3_feature1_title),
-                description = stringResource(R.string.onboarding_page3_feature1_description),
-                palette = palette,
-            )
-            FeatureRow(
-                tone = IconTone.Mint,
-                title = stringResource(R.string.onboarding_page3_feature2_title),
-                description = stringResource(R.string.onboarding_page3_feature2_description),
-                palette = palette,
-            )
-        }
     }
 }
 
+/**
+ * A miniature of the real accounts screen: the consolidated balance (with the screen's own label), then
+ * one row per account made of the account type's icon, its name and its balance — nothing else, since a
+ * real row has nothing else.
+ */
 @Composable
 private fun AccountsPreviewCard(palette: OnboardingPalette) {
     Column(
@@ -136,21 +114,29 @@ private fun AccountsPreviewCard(palette: OnboardingPalette) {
             .clip(RoundedCornerShape(16.dp))
             .background(palette.surface),
     ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Text(text = stringResource(R.string.accounts_hero_label), color = palette.textMuted, fontSize = 11.sp)
+            Text(
+                text = stringResource(R.string.onboarding_page2_total_amount),
+                color = palette.textPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        HorizontalDivider(palette)
         AccountRow(
             tone = IconTone.Green,
+            icon = "🏦",
             name = stringResource(R.string.onboarding_page2_account1_name),
-            subtitle = stringResource(R.string.onboarding_page2_account1_subtitle),
             amount = stringResource(R.string.onboarding_page2_account1_amount),
-            note = stringResource(R.string.onboarding_page2_account1_note),
             palette = palette,
         )
         HorizontalDivider(palette)
         AccountRow(
             tone = IconTone.Gold,
+            icon = "💵",
             name = stringResource(R.string.onboarding_page2_account2_name),
-            subtitle = stringResource(R.string.onboarding_page2_account2_subtitle),
             amount = stringResource(R.string.onboarding_page2_account2_amount),
-            note = stringResource(R.string.onboarding_page2_account2_note),
             palette = palette,
         )
     }
@@ -159,21 +145,20 @@ private fun AccountsPreviewCard(palette: OnboardingPalette) {
 @Composable
 private fun AccountRow(
     tone: IconTone,
+    icon: String,
     name: String,
-    subtitle: String,
     amount: String,
-    note: String,
     palette: OnboardingPalette,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(32.dp)
                 .clip(CircleShape)
                 .background(
                     when (tone) {
@@ -182,16 +167,19 @@ private fun AccountRow(
                         IconTone.Mint -> palette.iconToneMint
                     },
                 ),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = icon, fontSize = 15.sp)
+        }
         Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = name, color = palette.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitle, color = palette.textMuted, fontSize = 12.sp)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(text = amount, color = palette.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(text = note, color = palette.accent, fontSize = 12.sp)
-        }
+        Text(
+            text = name,
+            color = palette.textPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        Text(text = amount, color = palette.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -207,10 +195,10 @@ private fun EntryPreviewCard(palette: OnboardingPalette) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(palette.surface)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PreviewChip(stringResource(R.string.onboarding_page3_type_expense), selected = true, palette = palette)
             PreviewChip(stringResource(R.string.onboarding_page3_type_income), selected = false, palette = palette)
             PreviewChip(stringResource(R.string.onboarding_page3_type_transfer), selected = false, palette = palette)
@@ -220,10 +208,10 @@ private fun EntryPreviewCard(palette: OnboardingPalette) {
                 Text(
                     text = stringResource(R.string.onboarding_page3_entry_amount),
                     color = palette.textPrimary,
-                    fontSize = 22.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                Text(text = stringResource(R.string.onboarding_page3_entry_currency), color = palette.textSecondary, fontSize = 15.sp)
+                Text(text = stringResource(R.string.onboarding_page3_entry_currency), color = palette.textSecondary, fontSize = 14.sp)
             }
         }
         PreviewField(palette) {
@@ -244,7 +232,7 @@ private fun EntryPreviewCard(palette: OnboardingPalette) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(50))
                 .background(palette.primaryButton)
-                .padding(vertical = 10.dp),
+                .padding(vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -265,7 +253,7 @@ private fun PreviewField(palette: OnboardingPalette, content: @Composable () -> 
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(palette.surfaceAlt)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
     ) {
         content()
     }
@@ -274,8 +262,8 @@ private fun PreviewField(palette: OnboardingPalette, content: @Composable () -> 
 /** A labelled field ending in a chevron, like the form's pick-one dropdowns. */
 @Composable
 private fun PreviewDropdown(label: String, value: String, palette: OnboardingPalette) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = label, color = palette.textMuted, fontSize = 12.sp)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(text = label, color = palette.textMuted, fontSize = 11.sp)
         PreviewField(palette) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(text = value, color = palette.textPrimary, fontSize = 14.sp)
@@ -291,7 +279,7 @@ private fun PreviewChip(label: String, selected: Boolean, palette: OnboardingPal
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (selected) palette.primaryButton else palette.surfaceAlt)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
         Text(
             text = label,
