@@ -1,8 +1,8 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
-import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import java.time.Instant
@@ -12,7 +12,7 @@ class ListTransactionsService(private val transactionRepository: TransactionRepo
 {
     override fun list(
         accountId: AccountId?,
-        subcategory: TransactionSubcategory?,
+        subcategoryId: SubcategoryId?,
         from: Instant?,
         to: Instant?,
         titleFilter: String
@@ -21,7 +21,7 @@ class ListTransactionsService(private val transactionRepository: TransactionRepo
         return transactionRepository.findAll()
             .filter { transaction ->
                 (accountId == null || transaction.accountId == accountId) &&
-                        (subcategory == null || transaction.subcategory == subcategory) &&
+                        (subcategoryId == null || transaction.subcategoryId == subcategoryId) &&
                         (from == null || !transaction.date.isBefore(from)) &&
                         (to == null || !transaction.date.isAfter(to)) &&
                         transaction.title.contains(titleFilter)

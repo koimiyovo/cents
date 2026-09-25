@@ -13,13 +13,4 @@ enum class RecordableTransactionCategory
             EXPENSE -> TransactionCategory.EXPENSE
         }
     }
-
-    fun accepts(subcategory: TransactionSubcategory): Boolean
-    {
-        return when (this)
-        {
-            EXPENSE -> subcategory is ExpenseSubcategory
-            INCOME  -> subcategory is IncomeSubcategory
-        }
-    }
 }
