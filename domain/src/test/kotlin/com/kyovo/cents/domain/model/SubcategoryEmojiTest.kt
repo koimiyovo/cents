@@ -60,4 +60,32 @@ class SubcategoryEmojiTest
         // THEN
         assertThat(emoji.value).isEqualTo("🛒")
     }
+
+    @Test
+    fun `accepts an emoji of exactly 16 characters`()
+    {
+        // GIVEN
+        val text = "a".repeat(16)
+
+        // WHEN / THEN
+        assertThat(SubcategoryEmoji(text).value).isEqualTo(text)
+    }
+
+    @Test
+    fun `refuses an emoji of 17 characters`()
+    {
+        // WHEN / THEN
+        assertThatThrownBy { SubcategoryEmoji("a".repeat(17)) }
+            .isInstanceOf(InvalidSubcategoryEmojiException::class.java)
+    }
+
+    @Test
+    fun `the limit is checked after trimming`()
+    {
+        // GIVEN 16 characters between spaces
+        val text = "a".repeat(16)
+
+        // WHEN / THEN
+        assertThat(SubcategoryEmoji("  $text ").value).isEqualTo(text)
+    }
 }

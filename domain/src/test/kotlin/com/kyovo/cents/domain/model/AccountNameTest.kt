@@ -80,4 +80,40 @@ class AccountNameTest
         // WHEN / THEN
         assertThat(name.contains("Compte")).isFalse()
     }
+
+    @Test
+    fun `a name is limited to 60 characters`()
+    {
+        assertThat(AccountName.MAX_LENGTH).isEqualTo(60)
+    }
+
+    @Test
+    fun `accepts a name of exactly the limit`()
+    {
+        // GIVEN
+        val text = "a".repeat(AccountName.MAX_LENGTH)
+
+        // WHEN / THEN
+        assertThat(AccountName(text).value).isEqualTo(text)
+    }
+
+    @Test
+    fun `refuses a name one character over the limit`()
+    {
+        // WHEN / THEN
+        assertThatThrownBy { AccountName("a".repeat(AccountName.MAX_LENGTH + 1)) }
+            .isInstanceOf(InvalidAccountNameException::class.java)
+    }
+
+    @Test
+    fun `the limit is checked after trimming`()
+    {
+        // GIVEN
+        val text = "a".repeat(AccountName.MAX_LENGTH)
+
+        // WHEN / THEN the surrounding spaces don't count, the characters do
+        assertThat(AccountName("  $text  ").value).isEqualTo(text)
+        assertThatThrownBy { AccountName("  ${text}a  ") }
+            .isInstanceOf(InvalidAccountNameException::class.java)
+    }
 }
