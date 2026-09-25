@@ -20,8 +20,6 @@ import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.application.usecase.UpdateInitialDepositService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
-import com.kyovo.cents.data.DataRevision
-import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
@@ -45,23 +43,20 @@ import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
-import com.kyovo.cents.infrastructure.persistence.ListAccountRepository
-import com.kyovo.cents.infrastructure.persistence.ListSubcategoryRepository
-import com.kyovo.cents.infrastructure.persistence.ListTransactionRepository
-import com.kyovo.cents.infrastructure.persistence.ListUnitOfWork
-import java.time.Clock
+import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import java.time.Clock
 
 /**
- * Manual wiring for the app's current single-Activity shell: builds the in-memory repositories,
- * seeds them with fixed demo data, and exposes the application services the UI reads from.
+ * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
+ * repositories and unit of work) and exposes the application services the UI reads from.
  * Held by [CentsApplication] so it survives Activity recreation; real DI can replace it later.
  */
-class AppContainer {
-    private val accountRepository = ListAccountRepository()
-    private val transactionRepository = ListTransactionRepository()
-    private val subcategoryRepository = ListSubcategoryRepository()
+class AppContainer(persistence: RoomPersistence) {
+    private val accountRepository = persistence.accounts
+    private val transactionRepository = persistence.transactions
+    private val subcategoryRepository = persistence.subcategories
     private val transactionIdGenerator = UuidTransactionIdGenerator()
-    private val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, subcategoryRepository)
+    private val unitOfWork = persistence.unitOfWork
 
     val listAccounts: ListAccountsUseCase = ListAccountsService(accountRepository)
     val listArchivedAccounts: ListArchivedAccountsUseCase = ListArchivedAccountsService(accountRepository)
@@ -101,10 +96,4 @@ class AppContainer {
         unitOfWork,
     )
 
-    /** Bumped after each write so the screens re-read (see [DataRevision]). */
-    val dataRevision = DataRevision()
-
-    init {
-        seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository)
-    }
 }

@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.material.icons.core)
     debugImplementation(libs.androidx.ui.tooling)
 
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -13,11 +13,11 @@ import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 fun aTransactionId(value: String = "33333333-3333-3333-3333-333333333333"): TransactionId
 {
-    return TransactionId(Uuid.parse(value))
+    return TransactionId(UUID.fromString(value))
 }
 
 fun aMoney(value: Long = 0): Money

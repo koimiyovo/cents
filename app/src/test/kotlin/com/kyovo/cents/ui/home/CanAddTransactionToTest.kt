@@ -9,12 +9,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val WHEN_IT_HAPPENED = Instant.parse("2026-09-20T08:30:00Z")
 
 private fun anAccount(archived: Boolean) = Account(
-    id = AccountId(Uuid.random()),
+    id = AccountId(UUID.randomUUID()),
     name = AccountName("Compte"),
     type = AccountType.CHECKING,
     currency = AccountCurrency(Currency.getInstance("EUR")),

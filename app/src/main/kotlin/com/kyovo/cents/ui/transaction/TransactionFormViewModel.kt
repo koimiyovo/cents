@@ -1,7 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
 import androidx.lifecycle.ViewModel
-import com.kyovo.cents.data.DataRevision
+import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
 import com.kyovo.cents.domain.exception.CannotDeleteTransferException
@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /** Why a syntactically valid form still couldn't be saved (rules only the use cases can check). */
@@ -89,8 +90,7 @@ data class TransactionFormUiState(
  * sheet is open, survive it. The screen only renders [uiState] and reports events back; nothing here
  * touches Compose or Android, which keeps it testable as plain Kotlin.
  *
- * The use cases are synchronous because storage is in memory. Once they hit Room they become
- * `suspend` and [submit] will launch them in `viewModelScope`.
+ * The use cases are `suspend` (the storage is a database), so [submit] launches them in `viewModelScope`.
  */
 class TransactionFormViewModel(
     private val recordTransaction: RecordTransactionUseCase,
@@ -98,7 +98,6 @@ class TransactionFormViewModel(
     private val updateTransaction: UpdateTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
     private val createSubcategory: CreateSubcategoryUseCase,
-    private val dataRevision: DataRevision,
     private val now: () -> Instant = { Instant.now() },
 ) : ViewModel()
 {
@@ -213,10 +212,15 @@ class TransactionFormViewModel(
 
     /**
      * Creates the subcategory, of the kind the form records (with the emoji picked, if any), and selects it in the form. A blank or
-     * already-used name leaves the dialog open and says why; on success the lists refresh so the
-     * new subcategory shows up in every dropdown.
+     * already-used name leaves the dialog open and says why; on success the new subcategory shows
+     * up in every dropdown, which observes the list.
      */
     fun confirmNewSubcategory()
+    {
+        viewModelScope.launch { createNewSubcategory() }
+    }
+
+    private suspend fun createNewSubcategory()
     {
         val state = _uiState.value
         val kind = state.form?.subcategoryKind ?: return
@@ -241,7 +245,6 @@ class TransactionFormViewModel(
             return
         }
 
-        dataRevision.bump()
         _uiState.update { it.copy(form = it.form?.copy(subcategory = created), newSubcategory = null) }
     }
 
@@ -261,10 +264,15 @@ class TransactionFormViewModel(
     }
 
     /**
-     * Deletes the edited transaction, once the user has confirmed. On success everything closes and
-     * the lists refresh; if the domain refuses, the form stays open and says so.
+     * Deletes the edited transaction, once the user has confirmed. On success everything closes;
+     * if the domain refuses, the form stays open and says so.
      */
     fun confirmDelete()
+    {
+        viewModelScope.launch { delete() }
+    }
+
+    private suspend fun delete()
     {
         val id = _uiState.value.form?.editingId ?: return
         try
@@ -281,12 +289,17 @@ class TransactionFormViewModel(
             _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
             return
         }
-        dataRevision.bump()
         close()
     }
 
     /** Saves the form. On success the sheet closes; otherwise the state says what to show. */
     fun submit()
+    {
+        // A transfer is recorded by a suspend use case: the whole save runs in the view model's scope.
+        viewModelScope.launch { save() }
+    }
+
+    private suspend fun save()
     {
         val form = _uiState.value.form ?: return
         val submission = form.stampedAt(now()).submit()
@@ -331,8 +344,7 @@ class TransactionFormViewModel(
             return
         }
 
-        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-        dataRevision.bump()
+        // Close only once the write went through.
         close()
     }
 }

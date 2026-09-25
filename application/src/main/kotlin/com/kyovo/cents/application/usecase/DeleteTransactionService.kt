@@ -12,7 +12,7 @@ import com.kyovo.cents.domain.port.output.TransactionRepository
 class DeleteTransactionService(private val transactionRepository: TransactionRepository) :
     DeleteTransactionUseCase
 {
-    override fun delete(id: TransactionId)
+    override suspend fun delete(id: TransactionId)
     {
         val transaction = transactionRepository.findById(id) ?: return
 

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -82,21 +83,20 @@ fun TransactionsScreen(
     listSubcategories: ListSubcategoriesUseCase,
     onTransactionClick: (Transaction) -> Unit,
     onOpenSettings: () -> Unit,
-    revision: Int,
     modifier: Modifier = Modifier,
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
 
-    val accounts = remember(revision) { listAccounts.list() }
+    val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The account filter offers the active accounts only, but the list still shows the history of
     // archived ones: their names must resolve too, or those rows would lose their account.
-    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val accountsById =
         remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
-    val allTransactions = remember(revision) { listTransactions.list() }
+    val allTransactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // Already ordered by name by the use case.
-    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
     // Filter selection isn't saved across configuration changes: AccountId/SubcategoryId
@@ -134,23 +134,15 @@ fun TransactionsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
 
-    val filteredTransactions =
-        remember(
-            revision,
-            selectedAccountId,
-            selectedSubcategory,
-            searchQuery,
-            periodFrom,
-            periodTo
-        ) {
-            listTransactions.list(
-                accountId = selectedAccountId,
-                subcategoryId = selectedSubcategory,
-                titleFilter = searchQuery,
-                from = periodFrom,
-                to = periodTo,
-            )
-        }
+    val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        listTransactions.observe(
+            accountId = selectedAccountId,
+            subcategoryId = selectedSubcategory,
+            titleFilter = searchQuery,
+            from = periodFrom,
+            to = periodTo,
+        )
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
     val groupedByDay = remember(filteredTransactions) { groupByDay(filteredTransactions) }
 
     Column(

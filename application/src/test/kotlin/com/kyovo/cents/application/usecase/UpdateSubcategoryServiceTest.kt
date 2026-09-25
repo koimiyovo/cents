@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -25,7 +27,7 @@ class UpdateSubcategoryServiceTest
     private val service = UpdateSubcategoryService(repository)
 
     @Test
-    fun `renames the subcategory and changes its emoji`()
+    fun `renames the subcategory and changes its emoji`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
@@ -43,7 +45,7 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `a null emoji removes the one it had`()
+    fun `a null emoji removes the one it had`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, emoji = SubcategoryEmoji("🛒")))
@@ -56,7 +58,7 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `never changes the kind`()
+    fun `never changes the kind`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, kind = RecordableTransactionCategory.INCOME))
@@ -69,15 +71,15 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `throws when the subcategory does not exist`()
+    fun `throws when the subcategory does not exist`() = runTest()
     {
         // WHEN / THEN
-        assertThatThrownBy { service.update(anUpdateSubcategoryCommand(id = id)) }
+        assertThatThrownBySuspending { service.update(anUpdateSubcategoryCommand(id = id)) }
             .isInstanceOf(SubcategoryNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when another subcategory of the same kind has that name, and changes nothing`()
+    fun `throws when another subcategory of the same kind has that name, and changes nothing`() = runTest()
     {
         // GIVEN
         val renamed = aSubcategory(id = id, name = SubcategoryName("Alimentation"))
@@ -86,7 +88,7 @@ class UpdateSubcategoryServiceTest
         repository.save(sibling)
 
         // WHEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName(" transport ")))
         }.isInstanceOf(DuplicateSubcategoryNameException::class.java)
 
@@ -95,7 +97,7 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `accepts a name used under the other kind`()
+    fun `accepts a name used under the other kind`() = runTest()
     {
         // GIVEN
         repository.save(
@@ -115,7 +117,7 @@ class UpdateSubcategoryServiceTest
     // Changing only the case of its own name ("transport" → "Transport") must not be mistaken for
     // a clash with itself.
     @Test
-    fun `accepts its own name, even with another case`()
+    fun `accepts its own name, even with another case`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, name = SubcategoryName("transport")))
@@ -128,20 +130,20 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `throws when another subcategory of the same kind has that name with other accents`()
+    fun `throws when another subcategory of the same kind has that name with other accents`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
         repository.save(aSubcategory(id = otherId, name = SubcategoryName("Éducation")))
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("education"))) }
+        assertThatThrownBySuspending { service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("education"))) }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 
     // Adding the accent it was missing is a change of its own name, not a clash with itself.
     @Test
-    fun `accepts adding an accent to its own name`()
+    fun `accepts adding an accent to its own name`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = id, name = SubcategoryName("Education")))

@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -24,20 +26,20 @@ class DeleteTransactionServiceTransferTest
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
-    fun `throws when the transaction is one leg of a transfer`(category: TransactionCategory)
+    fun `throws when the transaction is one leg of a transfer`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         val id = aTransactionId()
         repository.save(aTransaction(id = id, category = category))
 
         // WHEN / THEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteTransferException::class.java)
     }
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
-    fun `does not delete the leg it refuses to delete`(category: TransactionCategory)
+    fun `does not delete the leg it refuses to delete`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -45,7 +47,7 @@ class DeleteTransactionServiceTransferTest
         repository.save(leg)
 
         // WHEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteTransferException::class.java)
 
         // THEN
@@ -53,7 +55,7 @@ class DeleteTransactionServiceTransferTest
     }
 
     @Test
-    fun `leaves both legs of the transfer, and everything else, in place when it refuses`()
+    fun `leaves both legs of the transfer, and everything else, in place when it refuses`() = runTest()
     {
         // GIVEN a transfer between two accounts, and an unrelated expense
         val legOut = aTransaction(
@@ -76,7 +78,7 @@ class DeleteTransactionServiceTransferTest
         repository.save(expense)
 
         // WHEN one leg is targeted
-        assertThatThrownBy { service.delete(legOut.id) }
+        assertThatThrownBySuspending { service.delete(legOut.id) }
             .isInstanceOf(CannotDeleteTransferException::class.java)
 
         // THEN nothing has moved
@@ -85,7 +87,7 @@ class DeleteTransactionServiceTransferTest
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["EXPENSE", "INCOME"])
-    fun `still deletes an expense or an income`(category: TransactionCategory)
+    fun `still deletes an expense or an income`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         val id = aTransactionId()

@@ -1,5 +1,8 @@
 package com.kyovo.cents.ui.home
 
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.res.Configuration
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Canvas
@@ -103,7 +106,6 @@ fun AccountsScreen(
     onDeleteAccount: (AccountId, Boolean) -> Unit,
     onReorderAccounts: (List<AccountId>) -> Unit,
     onOpenSettings: () -> Unit,
-    revision: Int,
     modifier: Modifier = Modifier,
 )
 {
@@ -114,10 +116,10 @@ fun AccountsScreen(
     // needing a scroll just to see the balance.
     val isCompact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val accounts = remember(revision) { listAccounts.list() }
+    val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The order the user has just dropped the rows in, shown until the saved list catches up: the
-    // list re-reads on the next revision, and showing the old order for that one frame would make
-    // the dropped row flick back before jumping to its place.
+    // list is observed and emits the new order a moment after the write, and showing the old order
+    // for that moment would make the dropped row flick back before jumping to its place.
     var droppedOrder by remember { mutableStateOf<List<AccountId>?>(null) }
     val displayedAccounts = remember(accounts, droppedOrder) {
         val order = droppedOrder
@@ -143,15 +145,15 @@ fun AccountsScreen(
     // for the same reason. One at a time: opening a row closes the previous one.
     var revealedId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
-    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The account whose deletion the user is being asked to confirm: from either list.
     var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingDelete = pendingDeleteId?.let { id ->
         (accounts + archivedAccounts).firstOrNull { it.id.value.toString() == id }
     }
-    val balanceByAccountId = remember(accounts, archivedAccounts, revision) {
-        (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
-    }
+    // Every account's balance, in cents: it follows the transactions as they change.
+    val balanceByAccountId by remember { getAccountBalance.observeAll().map { balances -> balances.mapValues { it.value.value } } }
+        .collectAsStateWithLifecycle(initialValue = emptyMap())
     // The consolidated figures cover the active accounts only: an archived account is closed, so
     // it counts neither in the total nor in the income/expense lines below.
     val totalCents = remember(accounts, balanceByAccountId) {
@@ -159,9 +161,10 @@ fun AccountsScreen(
     }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
-    val allTransactions = remember(revision, accounts) {
+    val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allTransactions = remember(everyTransaction, accounts) {
         val activeIds = accounts.map { it.id }.toSet()
-        listTransactions.list().filter { it.accountId in activeIds }
+        everyTransaction.filter { it.accountId in activeIds }
     }
     val incomeCents = remember(allTransactions) {
         allTransactions.filter { it.category == TransactionCategory.INCOME }
@@ -290,24 +293,27 @@ fun AccountsScreen(
     {
         // Counted when the question is asked (and again if the data changes underneath): it is what
         // the dialog tells the user they are about to erase.
-        val transactionCount = remember(pendingDelete.id, revision) {
-            listTransactions.list(accountId = pendingDelete.id).size
+        val transactionCount by remember(pendingDelete.id) { listTransactions.observe(accountId = pendingDelete.id).map { it.size } }
+            .collectAsStateWithLifecycle(initialValue = null)
+        // Nothing is asked until the count is known: a dialog saying "no transactions" for a frame would
+        // offer a plain delete that the account's history does not deserve.
+        transactionCount?.let { count ->
+            DeleteAccountDialog(
+                palette = palette,
+                accountName = pendingDelete.name.value,
+                transactionCount = count,
+                alreadyArchived = pendingDelete.archivedAt != null,
+                onDelete = {
+                    pendingDeleteId = null
+                    onDeleteAccount(pendingDelete.id, deleteChoices(count, alreadyArchived = false).deletesTransactions)
+                },
+                onArchive = {
+                    pendingDeleteId = null
+                    onArchiveAccount(pendingDelete.id)
+                },
+                onDismiss = { pendingDeleteId = null },
+            )
         }
-        DeleteAccountDialog(
-            palette = palette,
-            accountName = pendingDelete.name.value,
-            transactionCount = transactionCount,
-            alreadyArchived = pendingDelete.archivedAt != null,
-            onDelete = {
-                pendingDeleteId = null
-                onDeleteAccount(pendingDelete.id, deleteChoices(transactionCount, alreadyArchived = false).deletesTransactions)
-            },
-            onArchive = {
-                pendingDeleteId = null
-                onArchiveAccount(pendingDelete.id)
-            },
-            onDismiss = { pendingDeleteId = null },
-        )
     }
 }
 

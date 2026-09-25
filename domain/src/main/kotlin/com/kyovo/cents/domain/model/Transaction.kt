@@ -1,5 +1,6 @@
 package com.kyovo.cents.domain.model
 
+import com.kyovo.cents.domain.exception.InvalidRestoredTransactionException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import java.time.Instant
 
@@ -17,7 +18,8 @@ data class Transaction private constructor(
 {
     companion object
     {
-        private val OPENING_DEPOSIT_TITLE = TransactionTitle("Initial deposit")
+        // Shown as it is in the transactions list, whose language is French.
+        private val OPENING_DEPOSIT_TITLE = TransactionTitle("Dépôt initial")
 
         fun openingDeposit(
             id: TransactionId,
@@ -64,6 +66,33 @@ data class Transaction private constructor(
                 description = description,
                 date = date
             )
+        }
+
+        /**
+         * A transaction given back from storage, from the values that were stored. For the adapters
+         * that read a database: the other factories take what only recording knows (a whole
+         * [Subcategory], to check its kind). Not a way around the rules — what was stored went through
+         * them — but a combination no factory can produce is refused: only an income or an expense
+         * has a subcategory or a description.
+         */
+        fun restored(
+            id: TransactionId,
+            accountId: AccountId,
+            amount: Money,
+            title: TransactionTitle,
+            category: TransactionCategory,
+            subcategoryId: SubcategoryId?,
+            description: TransactionDescription?,
+            date: Instant
+        ): Transaction
+        {
+            val canBeDescribed = category == TransactionCategory.INCOME || category == TransactionCategory.EXPENSE
+            if (!canBeDescribed && (subcategoryId != null || description != null))
+            {
+                throw InvalidRestoredTransactionException()
+            }
+
+            return Transaction(id, accountId, amount, title, category, subcategoryId, description, date)
         }
 
         fun transferOut(

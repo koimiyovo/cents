@@ -5,5 +5,5 @@ import com.kyovo.cents.domain.model.TransactionId
 
 interface GetTransactionUseCase
 {
-    fun get(id: TransactionId): Transaction?
+    suspend fun get(id: TransactionId): Transaction?
 }

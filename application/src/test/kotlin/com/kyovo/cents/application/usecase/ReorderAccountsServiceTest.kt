@@ -1,5 +1,8 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
@@ -34,17 +37,17 @@ class ReorderAccountsServiceTest
     private val archived =
         anAccount(id = idArchived, name = AccountName("Archivé"), archivedAt = anInstant("2026-01-01T00:00:00Z"))
 
-    private fun repositoryWith(vararg accounts: Account): InMemoryAccountRepository
+    private suspend fun repositoryWith(vararg accounts: Account): InMemoryAccountRepository
     {
         val repository = InMemoryAccountRepository()
-        accounts.forEach(repository::save)
+        accounts.forEach { repository.save(it) }
         return repository
     }
 
-    private fun InMemoryAccountRepository.ids(): List<AccountId> = findAll().map { it.id }
+    private suspend fun InMemoryAccountRepository.ids(): List<AccountId> = findAll().map { it.id }
 
     @Test
-    fun `puts the accounts in the given order`()
+    fun `puts the accounts in the given order`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -58,7 +61,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `does not change the accounts themselves, only their order`()
+    fun `does not change the accounts themselves, only their order`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -72,7 +75,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `an account that is not listed keeps its place`()
+    fun `an account that is not listed keeps its place`() = runTest()
     {
         // GIVEN the archived account sits between two active ones and isn't part of the drag list
         val repository = repositoryWith(a, archived, b, c)
@@ -86,7 +89,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `reordering only some of the accounts shuffles them among their own positions`()
+    fun `reordering only some of the accounts shuffles them among their own positions`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -100,7 +103,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `listing the accounts afterwards follows the new order`()
+    fun `listing the accounts afterwards follows the new order`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, archived, b, c)
@@ -110,11 +113,11 @@ class ReorderAccountsServiceTest
         service.reorder(listOf(idB, idC, idA))
 
         // THEN the archived one is filtered out of the list, the others come in the new order
-        assertThat(ListAccountsService(repository).list().map { it.id }).containsExactly(idB, idC, idA)
+        assertThat(ListAccountsService(repository).observe().first().map { it.id }).containsExactly(idB, idC, idA)
     }
 
     @Test
-    fun `an empty list changes nothing`()
+    fun `an empty list changes nothing`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -128,7 +131,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `a single account changes nothing`()
+    fun `a single account changes nothing`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -142,7 +145,7 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `throws when an id matches no account`()
+    fun `throws when an id matches no account`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b)
@@ -150,12 +153,12 @@ class ReorderAccountsServiceTest
         val unknown = anAccountId("99999999-9999-9999-9999-999999999999")
 
         // WHEN / THEN
-        assertThatThrownBy { service.reorder(listOf(idB, unknown, idA)) }
+        assertThatThrownBySuspending { service.reorder(listOf(idB, unknown, idA)) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `reorders nothing when one of the ids is unknown`()
+    fun `reorders nothing when one of the ids is unknown`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
@@ -163,7 +166,7 @@ class ReorderAccountsServiceTest
         val unknown = anAccountId("99999999-9999-9999-9999-999999999999")
 
         // WHEN
-        assertThatThrownBy { service.reorder(listOf(idC, unknown, idA)) }
+        assertThatThrownBySuspending { service.reorder(listOf(idC, unknown, idA)) }
             .isInstanceOf(AccountNotFoundException::class.java)
 
         // THEN
@@ -171,26 +174,26 @@ class ReorderAccountsServiceTest
     }
 
     @Test
-    fun `throws when the same account is listed twice`()
+    fun `throws when the same account is listed twice`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
         val service = ReorderAccountsService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.reorder(listOf(idA, idB, idA)) }
+        assertThatThrownBySuspending { service.reorder(listOf(idA, idB, idA)) }
             .isInstanceOf(InvalidAccountOrderException::class.java)
     }
 
     @Test
-    fun `reorders nothing when the same account is listed twice`()
+    fun `reorders nothing when the same account is listed twice`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(a, b, c)
         val service = ReorderAccountsService(repository)
 
         // WHEN
-        assertThatThrownBy { service.reorder(listOf(idC, idC, idB)) }
+        assertThatThrownBySuspending { service.reorder(listOf(idC, idC, idB)) }
             .isInstanceOf(InvalidAccountOrderException::class.java)
 
         // THEN

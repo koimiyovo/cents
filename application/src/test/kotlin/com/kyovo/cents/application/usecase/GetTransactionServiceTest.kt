@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aTransaction
@@ -10,7 +12,7 @@ import org.junit.jupiter.api.Test
 class GetTransactionServiceTest
 {
     @Test
-    fun `returns the transaction matching the given id`()
+    fun `returns the transaction matching the given id`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -26,7 +28,7 @@ class GetTransactionServiceTest
     }
 
     @Test
-    fun `returns the transaction matching the given id among several saved transactions`()
+    fun `returns the transaction matching the given id among several saved transactions`() = runTest()
     {
         // GIVEN
         val id = aTransactionId("44444444-4444-4444-4444-444444444444")
@@ -43,7 +45,7 @@ class GetTransactionServiceTest
     }
 
     @Test
-    fun `returns null when no transaction matches the given id`()
+    fun `returns null when no transaction matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()

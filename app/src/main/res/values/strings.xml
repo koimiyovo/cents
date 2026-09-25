@@ -1,9 +1,9 @@
 <resources>
     <string name="app_name">Cents</string>
 
-    <string name="splash_tagline">Your money, simply tracked</string>
-    <string name="splash_privacy_badge">100% On-Device &amp; Private</string>
-    <string name="splash_status">Initializing secure vault</string>
+    <string name="splash_tagline">Votre argent, simplement suivi</string>
+    <string name="splash_privacy_badge" formatted="false">100% sur l\'appareil &amp; privé</string>
+    <string name="splash_status">Chargement de vos données</string>
     <string name="splash_version">v%1$s</string>
 
     <!-- Onboarding — shared -->
@@ -11,66 +11,42 @@
     <string name="onboarding_back">← Retour</string>
 
     <!-- Onboarding — page 1 -->
-    <string name="onboarding_page1_badge">100% Hors-ligne &amp; Sécurisé</string>
-    <string name="onboarding_page1_title">Reprenez le contrôle de vos finances en toute sérénité</string>
-    <string name="onboarding_page1_subtitle">Simple, privé et sans inscription. Toutes vos données restent stockées exclusivement sur votre appareil.</string>
-    <string name="onboarding_page1_feature1_title">100% Confidentiel &amp; Hors-ligne</string>
-    <string name="onboarding_page1_feature1_description">Aucun serveur cloud, zéro tracking, pas de revente de données. Aucune création de compte requise.</string>
-    <string name="onboarding_page1_feature2_title">Suivi des Comptes &amp; Enveloppes</string>
-    <string name="onboarding_page1_feature2_description">Banques, espèces, épargne et enveloppes de dépenses pour une clarté totale.</string>
-    <string name="onboarding_page1_feature3_title">Budgets clairs sans prise de tête</string>
-    <string name="onboarding_page1_feature3_description">Allouez vos enveloppes de dépenses visuelles et épargnez naturellement chaque mois.</string>
-    <string name="onboarding_page1_rating">★★★★★ Recommandé • Zéro pub • Open &amp; local</string>
+    <string name="onboarding_page1_badge" formatted="false">100% Hors-ligne &amp; Privé</string>
+    <string name="onboarding_page1_title">Reprenez le contrôle de vos finances</string>
+    <string name="onboarding_page1_feature1_title" formatted="false">100% hors-ligne</string>
+    <string name="onboarding_page1_feature1_description">Aucune donnée envoyée, aucun compte.</string>
+    <string name="onboarding_page1_feature2_title">Tous vos comptes</string>
+    <string name="onboarding_page1_feature2_description">Courant, épargne et espèces.</string>
+    <string name="onboarding_page1_feature3_title">Dépenses classées</string>
+    <string name="onboarding_page1_feature3_description">Des sous-catégories toutes prêtes.</string>
     <string name="onboarding_page1_button">Suivant →</string>
-    <string name="onboarding_page1_caption">⚡ Prêt en 30 secondes • Aucune carte requise</string>
+    <string name="onboarding_page1_caption">Sans inscription • Sans publicité</string>
 
     <!-- Onboarding — page 2 -->
-    <string name="onboarding_page2_badge">Étape 2 sur 3 • Suivi &amp; Devises</string>
-    <string name="onboarding_page2_title">Chaque euro, devise &amp; centime à sa juste place.</string>
-    <string name="onboarding_page2_subtitle">Gardez une vision claire de votre argent liquide, vos banques et vos devises étrangères sans jamais lier vos identifiants bancaires.</string>
-    <string name="onboarding_page2_account1_name">BNP • Compte Courant</string>
-    <string name="onboarding_page2_account1_subtitle">Solde de référence</string>
-    <string name="onboarding_page2_account1_amount">2 450,80 €</string>
-    <string name="onboarding_page2_account1_status">Actif</string>
-    <string name="onboarding_page2_account1_note">✓ Vérifié</string>
-    <string name="onboarding_page2_account2_name">Espèces &amp; Portefeuille</string>
-    <string name="onboarding_page2_account2_subtitle">Enveloppe liquide</string>
-    <string name="onboarding_page2_account2_amount">85,50 €</string>
-    <string name="onboarding_page2_account2_note">Prêt à dépenser</string>
-    <string name="onboarding_page2_feature2_title">Zéro identifiant bancaire requis</string>
-    <string name="onboarding_page2_feature2_description">Saisie manuelle ou import rapide, sans jamais confier vos accès à un intermédiaire.</string>
+    <string name="onboarding_page2_badge">Vos comptes</string>
+    <string name="onboarding_page2_title">Chaque euro à sa place</string>
+    <string name="onboarding_page2_feature2_title">Aucune connexion bancaire</string>
+    <string name="onboarding_page2_feature2_description">Vous saisissez vos opérations vous-même.</string>
+    <string name="onboarding_page2_feature3_title">Vos données restent chez vous</string>
+    <string name="onboarding_page2_feature3_description">Rien n\'est envoyé sur internet.</string>
     <string name="onboarding_page2_button">Suivant →</string>
-    <string name="onboarding_page2_caption">🔒 Données privées stockées à 100% sur cet appareil</string>
+    <string name="onboarding_page2_caption" formatted="false">🔒 100% sur cet appareil</string>
 
     <!-- Onboarding — page 3 -->
-    <string name="onboarding_page3_badge">Étape 3 sur 3 • Simplicité &amp; Rapidité</string>
-    <string name="onboarding_page3_title">Enregistrez vos dépenses en 3 secondes chrono</string>
-    <string name="onboarding_page3_subtitle">Finis les tableurs compliqués et les interfaces bancaires lentes. Une saisie ultra-rapide pensée pour le quotidien.</string>
-    <string name="onboarding_page3_entry_saved">✓ Enregistré en local</string>
-    <string name="onboarding_page3_entry_offline">🔒 Hors-ligne</string>
-    <string name="onboarding_page3_entry_label">Montant saisi</string>
-    <string name="onboarding_page3_entry_amount">14,50</string>
-    <string name="onboarding_page3_category_label">Catégorie instantanée</string>
-    <string name="onboarding_page3_category_coffee">Café</string>
-    <string name="onboarding_page3_category_groceries">Courses</string>
-    <string name="onboarding_page3_category_transport">Transport</string>
-    <string name="onboarding_page3_category_restaurant">Resto</string>
-    <string name="onboarding_page3_account_name">Compte Courant</string>
-    <string name="onboarding_page3_account_note">Solde ajusté auto</string>
-    <string name="onboarding_page3_feature1_title">Zéro friction au quotidien</string>
-    <string name="onboarding_page3_feature1_description">Ouvrez l\'application, tapez le montant, c\'est immédiatement sauvegardé. Aucun temps de chargement.</string>
-    <string name="onboarding_page3_feature2_title">Sauvegarde locale maîtrisée</string>
-    <string name="onboarding_page3_feature2_description">Vos données restent chez vous. Exportez en JSON ou tableur CSV chiffré en un seul geste.</string>
-    <string name="onboarding_page3_button">Commencer l\'expérience Cents →</string>
-    <string name="onboarding_page3_caption">🛡 Prêt en 30 secondes • Sans compte • Zéro publicité</string>
+    <string name="onboarding_page3_badge">Saisie rapide</string>
+    <string name="onboarding_page3_title">Une dépense en quelques secondes</string>
+    <string name="onboarding_page3_feature1_title">Sauvegardé immédiatement</string>
+    <string name="onboarding_page3_feature1_description">Sur votre appareil, sans attendre.</string>
+    <string name="onboarding_page3_button">Commencer →</string>
+    <string name="onboarding_page3_caption">⚡ Prêt en 30 secondes</string>
 
     <!-- Accounts (home) screen -->
     <string name="accounts_kicker">CENTS</string>
     <string name="accounts_title">Comptes</string>
     <string name="accounts_greeting_day">Bonjour 👋</string>
     <string name="accounts_greeting_evening">Bonsoir 👋</string>
-    <string name="accounts_greeting_subtitle">Données locales synchronisées</string>
-    <string name="accounts_vault_badge">🔒 Coffre local</string>
+    <string name="accounts_greeting_subtitle">Données stockées sur cet appareil</string>
+    <string name="accounts_vault_badge">🔒 Sur l\'appareil</string>
     <string name="accounts_hero_label">SOLDE TOTAL CONSOLIDÉ</string>
     <string name="accounts_income_label">↓ Revenus</string>
     <string name="accounts_expense_label">↑ Dépenses</string>
@@ -100,7 +76,7 @@
     <string name="transactions_today">Aujourd\'hui</string>
     <string name="transactions_yesterday">Hier</string>
     <string name="transactions_empty">Aucune transaction ne correspond à ces filtres.</string>
-    <string name="transactions_privacy_footer">🛡 Stockage local chiffré • 0 donnée partagée</string>
+    <string name="transactions_privacy_footer">🛡 Stockage local • 0 donnée partagée</string>
 
     <!-- Account details screen -->
     <string name="account_details_back">Retour</string>

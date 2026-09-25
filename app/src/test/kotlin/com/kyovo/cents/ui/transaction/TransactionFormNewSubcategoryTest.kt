@@ -1,19 +1,20 @@
 package com.kyovo.cents.ui.transaction
 
-import com.kyovo.cents.domain.model.TransactionTitle
-import com.kyovo.cents.domain.model.Money
-import com.kyovo.cents.data.DataRevision
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
+import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
@@ -28,14 +29,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val MOMENT = Instant.parse("2026-09-23T12:00:00Z")
 
 private const val CART = "🛒"
 
 private fun anActiveAccount() = Account(
-    id = AccountId(Uuid.random()),
+    id = AccountId(UUID.randomUUID()),
     name = AccountName("Compte"),
     type = AccountType.CHECKING,
     currency = AccountCurrency(Currency.getInstance("EUR")),
@@ -48,30 +49,30 @@ private class RecordingCreateSubcategory : CreateSubcategoryUseCase
     val commands = mutableListOf<CreateSubcategoryCommand>()
     var refuseName = false
 
-    override fun create(command: CreateSubcategoryCommand): Subcategory
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory
     {
         if (refuseName) throw DuplicateSubcategoryNameException()
         commands += command
-        return Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+        return Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
     }
 }
 
 /** Nothing here is used by these tests: creating a subcategory doesn't touch transactions. */
 private val unusedRecord = object : RecordTransactionUseCase
 {
-    override fun record(command: RecordTransactionCommand): Transaction = error("not used")
+    override suspend fun record(command: RecordTransactionCommand): Transaction = error("not used")
 }
 private val unusedTransfer = object : RecordTransferUseCase
 {
-    override fun record(command: RecordTransferCommand): TransferResult = error("not used")
+    override suspend fun record(command: RecordTransferCommand): TransferResult = error("not used")
 }
 private val unusedUpdate = object : UpdateTransactionUseCase
 {
-    override fun update(command: UpdateTransactionCommand): Transaction = error("not used")
+    override suspend fun update(command: UpdateTransactionCommand): Transaction = error("not used")
 }
 private val unusedDelete = object : DeleteTransactionUseCase
 {
-    override fun delete(id: TransactionId) = error("not used")
+    override suspend fun delete(id: TransactionId) = error("not used")
 }
 
 /**
@@ -79,12 +80,17 @@ private val unusedDelete = object : DeleteTransactionUseCase
  * a small dialog, a subcategory of the kind the form records (never of the other), selected right
  * away in the form.
  */
+@ExtendWith(MainDispatcherExtension::class)
 class TransactionFormNewSubcategoryTest
 {
     private val create = RecordingCreateSubcategory()
-    private val revision = DataRevision()
     private val viewModel = TransactionFormViewModel(
-        unusedRecord, unusedTransfer, unusedUpdate, unusedDelete, create, revision, now = { MOMENT },
+        unusedRecord,
+        unusedTransfer,
+        unusedUpdate,
+        unusedDelete,
+        create,
+        now = { MOMENT },
     )
 
     private val state get() = viewModel.uiState.value
@@ -144,7 +150,6 @@ class TransactionFormNewSubcategoryTest
         openExpenseForm()
         viewModel.askToCreateSubcategory()
         type("  Loisirs ")
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
@@ -155,8 +160,6 @@ class TransactionFormNewSubcategoryTest
         assertThat(create.commands.single().name.value).isEqualTo("Loisirs")
         assertThat(state.form!!.subcategory?.name?.value).isEqualTo("Loisirs")
         assertThat(state.newSubcategory).isNull()
-        // and the lists are told to re-read, so every dropdown offers it
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
     }
 
     @Test
@@ -182,15 +185,18 @@ class TransactionFormNewSubcategoryTest
         openExpenseForm()
         viewModel.askToCreateSubcategory()
         type("   ")
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft("   ", NewSubcategoryError.NAME_REQUIRED))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                "   ",
+                NewSubcategoryError.NAME_REQUIRED
+            )
+        )
         assertThat(create.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -207,7 +213,12 @@ class TransactionFormNewSubcategoryTest
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft("Alimentation", NewSubcategoryError.NAME_TAKEN))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                "Alimentation",
+                NewSubcategoryError.NAME_TAKEN
+            )
+        )
         assertThat(state.form).isEqualTo(formBefore)
     }
 
@@ -361,7 +372,13 @@ class TransactionFormNewSubcategoryTest
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft(" ", NewSubcategoryError.NAME_REQUIRED, CART))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                " ",
+                NewSubcategoryError.NAME_REQUIRED,
+                CART
+            )
+        )
     }
 
     // The picker only offers valid emojis; a blank one is the domain's "no", answered on screen.
@@ -383,8 +400,8 @@ class TransactionFormNewSubcategoryTest
     }
 
     private fun anExistingExpense() = Transaction.recorded(
-        id = TransactionId(Uuid.random()),
-        accountId = AccountId(Uuid.random()),
+        id = TransactionId(UUID.randomUUID()),
+        accountId = AccountId(UUID.randomUUID()),
         amount = Money(1_250),
         title = TransactionTitle("Courses"),
         category = RecordableTransactionCategory.EXPENSE,
@@ -434,14 +451,12 @@ class TransactionFormNewSubcategoryTest
     {
         // GIVEN
         openExpenseForm()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
 
         // THEN
         assertThat(create.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(state.newSubcategory).isNull()
     }
 

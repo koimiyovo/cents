@@ -1,5 +1,8 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
@@ -43,7 +46,7 @@ class UpdateTransactionServiceAccountChangeTest
         aTransaction(id = id, accountId = accountId, amount = aMoney(1_000), category = TransactionCategory.EXPENSE)
 
     @Test
-    fun `moves the transaction to another account`()
+    fun `moves the transaction to another account`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
@@ -61,7 +64,7 @@ class UpdateTransactionServiceAccountChangeTest
     }
 
     @Test
-    fun `the balances of both accounts follow the move`()
+    fun `the balances of both accounts follow the move`() = runTest()
     {
         // GIVEN each account has an opening deposit, and the expense is on the first one
         accountRepository.save(from)
@@ -84,19 +87,19 @@ class UpdateTransactionServiceAccountChangeTest
         )
         transactionRepository.save(anExpenseOn(fromId))
         val balances = GetAccountBalanceService(accountRepository, transactionRepository)
-        assertThat(balances.getBalance(fromId)!!.value).isEqualTo(9_000)
-        assertThat(balances.getBalance(toId)!!.value).isEqualTo(5_000)
+        assertThat(balances.observe(fromId).first()!!.value).isEqualTo(9_000)
+        assertThat(balances.observe(toId).first()!!.value).isEqualTo(5_000)
 
         // WHEN
         service.update(anUpdateTransactionCommand(id = id, accountId = toId, amount = aMoney(1_000)))
 
         // THEN the 10,00 € left the first account and weighs on the second
-        assertThat(balances.getBalance(fromId)!!.value).isEqualTo(10_000)
-        assertThat(balances.getBalance(toId)!!.value).isEqualTo(4_000)
+        assertThat(balances.observe(fromId).first()!!.value).isEqualTo(10_000)
+        assertThat(balances.observe(toId).first()!!.value).isEqualTo(4_000)
     }
 
     @Test
-    fun `throws when the destination account does not exist`()
+    fun `throws when the destination account does not exist`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
@@ -104,12 +107,12 @@ class UpdateTransactionServiceAccountChangeTest
         val unknown = anAccountId("99999999-9999-9999-9999-999999999999")
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, accountId = unknown)) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id, accountId = unknown)) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the destination account is archived`()
+    fun `throws when the destination account is archived`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
@@ -117,12 +120,12 @@ class UpdateTransactionServiceAccountChangeTest
         transactionRepository.save(anExpenseOn(fromId))
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, accountId = toId)) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id, accountId = toId)) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `changes nothing when the move is refused`()
+    fun `changes nothing when the move is refused`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
@@ -131,7 +134,7 @@ class UpdateTransactionServiceAccountChangeTest
         transactionRepository.save(original)
 
         // WHEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.update(anUpdateTransactionCommand(id = id, accountId = toId, amount = aMoney(9_999)))
         }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
 
@@ -140,7 +143,7 @@ class UpdateTransactionServiceAccountChangeTest
     }
 
     @Test
-    fun `allows moving a transaction out of an archived account`()
+    fun `allows moving a transaction out of an archived account`() = runTest()
     {
         // GIVEN
         accountRepository.save(from.copy(archivedAt = anInstant("2026-01-01T00:00:00Z")))
@@ -155,7 +158,7 @@ class UpdateTransactionServiceAccountChangeTest
     }
 
     @Test
-    fun `does not look the account up when the transaction stays on it`()
+    fun `does not look the account up when the transaction stays on it`() = runTest()
     {
         // GIVEN the account is not even in the repository: only a move needs it to exist
         transactionRepository.save(anExpenseOn(fromId))
@@ -170,7 +173,7 @@ class UpdateTransactionServiceAccountChangeTest
     // The destination is checked before the subcategory: a move that can't happen is reported as such,
     // whatever the rest of the command says.
     @Test
-    fun `an archived destination is reported before an unknown subcategory`()
+    fun `an archived destination is reported before an unknown subcategory`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
@@ -178,20 +181,20 @@ class UpdateTransactionServiceAccountChangeTest
         transactionRepository.save(anExpenseOn(fromId))
 
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.update(anUpdateTransactionCommand(id = id, accountId = toId, subcategoryId = aSubcategoryId()))
         }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `an unknown destination is reported before an unknown subcategory`()
+    fun `an unknown destination is reported before an unknown subcategory`() = runTest()
     {
         // GIVEN
         accountRepository.save(from)
         transactionRepository.save(anExpenseOn(fromId))
 
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             service.update(anUpdateTransactionCommand(id = id, accountId = toId, subcategoryId = aSubcategoryId()))
         }.isInstanceOf(AccountNotFoundException::class.java)
     }

@@ -1,13 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What Android may back up, for Android 11 and earlier (Android 12 and later read
+    data_extraction_rules.xml instead; the manifest names both).
+
+    The database holds the user's accounts and transactions: the app promises that it keeps them on the
+    device, so it is left out of the backup. "domain=database" is the app's whole database folder, which
+    covers cents.db and the -wal / -shm / -journal / .lck files kept next to it.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="database" path="." />
 </full-backup-content>

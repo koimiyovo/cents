@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
@@ -21,7 +23,7 @@ class UnarchiveAccountServiceTest
     private val archivedAt = anInstant("2026-01-01T00:00:00Z")
 
     @Test
-    fun `unarchives an archived account by clearing its archival instant`()
+    fun `unarchives an archived account by clearing its archival instant`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -38,7 +40,7 @@ class UnarchiveAccountServiceTest
     }
 
     @Test
-    fun `keeps every other field of the account as it was`()
+    fun `keeps every other field of the account as it was`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -61,7 +63,7 @@ class UnarchiveAccountServiceTest
     }
 
     @Test
-    fun `only touches the account it is given`()
+    fun `only touches the account it is given`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -86,19 +88,19 @@ class UnarchiveAccountServiceTest
     }
 
     @Test
-    fun `throws when no account matches the given id`()
+    fun `throws when no account matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
         val service = UnarchiveAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.unarchive(anAccountId()) }
+        assertThatThrownBySuspending { service.unarchive(anAccountId()) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the account is not archived`()
+    fun `throws when the account is not archived`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -107,12 +109,12 @@ class UnarchiveAccountServiceTest
         val service = UnarchiveAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.unarchive(id) }
+        assertThatThrownBySuspending { service.unarchive(id) }
             .isInstanceOf(AccountNotArchivedException::class.java)
     }
 
     @Test
-    fun `does not change the account when it is not archived`()
+    fun `does not change the account when it is not archived`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -122,7 +124,7 @@ class UnarchiveAccountServiceTest
         val service = UnarchiveAccountService(repository)
 
         // WHEN
-        assertThatThrownBy { service.unarchive(id) }
+        assertThatThrownBySuspending { service.unarchive(id) }
             .isInstanceOf(AccountNotArchivedException::class.java)
 
         // THEN
@@ -133,7 +135,7 @@ class UnarchiveAccountServiceTest
     @ValueSource(strings = ["Livret A", "livret a", "  livret A  "])
     fun `refuses to unarchive an account whose name is now used by an active account`(
         duplicateNameVariant: String
-    )
+    ) = runTest()
     {
         // GIVEN the name was reused after the first account got archived
         val archivedId = anAccountId()
@@ -148,12 +150,12 @@ class UnarchiveAccountServiceTest
         val service = UnarchiveAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.unarchive(archivedId) }
+        assertThatThrownBySuspending { service.unarchive(archivedId) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @Test
-    fun `keeps the account archived when its name is now used by an active account`()
+    fun `keeps the account archived when its name is now used by an active account`() = runTest()
     {
         // GIVEN
         val archived = anAccount(name = AccountName("Livret A"), archivedAt = archivedAt)
@@ -164,7 +166,7 @@ class UnarchiveAccountServiceTest
         val service = UnarchiveAccountService(repository)
 
         // WHEN
-        assertThatThrownBy { service.unarchive(archived.id) }
+        assertThatThrownBySuspending { service.unarchive(archived.id) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
 
         // THEN
@@ -172,7 +174,7 @@ class UnarchiveAccountServiceTest
     }
 
     @Test
-    fun `unarchives an account whose name is only shared with other archived accounts`()
+    fun `unarchives an account whose name is only shared with other archived accounts`() = runTest()
     {
         // GIVEN archived names never collide: only active accounts must be unique
         val id = anAccountId()

@@ -5,5 +5,5 @@ import com.kyovo.cents.domain.model.AccountId
 
 interface ArchiveAccountUseCase
 {
-    fun archive(id: AccountId): Account
+    suspend fun archive(id: AccountId): Account
 }

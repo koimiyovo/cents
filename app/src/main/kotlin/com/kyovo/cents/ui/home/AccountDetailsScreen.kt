@@ -1,5 +1,8 @@
 package com.kyovo.cents.ui.home
 
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,7 +75,6 @@ fun AccountDetailsScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
-    revision: Int,
     onBack: () -> Unit,
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,
@@ -83,7 +85,16 @@ fun AccountDetailsScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
-    val account = remember(accountId, revision) { getAccount.get(accountId) }
+    // Observed, so a rename or an archival made from this very page shows at once. Null while the first
+    // value is on its way (nothing to show yet, and above all not "account not found").
+    val lookup by remember(accountId) { getAccount.observe(accountId).map { AccountLookup(it) } }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val account = lookup?.account
+    if (lookup == null)
+    {
+        Box(modifier = modifier.fillMaxSize().background(palette.background))
+        return
+    }
 
     if (account == null)
     {
@@ -104,12 +115,13 @@ fun AccountDetailsScreen(
         return
     }
 
-    val balanceCents =
-        remember(accountId, revision) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
-    val accountTransactions =
-        remember(accountId, revision) { listTransactions.list(accountId = accountId) }
+    // A balance is the sum of the account's transactions, so it follows them as they change.
+    val balanceCents by remember(accountId) { getAccountBalance.observe(accountId).map { it?.value ?: 0L } }
+        .collectAsStateWithLifecycle(initialValue = 0L)
+    val accountTransactions by remember(accountId) { listTransactions.observe(accountId = accountId) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     // Already ordered by name by the use case.
-    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
     // Unlike the global tab (30 days by default), an account's page opens on its full history:
@@ -145,16 +157,15 @@ fun AccountDetailsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
 
-    val filteredTransactions =
-        remember(accountId, revision, selectedSubcategory, searchQuery, periodFrom, periodTo) {
-            listTransactions.list(
-                accountId = accountId,
-                subcategoryId = selectedSubcategory,
-                titleFilter = searchQuery,
-                from = periodFrom,
-                to = periodTo,
-            )
-        }
+    val filteredTransactions by remember(accountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        listTransactions.observe(
+            accountId = accountId,
+            subcategoryId = selectedSubcategory,
+            titleFilter = searchQuery,
+            from = periodFrom,
+            to = periodTo,
+        )
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
     val groupedByDay = remember(filteredTransactions) { groupByDay(filteredTransactions) }
 
     Column(
@@ -523,4 +534,7 @@ internal fun ArchiveConfirmationDialog(
             }
         },
     )
-}
+}
+
+/** The account a page asked for, or none if there is no such account (as opposed to "not loaded yet"). */
+private class AccountLookup(val account: Account?)

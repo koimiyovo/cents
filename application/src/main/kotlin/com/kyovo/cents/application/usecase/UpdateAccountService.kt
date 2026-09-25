@@ -9,7 +9,7 @@ import com.kyovo.cents.domain.port.output.AccountRepository
 
 class UpdateAccountService(private val accountRepository: AccountRepository) : UpdateAccountUseCase
 {
-    override fun update(command: UpdateAccountCommand): Account
+    override suspend fun update(command: UpdateAccountCommand): Account
     {
         val existingAccount =
             accountRepository.findById(command.id) ?: throw AccountNotFoundException()

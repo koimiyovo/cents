@@ -21,7 +21,7 @@ class OpenAccountService(
     private val clock: Clock
 ) : OpenAccountUseCase
 {
-    override fun open(command: OpenAccountCommand): Account
+    override suspend fun open(command: OpenAccountCommand): Account
     {
         if (accountRepository.existsByName(command.name))
         {

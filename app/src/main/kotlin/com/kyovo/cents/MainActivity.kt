@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
                     updateTransaction = appContainer.updateTransaction,
                     deleteTransaction = appContainer.deleteTransaction,
                     createSubcategory = appContainer.createSubcategory,
-                    dataRevision = appContainer.dataRevision,
                 )
             }
         }
@@ -49,7 +48,6 @@ class MainActivity : ComponentActivity() {
             initializer {
                 InitialDepositFormViewModel(
                     updateInitialDeposit = appContainer.updateInitialDeposit,
-                    dataRevision = appContainer.dataRevision,
                 )
             }
         }
@@ -62,7 +60,6 @@ class MainActivity : ComponentActivity() {
                     createSubcategory = appContainer.createSubcategory,
                     updateSubcategory = appContainer.updateSubcategory,
                     deleteSubcategory = appContainer.deleteSubcategory,
-                    dataRevision = appContainer.dataRevision,
                 )
             }
         }
@@ -74,7 +71,6 @@ class MainActivity : ComponentActivity() {
                 AccountFormViewModel(
                     openAccount = appContainer.openAccount,
                     updateAccount = appContainer.updateAccount,
-                    dataRevision = appContainer.dataRevision,
                 )
             }
         }
@@ -102,7 +98,6 @@ class MainActivity : ComponentActivity() {
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
                     listSubcategories = appContainer.listSubcategories,
-                    dataRevision = appContainer.dataRevision,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,

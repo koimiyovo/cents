@@ -11,7 +11,7 @@ import com.kyovo.cents.domain.port.output.AccountRepository
 class UnarchiveAccountService(private val accountRepository: AccountRepository) :
     UnarchiveAccountUseCase
 {
-    override fun unarchive(id: AccountId): Account
+    override suspend fun unarchive(id: AccountId): Account
     {
         val existingAccount = accountRepository.findById(id) ?: throw AccountNotFoundException()
 

@@ -5,7 +5,7 @@ import com.kyovo.cents.ui.transaction.FUEL_SUBCATEGORY
 import com.kyovo.cents.ui.transaction.GROCERIES_SUBCATEGORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * A screen keeps the subcategory it was filtering on, and one can be deleted from the management
@@ -42,6 +42,6 @@ class ValidSubcategoryFilterTest
     @Test
     fun `a filter falls back to all when there is no subcategory left at all`()
     {
-        assertThat(validSubcategoryFilter(SubcategoryId(Uuid.random()), emptyList())).isNull()
+        assertThat(validSubcategoryFilter(SubcategoryId(UUID.randomUUID()), emptyList())).isNull()
     }
 }

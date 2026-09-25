@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -27,7 +29,7 @@ class RecordTransferServiceTest
     private val toAccountId = anAccountId("22222222-2222-2222-2222-222222222222")
 
     @Test
-    fun `records a debit on the source account and a credit on the destination account, for the same amount`()
+    fun `records a debit on the source account and a credit on the destination account, for the same amount`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -63,7 +65,7 @@ class RecordTransferServiceTest
     }
 
     @Test
-    fun `both legs share the same title and date`()
+    fun `both legs share the same title and date`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -90,7 +92,7 @@ class RecordTransferServiceTest
     }
 
     @Test
-    fun `refuses a transfer to the same account`()
+    fun `refuses a transfer to the same account`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -99,12 +101,12 @@ class RecordTransferServiceTest
         val command = aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = fromAccountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(TransferToSameAccountException::class.java)
     }
 
     @Test
-    fun `throws when the source account does not exist`()
+    fun `throws when the source account does not exist`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -113,12 +115,12 @@ class RecordTransferServiceTest
         val command = aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the destination account does not exist`()
+    fun `throws when the destination account does not exist`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -127,12 +129,12 @@ class RecordTransferServiceTest
         val command = aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the source account is archived`()
+    fun `throws when the source account is archived`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -142,12 +144,12 @@ class RecordTransferServiceTest
         val command = aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `throws when the destination account is archived`()
+    fun `throws when the destination account is archived`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()
@@ -157,12 +159,12 @@ class RecordTransferServiceTest
         val command = aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId)
 
         // WHEN / THEN
-        assertThatThrownBy { service.record(command) }
+        assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
     @Test
-    fun `wraps both transaction saves in a single unit of work`()
+    fun `wraps both transaction saves in a single unit of work`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()

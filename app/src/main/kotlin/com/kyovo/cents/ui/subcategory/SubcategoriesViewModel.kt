@@ -1,7 +1,7 @@
 package com.kyovo.cents.ui.subcategory
 
 import androidx.lifecycle.ViewModel
-import com.kyovo.cents.data.DataRevision
+import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * What the deletion dialog says: which subcategory, and how many transactions will lose it (they are
@@ -35,13 +36,12 @@ data class SubcategoriesUiState(
 /**
  * Holds the create/edit form and the deletion confirmation of the subcategory management screen
  * across configuration changes, like the other form view models. Nothing here touches Compose or
- * Android. The use cases are synchronous because storage is in memory (see [DataRevision]).
+ * Android. The use cases suspend, so writes are launched in `viewModelScope`; the screens observe the lists.
  */
 class SubcategoriesViewModel(
     private val createSubcategory: CreateSubcategoryUseCase,
     private val updateSubcategory: UpdateSubcategoryUseCase,
     private val deleteSubcategory: DeleteSubcategoryUseCase,
-    private val dataRevision: DataRevision,
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(SubcategoriesUiState())
@@ -79,8 +79,13 @@ class SubcategoriesViewModel(
         _uiState.value = SubcategoriesUiState()
     }
 
-    /** Saves the form. On success the sheet closes and the lists refresh; otherwise the state says why not. */
+    /** Saves the form. On success the sheet closes; otherwise the state says why not. */
     fun submit()
+    {
+        viewModelScope.launch { save() }
+    }
+
+    private suspend fun save()
     {
         val form = _uiState.value.form ?: return
         try
@@ -106,8 +111,7 @@ class SubcategoriesViewModel(
             return
         }
 
-        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-        dataRevision.bump()
+        // Close only once the write went through.
         close()
     }
 
@@ -128,15 +132,16 @@ class SubcategoriesViewModel(
 
     /**
      * Deletes the subcategory, once the user has confirmed: its transactions are kept, uncategorised.
-     * Never refused. Everything closes and the lists refresh.
+     * Never refused. Everything closes.
      */
     fun confirmDelete()
     {
         val state = _uiState.value
         if (state.confirmingDelete == null) return
         val id = state.form?.editingId ?: return
-        deleteSubcategory.delete(id)
-        dataRevision.bump()
-        close()
+        viewModelScope.launch {
+            deleteSubcategory.delete(id)
+            close()
+        }
     }
 }

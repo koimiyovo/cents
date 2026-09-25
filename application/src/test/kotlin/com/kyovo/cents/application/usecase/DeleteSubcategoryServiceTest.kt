@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
@@ -54,7 +56,7 @@ class DeleteSubcategoryServiceTest
         )
 
     @Test
-    fun `deletes the subcategory`()
+    fun `deletes the subcategory`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -68,7 +70,7 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `leaves the other subcategories alone`()
+    fun `leaves the other subcategories alone`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -82,7 +84,7 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `keeps the transactions that used it, uncategorised, with everything else unchanged`()
+    fun `keeps the transactions that used it, uncategorised, with everything else unchanged`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -101,7 +103,7 @@ class DeleteSubcategoryServiceTest
 
     @ParameterizedTest
     @EnumSource(RecordableTransactionCategory::class)
-    fun `works the same for an income subcategory as for an expense one`(kind: RecordableTransactionCategory)
+    fun `works the same for an income subcategory as for an expense one`(kind: RecordableTransactionCategory) = runTest()
     {
         // GIVEN
         val subcategory = aSubcategory(id = groceriesId, kind = kind)
@@ -120,7 +122,7 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `does not touch the transactions of other subcategories, nor those with none`()
+    fun `does not touch the transactions of other subcategories, nor those with none`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -149,7 +151,7 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `does not change any balance`()
+    fun `does not change any balance`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -165,7 +167,7 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `does nothing when no subcategory matches the given id`()
+    fun `does nothing when no subcategory matches the given id`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(fuel)
@@ -173,13 +175,13 @@ class DeleteSubcategoryServiceTest
         transactionRepository.save(transaction)
 
         // WHEN / THEN it is not an error, and nothing changes
-        assertThatCode { service.delete(groceriesId) }.doesNotThrowAnyException()
+        service.delete(groceriesId)
         assertThat(subcategoryRepository.saved).containsExactly(fuel)
         assertThat(transactionRepository.saved).containsExactly(transaction)
     }
 
     @Test
-    fun `deletes the subcategory and updates its transactions in a single unit of work`()
+    fun `deletes the subcategory and updates its transactions in a single unit of work`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
