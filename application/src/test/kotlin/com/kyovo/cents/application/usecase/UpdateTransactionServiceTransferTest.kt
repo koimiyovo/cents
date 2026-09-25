@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -67,6 +68,18 @@ class UpdateTransactionServiceTransferTest
 
         // WHEN / THEN it is the transfer rule that answers, not "account not found"
         assertThatThrownBy { service.update(command) }
+            .isInstanceOf(CannotUpdateTransferException::class.java)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
+    fun `refuses a transfer leg before looking at the subcategory`(category: TransactionCategory)
+    {
+        // GIVEN a command whose subcategory doesn't exist
+        transactionRepository.save(aTransaction(id = id, category = category))
+
+        // WHEN / THEN it is the transfer rule that answers
+        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, subcategoryId = aSubcategoryId())) }
             .isInstanceOf(CannotUpdateTransferException::class.java)
     }
 }

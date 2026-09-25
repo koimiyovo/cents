@@ -74,3 +74,13 @@ class InMemorySubcategoryRepository : SubcategoryRepository
         saved.removeAll { it.id == id }
     }
 }
+
+class SequentialSubcategoryIdGenerator(private val ids: List<SubcategoryId>) : SubcategoryIdGenerator
+{
+    private var index = 0
+
+    override fun generate(): SubcategoryId
+    {
+        return ids[index++]
+    }
+}
