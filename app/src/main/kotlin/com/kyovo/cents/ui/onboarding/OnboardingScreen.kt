@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.onboarding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -49,15 +51,27 @@ fun OnboardingScreen(onFinished: () -> Unit, modifier: Modifier = Modifier) {
             state = pagerState,
             modifier = Modifier.weight(1f),
         ) { page ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                when (page) {
-                    0 -> OnboardingPage1(palette)
-                    1 -> OnboardingPage2(palette)
-                    else -> OnboardingPage3(palette)
+            // The page is centred in the room there is, and scrolls when there is not enough (a small
+            // screen, a large font): its minimum height is the pager's own.
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val pageHeight = maxHeight
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = pageHeight),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        when (page) {
+                            0 -> OnboardingPage1(palette)
+                            1 -> OnboardingPage2(palette)
+                            else -> OnboardingPage3(palette)
+                        }
+                    }
                 }
             }
         }
