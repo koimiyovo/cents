@@ -28,7 +28,7 @@ import java.util.Currency
 import java.util.UUID
 
 /**
- * What a database does that a list does not: it keeps the tables consistent with each other. A
+ * What a database does beyond storing rows: it keeps the tables consistent with each other. A
  * transaction cannot point to an account that does not exist, an account with transactions cannot
  * vanish under them, and deleting a subcategory leaves its transactions uncategorised — the same
  * rules the services apply, enforced a second time where the data lives.

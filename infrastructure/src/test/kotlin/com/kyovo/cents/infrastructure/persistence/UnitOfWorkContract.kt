@@ -25,8 +25,7 @@ import java.util.UUID
 class Storage(val stores: Stores, val unitOfWork: UnitOfWork)
 
 /**
- * What every [UnitOfWork] must guarantee, whatever it is built on (snapshots of in-memory lists, a
- * database transaction): the writes of a block are all kept if it completes, and all undone if it
+ * What every [UnitOfWork] must guarantee, whatever it is built on (today a database transaction): the writes of a block are all kept if it completes, and all undone if it
  * throws — the exception itself still reaching the caller — across the three repositories.
  */
 abstract class UnitOfWorkContract

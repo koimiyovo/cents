@@ -20,9 +20,9 @@ import java.util.Currency
 import java.util.UUID
 
 /**
- * What every [AccountRepository] must do, whatever it stores the accounts in: the in-memory list and
- * the Room database run these same tests (see [SubcategoryRepositoryContract] for why they run in
- * real time and wait for the state they expect). The order of the accounts is part of the stored data:
+ * What every [AccountRepository] must do, whatever it stores the accounts in: the port's specification,
+ * run today by the Room adapter (see [SubcategoryRepositoryContract] for why the tests run in real
+ * time and wait for the state they expect). The order of the accounts is part of the stored data:
  * the user arranges them by hand, and every listing comes back in that order.
  */
 abstract class AccountRepositoryContract

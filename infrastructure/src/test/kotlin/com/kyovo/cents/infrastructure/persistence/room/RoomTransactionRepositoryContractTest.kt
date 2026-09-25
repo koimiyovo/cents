@@ -6,7 +6,7 @@ import com.kyovo.cents.infrastructure.persistence.Stores
 import com.kyovo.cents.infrastructure.persistence.TransactionRepositoryContract
 import org.junit.jupiter.api.AfterEach
 
-/** The Room adapters, against a real SQLite: same tests as the in-memory lists. */
+/** The Room adapters, against a real SQLite. */
 class RoomTransactionRepositoryContractTest : TransactionRepositoryContract()
 {
     private lateinit var database: CentsDatabase

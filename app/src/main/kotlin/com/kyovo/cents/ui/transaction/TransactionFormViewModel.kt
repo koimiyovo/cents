@@ -90,8 +90,7 @@ data class TransactionFormUiState(
  * sheet is open, survive it. The screen only renders [uiState] and reports events back; nothing here
  * touches Compose or Android, which keeps it testable as plain Kotlin.
  *
- * The use cases are synchronous because storage is in memory. Once they hit Room they become
- * `suspend` and [submit] will launch them in `viewModelScope`.
+ * The use cases are `suspend` (the storage is a database), so [submit] launches them in `viewModelScope`.
  */
 class TransactionFormViewModel(
     private val recordTransaction: RecordTransactionUseCase,

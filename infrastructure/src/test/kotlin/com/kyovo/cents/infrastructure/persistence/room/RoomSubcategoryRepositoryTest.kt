@@ -14,7 +14,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.UUID
 
-/** What only a database on disk can do, and the in-memory list cannot: survive being closed. */
+/** What only a database on disk can do: survive being closed. */
 class RoomSubcategoryRepositoryTest
 {
     @TempDir
