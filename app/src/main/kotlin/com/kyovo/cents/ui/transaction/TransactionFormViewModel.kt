@@ -135,6 +135,18 @@ class TransactionFormViewModel(
         _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
     }
 
+    /**
+     * The accounts changed while the form is open (one was created from it): if that leaves a single
+     * account to choose from and none is chosen yet, the form takes it.
+     */
+    fun accountsChanged(accounts: List<Account>)
+    {
+        _uiState.update { state ->
+            val form = state.form ?: return@update state
+            state.copy(form = form.withSoleAccountSelected(accounts))
+        }
+    }
+
     fun update(form: TransactionFormState)
     {
         _uiState.update { if (it.form == null) it else it.copy(form = form, failure = null) }
