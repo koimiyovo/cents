@@ -140,6 +140,7 @@
     <string name="transaction_form_account_from_label">Depuis</string>
     <string name="transaction_form_account_to_label">Vers</string>
     <string name="transaction_form_account_placeholder">Choisir un compte</string>
+    <string name="transaction_form_account_create">+ Créer un compte</string>
     <string name="transaction_form_create_account">Créer un compte</string>
     <string name="transaction_form_no_active_account">Aucun compte actif : créez d\'abord un compte.</string>
     <string name="transaction_form_more_details">Plus de détails</string>

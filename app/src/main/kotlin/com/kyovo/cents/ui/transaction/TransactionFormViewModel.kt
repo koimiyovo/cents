@@ -108,10 +108,16 @@ class TransactionFormViewModel(
     /** The transaction being edited, as it was when the edit began (what a deletion would erase). */
     private var editedTransaction: Transaction? = null
 
+    /** An account the user asked to create from the form: for which field, and which accounts existed then. */
+    private class AccountRequest(val field: AccountField, val knownIds: Set<AccountId>)
+
+    private var accountRequest: AccountRequest? = null
+
     /** Opens a fresh form. Called when the user asks for a new transaction, never on recomposition. */
     fun open(accounts: List<Account>, preselectedAccountId: AccountId?)
     {
         editedTransaction = null
+        accountRequest = null
         // With a single active account there is nothing to choose: skip the step.
         val onlyAccountId = selectableAccounts(accounts).singleOrNull()?.id
         _uiState.value = TransactionFormUiState(
@@ -132,19 +138,42 @@ class TransactionFormViewModel(
         // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
+        accountRequest = null
         _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
     }
 
     /**
-     * The accounts changed while the form is open (one was created from it): if that leaves a single
-     * account to choose from and none is chosen yet, the form takes it.
+     * The user asked to create an account from the form, for [field]. Remembers which [accounts] exist
+     * now, so that the one that appears next can be recognised (see [accountsChanged]).
+     */
+    fun askToCreateAccount(field: AccountField, accounts: List<Account>)
+    {
+        accountRequest = AccountRequest(field, accounts.map { it.id }.toSet())
+    }
+
+    /**
+     * The accounts changed while the form is open. If an account was asked for and a new active one has
+     * appeared, the form chooses it for the field it was asked for; and if that leaves a single account to
+     * choose from with none chosen yet, the form takes it.
      */
     fun accountsChanged(accounts: List<Account>)
     {
-        _uiState.update { state ->
-            val form = state.form ?: return@update state
-            state.copy(form = form.withSoleAccountSelected(accounts))
+        val form = _uiState.value.form ?: return
+        var updated = form
+
+        val request = accountRequest
+        if (request != null)
+        {
+            val created = selectableAccounts(accounts).filter { it.id !in request.knownIds }
+            if (created.size == 1)
+            {
+                updated = updated.withAccountSelected(request.field, created.single().id)
+                accountRequest = null
+            }
         }
+
+        updated = updated.withSoleAccountSelected(accounts)
+        _uiState.update { if (it.form == null) it else it.copy(form = updated) }
     }
 
     fun update(form: TransactionFormState)
@@ -155,6 +184,7 @@ class TransactionFormViewModel(
     fun close()
     {
         editedTransaction = null
+        accountRequest = null
         _uiState.value = TransactionFormUiState()
     }
 
