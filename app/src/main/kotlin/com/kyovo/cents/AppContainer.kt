@@ -1,12 +1,14 @@
 package com.kyovo.cents
 
 import com.kyovo.cents.application.usecase.ArchiveAccountService
+import com.kyovo.cents.application.usecase.CreateSubcategoryService
 import com.kyovo.cents.application.usecase.DeleteAccountService
 import com.kyovo.cents.application.usecase.DeleteTransactionService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.ListAccountsService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
+import com.kyovo.cents.application.usecase.ListSubcategoriesService
 import com.kyovo.cents.application.usecase.ListTransactionsService
 import com.kyovo.cents.application.usecase.OpenAccountService
 import com.kyovo.cents.application.usecase.RecordTransactionService
@@ -19,12 +21,14 @@ import com.kyovo.cents.application.usecase.UpdateTransactionService
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
+import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
@@ -35,8 +39,10 @@ import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateInitialDepositUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
+import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.ListAccountRepository
+import com.kyovo.cents.infrastructure.persistence.ListSubcategoryRepository
 import com.kyovo.cents.infrastructure.persistence.ListTransactionRepository
 import com.kyovo.cents.infrastructure.persistence.ListUnitOfWork
 import java.time.Clock
@@ -49,6 +55,7 @@ import java.time.Clock
 class AppContainer {
     private val accountRepository = ListAccountRepository()
     private val transactionRepository = ListTransactionRepository()
+    private val subcategoryRepository = ListSubcategoryRepository()
     private val transactionIdGenerator = UuidTransactionIdGenerator()
     private val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository)
 
@@ -58,7 +65,7 @@ class AppContainer {
     val unarchiveAccount: UnarchiveAccountUseCase = UnarchiveAccountService(accountRepository)
     val updateAccount: UpdateAccountUseCase = UpdateAccountService(accountRepository)
     val deleteTransaction: DeleteTransactionUseCase = DeleteTransactionService(transactionRepository)
-    val updateTransaction: UpdateTransactionUseCase = UpdateTransactionService(accountRepository, transactionRepository)
+    val updateTransaction: UpdateTransactionUseCase = UpdateTransactionService(accountRepository, transactionRepository, subcategoryRepository)
     val updateInitialDeposit: UpdateInitialDepositUseCase = UpdateInitialDepositService(transactionRepository)
     val reorderAccounts: ReorderAccountsUseCase = ReorderAccountsService(accountRepository)
     val deleteAccount: DeleteAccountUseCase =
@@ -67,6 +74,9 @@ class AppContainer {
     val getAccountBalance: GetAccountBalanceUseCase =
         GetAccountBalanceService(accountRepository, transactionRepository)
     val listTransactions: ListTransactionsUseCase = ListTransactionsService(transactionRepository)
+    val listSubcategories: ListSubcategoriesUseCase = ListSubcategoriesService(subcategoryRepository)
+    val createSubcategory: CreateSubcategoryUseCase =
+        CreateSubcategoryService(subcategoryRepository, UuidSubcategoryIdGenerator())
     val openAccount: OpenAccountUseCase = OpenAccountService(
         accountRepository,
         UuidAccountIdGenerator(),
@@ -76,7 +86,7 @@ class AppContainer {
         Clock.systemUTC(),
     )
     val recordTransaction: RecordTransactionUseCase =
-        RecordTransactionService(accountRepository, transactionRepository, transactionIdGenerator)
+        RecordTransactionService(accountRepository, transactionRepository, transactionIdGenerator, subcategoryRepository)
     val recordTransfer: RecordTransferUseCase = RecordTransferService(
         accountRepository,
         transactionRepository,
@@ -88,6 +98,6 @@ class AppContainer {
     val dataRevision = DataRevision()
 
     init {
-        seedHardcodedData(accountRepository, transactionRepository)
+        seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository)
     }
 }

@@ -4,11 +4,11 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
-import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
@@ -56,7 +56,7 @@ data class TransactionFormState(
     val toAccountId: AccountId? = null,
     val amountText: String = "",
     val title: String = "",
-    val subcategory: TransactionSubcategory? = null,
+    val subcategory: Subcategory? = null,
     val description: String = "",
     val date: Instant,
     /** Set when an existing transaction is being edited instead of a new one recorded. */
@@ -72,8 +72,10 @@ data class TransactionFormState(
         /**
          * A form pre-filled with [transaction]'s values, saving as an update. The account is
          * pre-selected but can be changed: the transaction is then moved to the other one.
+         * [subcategory] is the one the transaction points to (null when it has none). It is a required
+         * argument, not a default: forgetting it would silently drop the subcategory on saving.
          */
-        fun editing(transaction: Transaction): TransactionFormState
+        fun editing(transaction: Transaction, subcategory: Subcategory?): TransactionFormState
         {
             require(canEditTransaction(transaction)) { "Only an income or an expense can be edited" }
             return TransactionFormState(
@@ -82,7 +84,7 @@ data class TransactionFormState(
                 accountId = transaction.accountId,
                 amountText = formatCentsForInput(transaction.amount.value),
                 title = transaction.title.value,
-                subcategory = transaction.subcategory,
+                subcategory = subcategory,
                 description = transaction.description?.value.orEmpty(),
                 date = transaction.date,
                 editingId = transaction.id,
@@ -121,7 +123,7 @@ data class TransactionFormState(
         {
             if (toAccountId == null) errors += FormError.DESTINATION_ACCOUNT_REQUIRED
             else if (toAccountId == accountId) errors += FormError.SAME_ACCOUNT
-        } else if (subcategory != null && !category.accepts(subcategory))
+        } else if (subcategory != null && subcategory.kind != category)
         {
             errors += FormError.SUBCATEGORY_MISMATCH
         }
@@ -139,7 +141,7 @@ data class TransactionFormState(
                     amount = Money(amountCents),
                     title = TransactionTitle(title),
                     category = category,
-                    subcategory = subcategory,
+                    subcategoryId = subcategory?.id,
                     description = TransactionDescription.of(description),
                     date = date,
                 ),
@@ -172,7 +174,7 @@ data class TransactionFormState(
                 amount = amount,
                 title = cleanTitle,
                 category = category,
-                subcategory = subcategory,
+                subcategoryId = subcategory?.id,
                 description = TransactionDescription.of(description),
                 date = date,
             ),
@@ -183,7 +185,11 @@ data class TransactionFormState(
     fun day(zone: ZoneId = ZoneId.systemDefault()): LocalDate = date.atZone(zone).toLocalDate()
 
     /** Moves the transaction to [day], keeping the time of day of [now] (see [dateOnDay]). */
-    fun withDay(day: LocalDate, now: Instant, zone: ZoneId = ZoneId.systemDefault()): TransactionFormState
+    fun withDay(
+        day: LocalDate,
+        now: Instant,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): TransactionFormState
     {
         if (editingId != null)
         {
@@ -218,8 +224,9 @@ data class TransactionFormState(
         // An income can become an expense and back, but not a transfer (see [canEditTransaction]).
         if (isEditing && type == TransactionFormType.TRANSFER) return this
         val category = type.recordableCategory()
-        val keptSubcategory = subcategory?.takeIf { category != null && category.accepts(it) }
-        val keptDestination = toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
+        val keptSubcategory = subcategory?.takeIf { category != null && it.kind == category }
+        val keptDestination =
+            toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
         return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination)
     }
 
@@ -234,8 +241,19 @@ data class TransactionFormState(
         return accounts.firstOrNull { it.id == original && it.archivedAt != null }
     }
 
+    /** The kind of subcategory this form takes — null for a transfer, which has none. */
+    val subcategoryKind: RecordableTransactionCategory? get() = type.recordableCategory()
+
+    /** The subcategories this form offers: those of the kind it records (a transfer has none). */
+    fun subcategoryChoices(subcategories: List<Subcategory>): List<Subcategory>
+    {
+        val category = type.recordableCategory() ?: return emptyList()
+        return subcategories.filter { it.kind == category }
+    }
+
     /** The accounts this form offers (see [accountChoicesFor]). */
-    fun accountChoices(accounts: List<Account>): List<Account> = accountChoicesFor(accounts, originalAccountId)
+    fun accountChoices(accounts: List<Account>): List<Account> =
+        accountChoicesFor(accounts, originalAccountId)
 
     /**
      * Accounts a transfer can leave from: every selectable one except the chosen destination — a

@@ -53,9 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
-import com.kyovo.cents.domain.model.ExpenseSubcategory
-import com.kyovo.cents.domain.model.IncomeSubcategory
-import com.kyovo.cents.domain.model.TransactionSubcategory
+import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
@@ -70,7 +68,6 @@ import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.LightAccountsPalette
 import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.datePickerColorScheme
-import com.kyovo.cents.ui.home.subcategoryLabel
 import com.kyovo.cents.ui.home.toEpochMillisUtc
 import com.kyovo.cents.ui.home.toLocalDateUtc
 import java.time.Instant
@@ -91,12 +88,14 @@ import java.util.Locale
 @Composable
 fun TransactionFormSheet(
     accounts: List<Account>,
+    subcategories: List<Subcategory>,
     form: TransactionFormState,
     showErrors: Boolean,
     failure: SubmitFailure?,
     onFormChange: (TransactionFormState) -> Unit,
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
+    onCreateSubcategory: () -> Unit,
     onDismiss: () -> Unit,
 )
 {
@@ -242,9 +241,10 @@ fun TransactionFormSheet(
                 {
                     SubcategoryPicker(
                         palette = palette,
-                        subcategories = subcategoriesFor(form.type),
+                        subcategories = form.subcategoryChoices(subcategories),
                         selected = form.subcategory,
                         onSelect = { onFormChange(form.copy(subcategory = it)) },
+                        onCreate = onCreateSubcategory,
                     )
                     FieldError(
                         palette,
@@ -300,13 +300,6 @@ fun TransactionFormSheet(
             },
         )
     }
-}
-
-private fun subcategoriesFor(type: TransactionFormType): List<TransactionSubcategory> = when (type)
-{
-    TransactionFormType.EXPENSE  -> ExpenseSubcategory.entries
-    TransactionFormType.INCOME   -> IncomeSubcategory.entries
-    TransactionFormType.TRANSFER -> emptyList()
 }
 
 @Composable
@@ -379,9 +372,10 @@ private fun AccountPicker(
 @Composable
 private fun SubcategoryPicker(
     palette: AccountsPalette,
-    subcategories: List<TransactionSubcategory>,
-    selected: TransactionSubcategory?,
-    onSelect: (TransactionSubcategory?) -> Unit,
+    subcategories: List<Subcategory>,
+    selected: Subcategory?,
+    onSelect: (Subcategory?) -> Unit,
+    onCreate: () -> Unit,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -389,11 +383,13 @@ private fun SubcategoryPicker(
         val noneLabel = stringResource(R.string.transaction_form_subcategory_none)
         SelectDropdown(
             palette = palette,
-            options = listOf(SelectOption<TransactionSubcategory?>(null, noneLabel)) +
-                subcategories.map { SelectOption<TransactionSubcategory?>(it, subcategoryLabel(it)) },
+            options = listOf(SelectOption<Subcategory?>(null, noneLabel)) +
+                subcategories.map { SelectOption<Subcategory?>(it, it.name.value) },
             selected = selected,
             onSelect = onSelect,
             fillWidth = true,
+            footerLabel = stringResource(R.string.transaction_form_subcategory_create),
+            onFooterClick = onCreate,
         )
     }
 }

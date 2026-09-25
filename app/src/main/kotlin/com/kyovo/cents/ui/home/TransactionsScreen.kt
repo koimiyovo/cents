@@ -51,13 +51,13 @@ import androidx.compose.ui.window.DialogProperties
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
-import com.kyovo.cents.domain.model.ExpenseSubcategory
-import com.kyovo.cents.domain.model.IncomeSubcategory
+import com.kyovo.cents.domain.model.Subcategory
+import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
-import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
@@ -80,6 +80,7 @@ fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
     listArchivedAccounts: ListArchivedAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
+    listSubcategories: ListSubcategoriesUseCase,
     onTransactionClick: (Transaction) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
@@ -91,16 +92,20 @@ fun TransactionsScreen(
     // The account filter offers the active accounts only, but the list still shows the history of
     // archived ones: their names must resolve too, or those rows would lose their account.
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
-    val accountsById = remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
+    val accountsById =
+        remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
     val allTransactions = remember(revision) { listTransactions.list() }
+    // Already ordered by name by the use case.
+    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
-    // Filter selection isn't saved across configuration changes: AccountId/TransactionSubcategory
+    // Filter selection isn't saved across configuration changes: AccountId/SubcategoryId
     // aren't trivially Saveable, and losing a filter on rotation is a minor, acceptable trade-off.
     var selectedPeriod by remember { mutableStateOf(TransactionsPeriod.LAST_30_DAYS) }
     var customFrom by remember { mutableStateOf<LocalDate?>(null) }
     var customTo by remember { mutableStateOf<LocalDate?>(null) }
     var selectedAccountId by remember { mutableStateOf<AccountId?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<TransactionSubcategory?>(null) }
+    var selectedSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
     var periodMenuExpanded by remember { mutableStateOf(false) }
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
@@ -123,15 +128,23 @@ fun TransactionsScreen(
             .sumOf { it.amount.value }
     }
     val netCents = totalIncomeCents - totalExpenseCents
-    val availableSubcategories = remember(transactionsInPeriod) {
-        transactionsInPeriod.mapNotNull { it.subcategory }.distinct()
+    val availableSubcategories = remember(transactionsInPeriod, subcategories) {
+        val usedIds = transactionsInPeriod.mapNotNull { it.subcategoryId }.toSet()
+        subcategories.filter { it.id in usedIds }
     }
 
     val filteredTransactions =
-        remember(revision, selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        remember(
+            revision,
+            selectedAccountId,
+            selectedSubcategory,
+            searchQuery,
+            periodFrom,
+            periodTo
+        ) {
             listTransactions.list(
                 accountId = selectedAccountId,
-                subcategory = selectedSubcategory,
+                subcategoryId = selectedSubcategory,
                 titleFilter = searchQuery,
                 from = periodFrom,
                 to = periodTo,
@@ -196,7 +209,7 @@ fun TransactionsScreen(
         {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(palette, date, dayTransactions, accountsById, onTransactionClick)
+                    DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick)
                 }
             }
         }
@@ -633,14 +646,14 @@ private fun AccountFilterRow(
 @Composable
 internal fun SubcategoryFilter(
     palette: AccountsPalette,
-    subcategories: List<TransactionSubcategory>,
-    selected: TransactionSubcategory?,
-    onSelect: (TransactionSubcategory?) -> Unit,
+    subcategories: List<Subcategory>,
+    selected: SubcategoryId?,
+    onSelect: (SubcategoryId?) -> Unit,
 )
 {
     val allLabel = stringResource(R.string.transactions_all_subcategories)
-    val options = listOf(SelectOption<TransactionSubcategory?>(null, allLabel)) +
-        subcategories.map { SelectOption<TransactionSubcategory?>(it, subcategoryLabel(it)) }
+    val options = listOf(SelectOption<SubcategoryId?>(null, allLabel)) +
+            subcategories.map { SelectOption<SubcategoryId?>(it.id, it.name.value) }
     SelectDropdown(
         palette = palette,
         options = options,
@@ -682,6 +695,7 @@ internal fun DayGroup(
     date: LocalDate,
     transactions: List<Transaction>,
     accountsById: Map<AccountId, Account>,
+    subcategoriesById: Map<SubcategoryId, Subcategory>,
     onTransactionClick: ((Transaction) -> Unit)? = null,
 )
 {
@@ -714,10 +728,15 @@ internal fun DayGroup(
                     palette = palette,
                     transaction = transaction,
                     account = accountsById[transaction.accountId],
+                    subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
                     // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
                     // does, but only for its amount (it opens its own, one-field form).
                     onClick = onTransactionClick
-                        ?.takeIf { canEditTransaction(transaction) || canEditInitialDeposit(transaction) }
+                        ?.takeIf {
+                            canEditTransaction(transaction) || canEditInitialDeposit(
+                                transaction
+                            )
+                        }
                         ?.let { open -> { open(transaction) } },
                 )
                 if (index != transactions.lastIndex)
@@ -739,6 +758,7 @@ private fun TransactionRow(
     palette: AccountsPalette,
     transaction: Transaction,
     account: Account?,
+    subcategory: Subcategory?,
     onClick: (() -> Unit)?,
 )
 {
@@ -746,13 +766,16 @@ private fun TransactionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClickLabel = editLabel, onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    onClickLabel = editLabel,
+                    onClick = onClick
+                ) else Modifier
+            )
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val emoji = transaction.subcategory?.let { subcategoryEmoji(it) } ?: categoryEmoji(
-            transaction.category
-        )
+        val emoji = subcategory?.emoji?.value ?: categoryEmoji(transaction.category)
         val tone = when (transaction.category)
         {
             TransactionCategory.EXPENSE, TransactionCategory.TRANSFER_OUT -> IconTone.Gold
@@ -778,7 +801,7 @@ private fun TransactionRow(
                 maxLines = 1,
             )
             val subtitle = listOfNotNull(
-                transaction.subcategory?.let { subcategoryLabel(it) },
+                subcategory?.name?.value,
                 account?.name?.value,
             ).joinToString(" • ")
             if (subtitle.isNotEmpty())
@@ -832,26 +855,6 @@ internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
 
 private fun timeLabel(date: Instant): String =
     date.atZone(ZoneId.systemDefault()).toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-
-internal fun subcategoryLabel(subcategory: TransactionSubcategory): String = when (subcategory)
-{
-    ExpenseSubcategory.GROCERIES   -> "Alimentation"
-    ExpenseSubcategory.FUEL        -> "Transport"
-    ExpenseSubcategory.HAIRDRESSER -> "Coiffeur"
-    IncomeSubcategory.SALARY       -> "Salaire"
-    IncomeSubcategory.GIFT         -> "Cadeau"
-    IncomeSubcategory.REFUND       -> "Remboursement"
-}
-
-private fun subcategoryEmoji(subcategory: TransactionSubcategory): String = when (subcategory)
-{
-    ExpenseSubcategory.GROCERIES   -> "🛒"
-    ExpenseSubcategory.FUEL        -> "⛽"
-    ExpenseSubcategory.HAIRDRESSER -> "💇"
-    IncomeSubcategory.SALARY       -> "💰"
-    IncomeSubcategory.GIFT         -> "🎁"
-    IncomeSubcategory.REFUND       -> "💸"
-}
 
 private fun categoryEmoji(category: TransactionCategory): String = when (category)
 {
