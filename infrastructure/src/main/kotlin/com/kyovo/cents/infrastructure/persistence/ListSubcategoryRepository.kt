@@ -3,41 +3,51 @@ package com.kyovo.cents.infrastructure.persistence
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class ListSubcategoryRepository : SubcategoryRepository
 {
-    private val subcategories = mutableListOf<Subcategory>()
+    // A StateFlow holds the current list and tells its observers about every change: the list-based
+    // stand-in for what a Room query returning a Flow will do by itself.
+    private val subcategories = MutableStateFlow<List<Subcategory>>(emptyList())
 
-    override fun save(subcategory: Subcategory)
+    override suspend fun save(subcategory: Subcategory)
     {
         // An existing subcategory is replaced where it stands (a rename must not reshuffle storage).
-        val index = subcategories.indexOfFirst { it.id == subcategory.id }
-        if (index >= 0) subcategories[index] = subcategory else subcategories.add(subcategory)
+        val current = subcategories.value
+        val index = current.indexOfFirst { it.id == subcategory.id }
+        subcategories.value = if (index >= 0) current.toMutableList().also { it[index] = subcategory } else current + subcategory
     }
 
-    override fun findById(id: SubcategoryId): Subcategory?
+    override suspend fun findById(id: SubcategoryId): Subcategory?
     {
-        return subcategories.find { it.id == id }
+        return subcategories.value.find { it.id == id }
     }
 
-    override fun findAll(): List<Subcategory>
+    override suspend fun findAll(): List<Subcategory>
     {
-        return subcategories.toList()
+        return subcategories.value
     }
 
-    override fun deleteById(id: SubcategoryId)
+    override suspend fun deleteById(id: SubcategoryId)
     {
-        subcategories.removeAll { it.id == id }
+        subcategories.value = subcategories.value.filterNot { it.id == id }
+    }
+
+    override fun observeAll(): Flow<List<Subcategory>>
+    {
+        return subcategories
     }
 
     internal fun snapshot(): List<Subcategory>
     {
-        return subcategories.toList()
+        return subcategories.value
     }
 
+    /** Puts the list back as it was: the observers are told, so a screen never keeps what a rollback undid. */
     internal fun restore(snapshot: List<Subcategory>)
     {
-        subcategories.clear()
-        subcategories.addAll(snapshot)
+        subcategories.value = snapshot
     }
 }

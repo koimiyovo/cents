@@ -18,7 +18,7 @@ class RecordTransactionService(
     private val subcategoryRepository: SubcategoryRepository
 ) : RecordTransactionUseCase
 {
-    override fun record(command: RecordTransactionCommand): Transaction
+    override suspend fun record(command: RecordTransactionCommand): Transaction
     {
         val account =
             accountRepository.findById(command.accountId) ?: throw AccountNotFoundException()

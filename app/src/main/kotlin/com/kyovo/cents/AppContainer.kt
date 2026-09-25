@@ -49,7 +49,8 @@ import com.kyovo.cents.infrastructure.persistence.ListAccountRepository
 import com.kyovo.cents.infrastructure.persistence.ListSubcategoryRepository
 import com.kyovo.cents.infrastructure.persistence.ListTransactionRepository
 import com.kyovo.cents.infrastructure.persistence.ListUnitOfWork
-import java.time.Clock
+import java.time.Clock
+import kotlinx.coroutines.runBlocking
 
 /**
  * Manual wiring for the app's current single-Activity shell: builds the in-memory repositories,
@@ -105,6 +106,8 @@ class AppContainer {
     val dataRevision = DataRevision()
 
     init {
-        seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository)
+        // Temporary bridge: the seeding suspends now, but the container is built synchronously. It goes
+        // when the database replaces the in-memory repositories (seeding then runs once, off the main thread).
+        runBlocking { seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository) }
     }
 }

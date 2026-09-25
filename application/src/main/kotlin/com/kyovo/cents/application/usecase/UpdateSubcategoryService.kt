@@ -11,7 +11,7 @@ class UpdateSubcategoryService(
     private val subcategoryRepository: SubcategoryRepository
 ) : UpdateSubcategoryUseCase
 {
-    override fun update(command: UpdateSubcategoryCommand): Subcategory
+    override suspend fun update(command: UpdateSubcategoryCommand): Subcategory
     {
         val existing =
             subcategoryRepository.findById(command.id) ?: throw SubcategoryNotFoundException()

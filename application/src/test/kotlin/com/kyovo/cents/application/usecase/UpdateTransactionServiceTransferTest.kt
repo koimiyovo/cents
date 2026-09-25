@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
@@ -30,26 +32,26 @@ class UpdateTransactionServiceTransferTest
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
-    fun `throws when the transaction is one leg of a transfer`(category: TransactionCategory)
+    fun `throws when the transaction is one leg of a transfer`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         transactionRepository.save(aTransaction(id = id, category = category))
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id)) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id)) }
             .isInstanceOf(CannotUpdateTransferException::class.java)
     }
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
-    fun `does not modify the leg it refuses to update`(category: TransactionCategory)
+    fun `does not modify the leg it refuses to update`(category: TransactionCategory) = runTest()
     {
         // GIVEN
         val leg = aTransaction(id = id, category = category)
         transactionRepository.save(leg)
 
         // WHEN
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id)) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id)) }
             .isInstanceOf(CannotUpdateTransferException::class.java)
 
         // THEN
@@ -57,7 +59,7 @@ class UpdateTransactionServiceTransferTest
     }
 
     @Test
-    fun `refuses a transfer leg before looking at where the command would move it`()
+    fun `refuses a transfer leg before looking at where the command would move it`() = runTest()
     {
         // GIVEN a command aimed at an account that doesn't even exist
         transactionRepository.save(aTransaction(id = id, category = TransactionCategory.TRANSFER_OUT))
@@ -67,19 +69,19 @@ class UpdateTransactionServiceTransferTest
         )
 
         // WHEN / THEN it is the transfer rule that answers, not "account not found"
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(CannotUpdateTransferException::class.java)
     }
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
-    fun `refuses a transfer leg before looking at the subcategory`(category: TransactionCategory)
+    fun `refuses a transfer leg before looking at the subcategory`(category: TransactionCategory) = runTest()
     {
         // GIVEN a command whose subcategory doesn't exist
         transactionRepository.save(aTransaction(id = id, category = category))
 
         // WHEN / THEN it is the transfer rule that answers
-        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, subcategoryId = aSubcategoryId())) }
+        assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id, subcategoryId = aSubcategoryId())) }
             .isInstanceOf(CannotUpdateTransferException::class.java)
     }
 }

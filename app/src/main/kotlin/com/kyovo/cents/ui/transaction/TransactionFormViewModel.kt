@@ -220,6 +220,11 @@ class TransactionFormViewModel(
      */
     fun confirmNewSubcategory()
     {
+        viewModelScope.launch { createNewSubcategory() }
+    }
+
+    private suspend fun createNewSubcategory()
+    {
         val state = _uiState.value
         val kind = state.form?.subcategoryKind ?: return
         val draft = state.newSubcategory ?: return

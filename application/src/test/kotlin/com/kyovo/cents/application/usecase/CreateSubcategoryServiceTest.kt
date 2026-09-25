@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedSubcategoryIdGenerator
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.aCreateSubcategoryCommand
@@ -28,7 +30,7 @@ class CreateSubcategoryServiceTest
     private val service = CreateSubcategoryService(repository, FixedSubcategoryIdGenerator(generatedId))
 
     @Test
-    fun `creates a subcategory with the given kind and name and a generated id, and saves it`()
+    fun `creates a subcategory with the given kind and name and a generated id, and saves it`() = runTest()
     {
         // WHEN
         val result = service.create(aCreateSubcategoryCommand())
@@ -40,7 +42,7 @@ class CreateSubcategoryServiceTest
     }
 
     @Test
-    fun `keeps the emoji when one is given, and has none otherwise`()
+    fun `keeps the emoji when one is given, and has none otherwise`() = runTest()
     {
         // GIVEN
         val cart = SubcategoryEmoji("🛒")
@@ -56,25 +58,25 @@ class CreateSubcategoryServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = ["Alimentation", "alimentation", "ALIMENTATION", "  Alimentation  "])
-    fun `throws when a subcategory of the same kind already has that name, whatever the case or spaces`(name: String)
+    fun `throws when a subcategory of the same kind already has that name, whatever the case or spaces`(name: String) = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = existingId))
 
         // WHEN / THEN
-        assertThatThrownBy { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
+        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 
     @Test
-    fun `saves nothing when the name is already taken`()
+    fun `saves nothing when the name is already taken`() = runTest()
     {
         // GIVEN
         val existing = aSubcategory(id = existingId)
         repository.save(existing)
 
         // WHEN
-        assertThatThrownBy { service.create(aCreateSubcategoryCommand()) }
+        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand()) }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
 
         // THEN
@@ -84,7 +86,7 @@ class CreateSubcategoryServiceTest
     // "Autre" can perfectly be both an expense and an income subcategory: names only have to be
     // unique among the subcategories of the same kind.
     @Test
-    fun `accepts a name already used under the other kind`()
+    fun `accepts a name already used under the other kind`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = existingId, kind = RecordableTransactionCategory.INCOME))
@@ -100,24 +102,24 @@ class CreateSubcategoryServiceTest
     // Uniqueness ignores accents as well as case: "Education" and "Éducation" are the same name.
     @ParameterizedTest
     @ValueSource(strings = ["Education", "éducation", "EDUCATION", "E\u0301ducation"])
-    fun `throws when a subcategory of the same kind has the same name with other accents`(name: String)
+    fun `throws when a subcategory of the same kind has the same name with other accents`(name: String) = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = existingId, name = SubcategoryName("Éducation")))
 
         // WHEN / THEN
-        assertThatThrownBy { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
+        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 
     @Test
-    fun `throws when the existing name has no accent and the new one has`()
+    fun `throws when the existing name has no accent and the new one has`() = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = existingId, name = SubcategoryName("Education")))
 
         // WHEN / THEN
-        assertThatThrownBy { service.create(aCreateSubcategoryCommand(name = SubcategoryName("Éducation"))) }
+        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName("Éducation"))) }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 }

@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Subcategory
 
 interface UpdateSubcategoryUseCase
 {
-    fun update(command: UpdateSubcategoryCommand): Subcategory
+    suspend fun update(command: UpdateSubcategoryCommand): Subcategory
 }

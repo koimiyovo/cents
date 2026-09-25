@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -109,7 +110,7 @@ fun AccountDetailsScreen(
     val accountTransactions =
         remember(accountId, revision) { listTransactions.list(accountId = accountId) }
     // Already ordered by name by the use case.
-    val subcategories = remember(revision) { listSubcategories.list() }
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
 
     // Unlike the global tab (30 days by default), an account's page opens on its full history:

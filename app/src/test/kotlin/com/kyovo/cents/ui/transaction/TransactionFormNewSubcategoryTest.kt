@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.model.Account
@@ -48,7 +50,7 @@ private class RecordingCreateSubcategory : CreateSubcategoryUseCase
     val commands = mutableListOf<CreateSubcategoryCommand>()
     var refuseName = false
 
-    override fun create(command: CreateSubcategoryCommand): Subcategory
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory
     {
         if (refuseName) throw DuplicateSubcategoryNameException()
         commands += command
@@ -59,7 +61,7 @@ private class RecordingCreateSubcategory : CreateSubcategoryUseCase
 /** Nothing here is used by these tests: creating a subcategory doesn't touch transactions. */
 private val unusedRecord = object : RecordTransactionUseCase
 {
-    override fun record(command: RecordTransactionCommand): Transaction = error("not used")
+    override suspend fun record(command: RecordTransactionCommand): Transaction = error("not used")
 }
 private val unusedTransfer = object : RecordTransferUseCase
 {
@@ -67,7 +69,7 @@ private val unusedTransfer = object : RecordTransferUseCase
 }
 private val unusedUpdate = object : UpdateTransactionUseCase
 {
-    override fun update(command: UpdateTransactionCommand): Transaction = error("not used")
+    override suspend fun update(command: UpdateTransactionCommand): Transaction = error("not used")
 }
 private val unusedDelete = object : DeleteTransactionUseCase
 {
@@ -79,6 +81,7 @@ private val unusedDelete = object : DeleteTransactionUseCase
  * a small dialog, a subcategory of the kind the form records (never of the other), selected right
  * away in the form.
  */
+@ExtendWith(MainDispatcherExtension::class)
 class TransactionFormNewSubcategoryTest
 {
     private val create = RecordingCreateSubcategory()

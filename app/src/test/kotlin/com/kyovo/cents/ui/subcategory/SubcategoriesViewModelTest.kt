@@ -29,7 +29,7 @@ private class RecordingCreate : CreateSubcategoryUseCase
     val commands = mutableListOf<CreateSubcategoryCommand>()
     var failWith: RuntimeException? = null
 
-    override fun create(command: CreateSubcategoryCommand): Subcategory
+    override suspend fun create(command: CreateSubcategoryCommand): Subcategory
     {
         failWith?.let { throw it }
         commands += command
@@ -43,7 +43,7 @@ private class RecordingUpdate : UpdateSubcategoryUseCase
     val commands = mutableListOf<UpdateSubcategoryCommand>()
     var failWith: RuntimeException? = null
 
-    override fun update(command: UpdateSubcategoryCommand): Subcategory
+    override suspend fun update(command: UpdateSubcategoryCommand): Subcategory
     {
         failWith?.let { throw it }
         commands += command
