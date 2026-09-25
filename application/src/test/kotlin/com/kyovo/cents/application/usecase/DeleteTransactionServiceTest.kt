@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -13,7 +15,7 @@ import org.junit.jupiter.api.Test
 class DeleteTransactionServiceTest
 {
     @Test
-    fun `deletes an existing recorded transaction`()
+    fun `deletes an existing recorded transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -29,18 +31,18 @@ class DeleteTransactionServiceTest
     }
 
     @Test
-    fun `does not throw when no transaction matches the given id`()
+    fun `does not throw when no transaction matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
         val service = DeleteTransactionService(repository)
 
         // WHEN / THEN
-        assertThatCode { service.delete(aTransactionId()) }.doesNotThrowAnyException()
+        service.delete(aTransactionId())
     }
 
     @Test
-    fun `throws when trying to delete an initial deposit transaction`()
+    fun `throws when trying to delete an initial deposit transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -49,12 +51,12 @@ class DeleteTransactionServiceTest
         val service = DeleteTransactionService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteInitialDepositException::class.java)
     }
 
     @Test
-    fun `does not delete the transaction when trying to delete an initial deposit transaction`()
+    fun `does not delete the transaction when trying to delete an initial deposit transaction`() = runTest()
     {
         // GIVEN
         val id = aTransactionId()
@@ -64,7 +66,7 @@ class DeleteTransactionServiceTest
         val service = DeleteTransactionService(repository)
 
         // WHEN
-        assertThatThrownBy { service.delete(id) }
+        assertThatThrownBySuspending { service.delete(id) }
             .isInstanceOf(CannotDeleteInitialDepositException::class.java)
 
         // THEN

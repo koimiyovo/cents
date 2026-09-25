@@ -147,6 +147,42 @@ class ListUnitOfWorkTest
         assertThat(accountRepository.observeAll().first()).containsExactly(first, second)
     }
 
+    @Test
+    fun `a rollback is seen by the observers of the transactions`() = runTest()
+    {
+        // GIVEN a screen collecting the transactions
+        val accountRepository = ListAccountRepository()
+        val transactionRepository = ListTransactionRepository()
+        val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, ListSubcategoryRepository())
+        val account = anAccount(name = AccountName("Livret A"))
+        val existing = anOpeningDeposit(account.id)
+        transactionRepository.save(existing)
+        val seen = mutableListOf<Int>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            transactionRepository.observeAll().collect { list -> seen += list.size }
+        }
+
+        // WHEN a unit of work fails after having recorded another transaction
+        assertThatThrownBySuspending {
+            unitOfWork.execute {
+                transactionRepository.save(
+                    Transaction.openingDeposit(
+                        id = TransactionId(Uuid.parse("44444444-4444-4444-4444-444444444444")),
+                        accountId = account.id,
+                        amount = Money(1_000),
+                        date = Instant.parse("2026-09-22T10:00:00Z"),
+                    ),
+                )
+                throw RuntimeException("boom")
+            }
+        }.isInstanceOf(RuntimeException::class.java)
+
+        // THEN the observer saw it come, then go
+        assertThat(seen).containsExactly(1, 2, 1)
+        assertThat(transactionRepository.observeAll().first()).containsExactly(existing)
+    }
+
     private fun anAccount(
         id: AccountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
         name: AccountName

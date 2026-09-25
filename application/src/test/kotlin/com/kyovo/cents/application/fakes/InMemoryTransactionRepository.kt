@@ -3,29 +3,38 @@ package com.kyovo.cents.application.fakes
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.port.output.TransactionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class InMemoryTransactionRepository : TransactionRepository
 {
-    val saved = mutableListOf<Transaction>()
+    private val state = MutableStateFlow<List<Transaction>>(emptyList())
 
-    override fun save(transaction: Transaction)
+    /** What is stored, in order (for the tests to look at). */
+    val saved: List<Transaction> get() = state.value
+
+    override suspend fun save(transaction: Transaction)
     {
-        saved.removeAll { it.id == transaction.id }
-        saved.add(transaction)
+        state.value = state.value.filterNot { it.id == transaction.id } + transaction
     }
 
-    override fun findById(id: TransactionId): Transaction?
+    override suspend fun findById(id: TransactionId): Transaction?
     {
-        return saved.find { it.id == id }
+        return state.value.find { it.id == id }
     }
 
-    override fun deleteById(id: TransactionId)
+    override suspend fun deleteById(id: TransactionId)
     {
-        saved.removeAll { it.id == id }
+        state.value = state.value.filterNot { it.id == id }
     }
 
-    override fun findAll(): List<Transaction>
+    override suspend fun findAll(): List<Transaction>
     {
-        return saved.toList()
+        return state.value
+    }
+
+    override fun observeAll(): Flow<List<Transaction>>
+    {
+        return state
     }
 }

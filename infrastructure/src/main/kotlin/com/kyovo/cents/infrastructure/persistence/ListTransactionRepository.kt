@@ -3,40 +3,45 @@ package com.kyovo.cents.infrastructure.persistence
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.port.output.TransactionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class ListTransactionRepository : TransactionRepository
 {
-    private val transactions = mutableListOf<Transaction>()
+    private val transactions = MutableStateFlow<List<Transaction>>(emptyList())
 
-    override fun save(transaction: Transaction)
+    override suspend fun save(transaction: Transaction)
     {
-        transactions.removeAll { it.id == transaction.id }
-        transactions.add(transaction)
+        transactions.value = transactions.value.filterNot { it.id == transaction.id } + transaction
     }
 
     internal fun snapshot(): List<Transaction>
     {
-        return transactions.toList()
+        return transactions.value
     }
 
     internal fun restore(snapshot: List<Transaction>)
     {
-        transactions.clear()
-        transactions.addAll(snapshot)
+        transactions.value = snapshot
     }
 
-    override fun findById(id: TransactionId): Transaction?
+    override suspend fun findById(id: TransactionId): Transaction?
     {
-        return transactions.find { it.id == id }
+        return transactions.value.find { it.id == id }
     }
 
-    override fun deleteById(id: TransactionId)
+    override suspend fun deleteById(id: TransactionId)
     {
-        transactions.removeAll { it.id == id }
+        transactions.value = transactions.value.filterNot { it.id == id }
     }
 
-    override fun findAll(): List<Transaction>
+    override suspend fun findAll(): List<Transaction>
     {
-        return transactions.toList()
+        return transactions.value
+    }
+
+    override fun observeAll(): Flow<List<Transaction>>
+    {
+        return transactions
     }
 }

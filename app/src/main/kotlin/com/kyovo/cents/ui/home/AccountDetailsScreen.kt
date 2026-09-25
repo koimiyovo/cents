@@ -116,12 +116,11 @@ fun AccountDetailsScreen(
         return
     }
 
-    // Computed from the transactions, which are not observed yet: recomputed (suspending) on each revision.
-    val balanceCents by produceState(0L, accountId, revision) {
-        value = getAccountBalance.getBalance(accountId)?.value ?: 0L
-    }
-    val accountTransactions =
-        remember(accountId, revision) { listTransactions.list(accountId = accountId) }
+    // A balance is the sum of the account's transactions, so it follows them as they change.
+    val balanceCents by remember(accountId) { getAccountBalance.observe(accountId).map { it?.value ?: 0L } }
+        .collectAsStateWithLifecycle(initialValue = 0L)
+    val accountTransactions by remember(accountId) { listTransactions.observe(accountId = accountId) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     // Already ordered by name by the use case.
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
@@ -159,16 +158,15 @@ fun AccountDetailsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
 
-    val filteredTransactions =
-        remember(accountId, revision, selectedSubcategory, searchQuery, periodFrom, periodTo) {
-            listTransactions.list(
-                accountId = accountId,
-                subcategoryId = selectedSubcategory,
-                titleFilter = searchQuery,
-                from = periodFrom,
-                to = periodTo,
-            )
-        }
+    val filteredTransactions by remember(accountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        listTransactions.observe(
+            accountId = accountId,
+            subcategoryId = selectedSubcategory,
+            titleFilter = searchQuery,
+            from = periodFrom,
+            to = periodTo,
+        )
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
     val groupedByDay = remember(filteredTransactions) { groupByDay(filteredTransactions) }
 
     Column(

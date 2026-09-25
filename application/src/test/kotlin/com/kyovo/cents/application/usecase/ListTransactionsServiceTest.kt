@@ -1,5 +1,13 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.model.TransactionId
+import com.kyovo.cents.application.fakes.aMoney
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -11,13 +19,14 @@ import com.kyovo.cents.domain.model.TransactionCategory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ListTransactionsServiceTest
 {
     private val groceriesId = aSubcategoryId("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
     private val fuelId = aSubcategoryId("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
     @Test
-    fun `returns all transactions when no date range is given`()
+    fun `returns all transactions when no date range is given`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -28,14 +37,14 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list()
+        val result = service.observe().first()
 
         // THEN
         assertThat(result).containsExactly(first, second)
     }
 
     @Test
-    fun `returns only transactions on or after the given start date when no end date is given`()
+    fun `returns only transactions on or after the given start date when no end date is given`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -52,14 +61,14 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(from = anInstant("2026-03-01T00:00:00Z"))
+        val result = service.observe(from = anInstant("2026-03-01T00:00:00Z")).first()
 
         // THEN
         assertThat(result).containsExactly(late)
     }
 
     @Test
-    fun `returns only transactions on or before the given end date when no start date is given`()
+    fun `returns only transactions on or before the given end date when no start date is given`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -76,14 +85,14 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(to = anInstant("2026-03-01T00:00:00Z"))
+        val result = service.observe(to = anInstant("2026-03-01T00:00:00Z")).first()
 
         // THEN
         assertThat(result).containsExactly(early)
     }
 
     @Test
-    fun `returns only transactions within the given date range, boundaries included`()
+    fun `returns only transactions within the given date range, boundaries included`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -110,17 +119,17 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(
+        val result = service.observe(
             from = anInstant("2026-02-01T00:00:00Z"),
             to = anInstant("2026-03-01T00:00:00Z")
-        )
+        ).first()
 
         // THEN
         assertThat(result).containsExactly(onStart, onEnd)
     }
 
     @Test
-    fun `returns an empty list when no transaction falls within the given date range`()
+    fun `returns an empty list when no transaction falls within the given date range`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -128,17 +137,17 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(
+        val result = service.observe(
             from = anInstant("2026-06-01T00:00:00Z"),
             to = anInstant("2026-07-01T00:00:00Z")
-        )
+        ).first()
 
         // THEN
         assertThat(result).isEmpty()
     }
 
     @Test
-    fun `returns only transactions belonging to the given account`()
+    fun `returns only transactions belonging to the given account`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId("11111111-1111-1111-1111-111111111111")
@@ -157,14 +166,14 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(accountId = accountId)
+        val result = service.observe(accountId = accountId).first()
 
         // THEN
         assertThat(result).containsExactly(ownTransaction)
     }
 
     @Test
-    fun `returns only transactions of the given subcategory`()
+    fun `returns only transactions of the given subcategory`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -183,14 +192,14 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(subcategoryId = groceriesId)
+        val result = service.observe(subcategoryId = groceriesId).first()
 
         // THEN
         assertThat(result).containsExactly(groceries)
     }
 
     @Test
-    fun `combines account, subcategory and date range filters`()
+    fun `combines account, subcategory and date range filters`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId("11111111-1111-1111-1111-111111111111")
@@ -230,19 +239,19 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(
+        val result = service.observe(
             accountId = accountId,
             subcategoryId = groceriesId,
             from = anInstant("2026-01-01T00:00:00Z"),
             to = anInstant("2026-03-01T00:00:00Z")
-        )
+        ).first()
 
         // THEN
         assertThat(result).containsExactly(matching)
     }
 
     @Test
-    fun `returns only transactions whose title contains the given text, case-insensitively`()
+    fun `returns only transactions whose title contains the given text, case-insensitively`() = runTest()
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
@@ -261,9 +270,84 @@ class ListTransactionsServiceTest
         val service = ListTransactionsService(repository)
 
         // WHEN
-        val result = service.list(titleFilter = "courses")
+        val result = service.observe(titleFilter = "courses").first()
 
         // THEN
         assertThat(result).containsExactly(groceries)
+    }
+
+    // ------------------------------------------------------------------ it keeps emitting
+
+    @Test
+    fun `emits again each time a transaction is recorded or deleted`() = runTest()
+    {
+        // GIVEN a screen collecting the transactions
+        val repository = InMemoryTransactionRepository()
+        val service = ListTransactionsService(repository)
+        val first = aTransaction(id = aTransactionId("11111111-1111-1111-1111-111111111111"))
+        val second = aTransaction(id = aTransactionId("22222222-2222-2222-2222-222222222222"))
+        val emissions = mutableListOf<List<TransactionId>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            service.observe().collect { list -> emissions += list.map { it.id } }
+        }
+
+        // WHEN
+        repository.save(first)
+        repository.save(second)
+        repository.deleteById(first.id)
+
+        // THEN
+        assertThat(emissions).containsExactly(
+            emptyList(),
+            listOf(first.id),
+            listOf(first.id, second.id),
+            listOf(second.id),
+        )
+    }
+
+    @Test
+    fun `emits again when a transaction is edited`() = runTest()
+    {
+        // GIVEN
+        val repository = InMemoryTransactionRepository()
+        val service = ListTransactionsService(repository)
+        val id = aTransactionId("11111111-1111-1111-1111-111111111111")
+        repository.save(aTransaction(id = id, amount = aMoney(1_000)))
+        val amounts = mutableListOf<List<Long>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            service.observe().collect { list -> amounts += list.map { it.amount.value } }
+        }
+
+        // WHEN
+        repository.save(aTransaction(id = id, amount = aMoney(2_500)))
+
+        // THEN
+        assertThat(amounts).containsExactly(listOf(1_000L), listOf(2_500L))
+    }
+
+    // A page showing one account has nothing to redraw when a transaction is recorded on another.
+    @Test
+    fun `with a filter, emits again only when the matching transactions change`() = runTest()
+    {
+        // GIVEN a page on one account
+        val repository = InMemoryTransactionRepository()
+        val service = ListTransactionsService(repository)
+        val mine = anAccountId("11111111-1111-1111-1111-111111111111")
+        val other = anAccountId("22222222-2222-2222-2222-222222222222")
+        val emissions = mutableListOf<List<TransactionId>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            service.observe(accountId = mine).collect { list -> emissions += list.map { it.id } }
+        }
+
+        // WHEN a transaction lands on the other account, then one on this one
+        repository.save(aTransaction(id = aTransactionId("33333333-3333-3333-3333-333333333333"), accountId = other))
+        val minePlease = aTransaction(id = aTransactionId("44444444-4444-4444-4444-444444444444"), accountId = mine)
+        repository.save(minePlease)
+
+        // THEN
+        assertThat(emissions).containsExactly(emptyList(), listOf(minePlease.id))
     }
 }

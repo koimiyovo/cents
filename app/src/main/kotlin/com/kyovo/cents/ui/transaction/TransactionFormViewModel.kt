@@ -273,6 +273,11 @@ class TransactionFormViewModel(
      */
     fun confirmDelete()
     {
+        viewModelScope.launch { delete() }
+    }
+
+    private suspend fun delete()
+    {
         val id = _uiState.value.form?.editingId ?: return
         try
         {

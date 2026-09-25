@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -86,15 +87,15 @@ class UpdateTransactionServiceAccountChangeTest
         )
         transactionRepository.save(anExpenseOn(fromId))
         val balances = GetAccountBalanceService(accountRepository, transactionRepository)
-        assertThat(balances.getBalance(fromId)!!.value).isEqualTo(9_000)
-        assertThat(balances.getBalance(toId)!!.value).isEqualTo(5_000)
+        assertThat(balances.observe(fromId).first()!!.value).isEqualTo(9_000)
+        assertThat(balances.observe(toId).first()!!.value).isEqualTo(5_000)
 
         // WHEN
         service.update(anUpdateTransactionCommand(id = id, accountId = toId, amount = aMoney(1_000)))
 
         // THEN the 10,00 € left the first account and weighs on the second
-        assertThat(balances.getBalance(fromId)!!.value).isEqualTo(10_000)
-        assertThat(balances.getBalance(toId)!!.value).isEqualTo(4_000)
+        assertThat(balances.observe(fromId).first()!!.value).isEqualTo(10_000)
+        assertThat(balances.observe(toId).first()!!.value).isEqualTo(4_000)
     }
 
     @Test

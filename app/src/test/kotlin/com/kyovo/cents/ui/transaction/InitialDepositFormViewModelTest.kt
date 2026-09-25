@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.InvalidInitialDepositAmountException
 import com.kyovo.cents.domain.exception.NotAnInitialDepositException
@@ -24,7 +26,7 @@ private class FakeUpdateInitialDeposit : UpdateInitialDepositUseCase
     val calls = mutableListOf<Pair<TransactionId, Money>>()
     var failWith: RuntimeException? = null
 
-    override fun update(id: TransactionId, amount: Money): Transaction
+    override suspend fun update(id: TransactionId, amount: Money): Transaction
     {
         failWith?.let { throw it }
         calls += id to amount
@@ -35,6 +37,7 @@ private class FakeUpdateInitialDeposit : UpdateInitialDepositUseCase
 private fun aDeposit(cents: Long = 10_000) =
     Transaction.openingDeposit(TransactionId(Uuid.random()), AccountId(Uuid.random()), Money(cents), OPENED)
 
+@ExtendWith(MainDispatcherExtension::class)
 class InitialDepositFormViewModelTest
 {
     private val updateInitialDeposit = FakeUpdateInitialDeposit()

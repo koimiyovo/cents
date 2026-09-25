@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
@@ -61,13 +62,13 @@ class UpdateInitialDepositScenarioTest
     {
         // GIVEN
         givenAnAccountWithADepositAndAnExpense()
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(7_000))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(7_000))
 
         // WHEN the deposit was really 250,50 €
         updateInitialDeposit.update(depositId, aMoney(25_050))
 
         // THEN 250,50 - 30,00
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(22_050))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(22_050))
     }
 
     @Test
@@ -80,7 +81,7 @@ class UpdateInitialDepositScenarioTest
         updateInitialDeposit.update(depositId, aMoney(25_050))
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(22_050))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(22_050))
     }
 
     @Test
@@ -119,6 +120,6 @@ class UpdateInitialDepositScenarioTest
             .isInstanceOf(InvalidInitialDepositAmountException::class.java)
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(AccountBalance(7_000))
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(AccountBalance(7_000))
     }
 }
