@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.TransactionTitle
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.model.Account
@@ -378,5 +380,82 @@ class TransactionFormNewSubcategoryTest
         // THEN
         assertThat(state.newSubcategory!!.error).isEqualTo(NewSubcategoryError.EMOJI_INVALID)
         assertThat(create.commands).isEmpty()
+    }
+
+    private fun anExistingExpense() = Transaction.recorded(
+        id = TransactionId(Uuid.random()),
+        accountId = AccountId(Uuid.random()),
+        amount = Money(1_250),
+        title = TransactionTitle("Courses"),
+        category = RecordableTransactionCategory.EXPENSE,
+        subcategory = GROCERIES_SUBCATEGORY,
+        description = null,
+        date = MOMENT,
+    )
+
+    @Test
+    fun `an expense subcategory just created does not follow the form to an income`()
+    {
+        // GIVEN a subcategory created from an expense form
+        openExpenseForm()
+        viewModel.askToCreateSubcategory()
+        type("Sorties")
+        viewModel.confirmNewSubcategory()
+
+        // WHEN the user switches to an income
+        viewModel.update(state.form!!.withType(TransactionFormType.INCOME))
+
+        // THEN the subcategory doesn't stay selected: it is of the other kind
+        assertThat(state.form!!.subcategory).isNull()
+    }
+
+    @Test
+    fun `creating from an edit form selects it and keeps editing the same transaction`()
+    {
+        // GIVEN a transaction opened for editing
+        val transaction = anExistingExpense()
+        viewModel.openForEdit(transaction)
+        viewModel.askToCreateSubcategory()
+        type("Sorties")
+
+        // WHEN
+        viewModel.confirmNewSubcategory()
+
+        // THEN the new subcategory replaces the one it had, in the form only
+        assertThat(state.form!!.subcategory?.name?.value).isEqualTo("Sorties")
+        assertThat(state.form!!.editingId).isEqualTo(transaction.id)
+        // and what a deletion would ask about is still the stored transaction
+        viewModel.askToDelete()
+        assertThat(state.confirmingDelete).isEqualTo(TransactionToDelete("Courses", -1_250))
+    }
+
+    @Test
+    fun `confirming without a dialog open does nothing`()
+    {
+        // GIVEN
+        openExpenseForm()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.confirmNewSubcategory()
+
+        // THEN
+        assertThat(create.commands).isEmpty()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+        assertThat(state.newSubcategory).isNull()
+    }
+
+    @Test
+    fun `typing a name or picking an emoji without a dialog open does nothing`()
+    {
+        // GIVEN
+        openExpenseForm()
+
+        // WHEN
+        type("Sorties")
+        viewModel.selectNewSubcategoryEmoji(CART)
+
+        // THEN no dialog appears by itself
+        assertThat(state.newSubcategory).isNull()
     }
 }
