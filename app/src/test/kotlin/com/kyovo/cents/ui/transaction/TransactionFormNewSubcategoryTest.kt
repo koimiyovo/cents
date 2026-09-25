@@ -73,7 +73,7 @@ private val unusedUpdate = object : UpdateTransactionUseCase
 }
 private val unusedDelete = object : DeleteTransactionUseCase
 {
-    override fun delete(id: TransactionId) = error("not used")
+    override suspend fun delete(id: TransactionId) = error("not used")
 }
 
 /**

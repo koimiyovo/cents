@@ -32,7 +32,7 @@ class HardcodedDataTest
     {
         runBlocking { seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository) }
         accounts = runBlocking { accountRepository.findAll() }
-        transactions = transactionRepository.findAll()
+        transactions = runBlocking { transactionRepository.findAll() }
         subcategories = runBlocking { subcategoryRepository.findAll() }
     }
 

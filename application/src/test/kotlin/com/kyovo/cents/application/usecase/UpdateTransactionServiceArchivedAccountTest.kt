@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
@@ -118,12 +119,12 @@ class UpdateTransactionServiceArchivedAccountTest
             ),
         )
         val balances = GetAccountBalanceService(accountRepository, transactionRepository)
-        assertThat(balances.getBalance(accountId)!!.value).isEqualTo(9_000)
+        assertThat(balances.observe(accountId).first()!!.value).isEqualTo(9_000)
 
         // WHEN the expense is corrected to 25,00 €
         service.update(anUpdateTransactionCommand(id = id, accountId = accountId, amount = aMoney(2_500)))
 
         // THEN the closed account's final balance changed with it: nothing freezes it
-        assertThat(balances.getBalance(accountId)!!.value).isEqualTo(7_500)
+        assertThat(balances.observe(accountId).first()!!.value).isEqualTo(7_500)
     }
 }

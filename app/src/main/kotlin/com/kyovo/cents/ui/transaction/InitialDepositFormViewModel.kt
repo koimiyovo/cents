@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.InvalidInitialDepositAmountException
@@ -57,6 +59,11 @@ class InitialDepositFormViewModel(
 
     /** Saves the amount. On success the sheet closes; otherwise the state says what to show. */
     fun submit()
+    {
+        viewModelScope.launch { save() }
+    }
+
+    private suspend fun save()
     {
         val form = _uiState.value.form ?: return
         when (val submission = form.submit())

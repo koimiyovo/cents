@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Transaction
@@ -17,7 +18,7 @@ class ListTransactionRepositoryTest
     private val date = Instant.parse("2026-09-22T10:00:00Z")
 
     @Test
-    fun `finds a transaction that has been saved`()
+    fun `finds a transaction that has been saved`() = runTest()
     {
         // GIVEN
         val repository = ListTransactionRepository()
@@ -29,7 +30,7 @@ class ListTransactionRepositoryTest
     }
 
     @Test
-    fun `replaces an existing transaction when saving another transaction with the same id`()
+    fun `replaces an existing transaction when saving another transaction with the same id`() = runTest()
     {
         // GIVEN
         val repository = ListTransactionRepository()
@@ -45,7 +46,7 @@ class ListTransactionRepositoryTest
     }
 
     @Test
-    fun `no longer finds a transaction once it has been deleted`()
+    fun `no longer finds a transaction once it has been deleted`() = runTest()
     {
         // GIVEN
         val repository = ListTransactionRepository()
@@ -59,12 +60,12 @@ class ListTransactionRepositoryTest
     }
 
     @Test
-    fun `does not throw when deleting a transaction that does not exist`()
+    fun `does not throw when deleting a transaction that does not exist`() = runTest()
     {
         // GIVEN
         val repository = ListTransactionRepository()
 
         // WHEN / THEN
-        assertThatCode { repository.deleteById(id) }.doesNotThrowAnyException()
+        repository.deleteById(id)
     }
 }

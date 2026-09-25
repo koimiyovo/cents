@@ -6,5 +6,5 @@ import com.kyovo.cents.domain.model.TransactionId
 
 interface UpdateInitialDepositUseCase
 {
-    fun update(id: TransactionId, amount: Money): Transaction
+    suspend fun update(id: TransactionId, amount: Money): Transaction
 }

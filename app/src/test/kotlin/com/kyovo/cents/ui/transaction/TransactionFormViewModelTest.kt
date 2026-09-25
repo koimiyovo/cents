@@ -115,7 +115,7 @@ private class FakeDeleteTransaction : DeleteTransactionUseCase
     val deleted = mutableListOf<TransactionId>()
     var failWith: RuntimeException? = null
 
-    override fun delete(id: TransactionId)
+    override suspend fun delete(id: TransactionId)
     {
         failWith?.let { throw it }
         deleted += id

@@ -95,7 +95,7 @@ fun TransactionsScreen(
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val accountsById =
         remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
-    val allTransactions = remember(revision) { listTransactions.list() }
+    val allTransactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // Already ordered by name by the use case.
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
@@ -135,23 +135,15 @@ fun TransactionsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
 
-    val filteredTransactions =
-        remember(
-            revision,
-            selectedAccountId,
-            selectedSubcategory,
-            searchQuery,
-            periodFrom,
-            periodTo
-        ) {
-            listTransactions.list(
-                accountId = selectedAccountId,
-                subcategoryId = selectedSubcategory,
-                titleFilter = searchQuery,
-                from = periodFrom,
-                to = periodTo,
-            )
-        }
+    val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
+        listTransactions.observe(
+            accountId = selectedAccountId,
+            subcategoryId = selectedSubcategory,
+            titleFilter = searchQuery,
+            from = periodFrom,
+            to = periodTo,
+        )
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
     val groupedByDay = remember(filteredTransactions) { groupByDay(filteredTransactions) }
 
     Column(

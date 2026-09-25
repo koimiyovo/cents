@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
@@ -84,9 +85,9 @@ class SubcategoryScenariosTest
         deleteSubcategory.delete(first)
 
         // THEN nothing is found under the deleted subcategory any more, yet no transaction is lost
-        assertThat(listTransactions.list(subcategoryId = first)).isEmpty()
-        assertThat(listTransactions.list()).hasSize(3)
-        assertThat(listTransactions.list().map { it.subcategoryId }).containsOnlyNulls()
+        assertThat(listTransactions.observe(subcategoryId = first).first()).isEmpty()
+        assertThat(listTransactions.observe().first()).hasSize(3)
+        assertThat(listTransactions.observe().first().map { it.subcategoryId }).containsOnlyNulls()
     }
 
     @Test
@@ -96,13 +97,13 @@ class SubcategoryScenariosTest
         createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
         spend(1_000, first)
         spend(2_000, null)
-        val balanceBefore = getBalance.getBalance(accountId)
+        val balanceBefore = getBalance.observe(accountId).first()
 
         // WHEN
         deleteSubcategory.delete(first)
 
         // THEN
-        assertThat(getBalance.getBalance(accountId)).isEqualTo(balanceBefore)
+        assertThat(getBalance.observe(accountId).first()).isEqualTo(balanceBefore)
     }
 
     @Test
@@ -117,7 +118,7 @@ class SubcategoryScenariosTest
         updateSubcategory.update(anUpdateSubcategoryCommand(id = first, name = SubcategoryName("Courses")))
 
         // THEN they are found under the same subcategory, whatever it is called now
-        assertThat(listTransactions.list(subcategoryId = first)).hasSize(2)
+        assertThat(listTransactions.observe(subcategoryId = first).first()).hasSize(2)
     }
 
     @Test
@@ -133,8 +134,8 @@ class SubcategoryScenariosTest
 
         // THEN it is a new subcategory: the old transaction does not come back under it
         assertThat(again.id).isEqualTo(second)
-        assertThat(listTransactions.list(subcategoryId = second)).isEmpty()
-        assertThat(listTransactions.list().single().subcategoryId).isNull()
+        assertThat(listTransactions.observe(subcategoryId = second).first()).isEmpty()
+        assertThat(listTransactions.observe().first().single().subcategoryId).isNull()
     }
 
     @Test

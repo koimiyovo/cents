@@ -67,7 +67,8 @@ fun SubcategoriesScreen(
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
-    val sections = remember(subcategories, revision) { subcategorySections(subcategories, listTransactions.list()) }
+    val transactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val sections = remember(subcategories, transactions) { subcategorySections(subcategories, transactions) }
     // Each section folds on its own: with many subcategories in the first, the second would otherwise be
     // lost at the bottom. Both start unfolded.
     var expensesExpanded by rememberSaveable { mutableStateOf(true) }

@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.TransactionId
 
 interface DeleteTransactionUseCase
 {
-    fun delete(id: TransactionId)
+    suspend fun delete(id: TransactionId)
 }

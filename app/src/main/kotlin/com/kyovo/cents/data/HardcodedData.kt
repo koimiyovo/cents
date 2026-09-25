@@ -70,7 +70,7 @@ suspend fun seedHardcodedData(
 
     listOf(checking, cash, oldJoint).forEach { accountRepository.save(it) }
 
-    fun deposit(accountId: AccountId, amountCents: Long, date: Instant)
+    suspend fun deposit(accountId: AccountId, amountCents: Long, date: Instant)
     {
         transactionRepository.save(
             Transaction.openingDeposit(
@@ -82,7 +82,7 @@ suspend fun seedHardcodedData(
         )
     }
 
-    fun recorded(
+    suspend fun recorded(
         accountId: AccountId,
         amountCents: Long,
         category: RecordableTransactionCategory,
@@ -107,7 +107,7 @@ suspend fun seedHardcodedData(
 
     // A transfer is two independent legs, not a single Transaction.recorded call: it doesn't
     // count as an expense or income on either side (see Transaction.transferOut/transferIn).
-    fun transferred(
+    suspend fun transferred(
         fromAccountId: AccountId,
         toAccountId: AccountId,
         amountCents: Long,

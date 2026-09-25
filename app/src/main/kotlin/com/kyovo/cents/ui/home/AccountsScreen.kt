@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.home
 
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.res.Configuration
@@ -151,11 +152,9 @@ fun AccountsScreen(
     val pendingDelete = pendingDeleteId?.let { id ->
         (accounts + archivedAccounts).firstOrNull { it.id.value.toString() == id }
     }
-    // A balance is computed from the transactions, which are not observed yet: recomputed (suspending)
-    // when the accounts or the revision change, the previous figures staying up meanwhile.
-    val balanceByAccountId by produceState(emptyMap<AccountId, Long>(), accounts, archivedAccounts, revision) {
-        value = (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
-    }
+    // Every account's balance, in cents: it follows the transactions as they change.
+    val balanceByAccountId by remember { getAccountBalance.observeAll().map { balances -> balances.mapValues { it.value.value } } }
+        .collectAsStateWithLifecycle(initialValue = emptyMap())
     // The consolidated figures cover the active accounts only: an archived account is closed, so
     // it counts neither in the total nor in the income/expense lines below.
     val totalCents = remember(accounts, balanceByAccountId) {
@@ -163,9 +162,10 @@ fun AccountsScreen(
     }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
-    val allTransactions = remember(revision, accounts) {
+    val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allTransactions = remember(everyTransaction, accounts) {
         val activeIds = accounts.map { it.id }.toSet()
-        listTransactions.list().filter { it.accountId in activeIds }
+        everyTransaction.filter { it.accountId in activeIds }
     }
     val incomeCents = remember(allTransactions) {
         allTransactions.filter { it.category == TransactionCategory.INCOME }
@@ -294,24 +294,27 @@ fun AccountsScreen(
     {
         // Counted when the question is asked (and again if the data changes underneath): it is what
         // the dialog tells the user they are about to erase.
-        val transactionCount = remember(pendingDelete.id, revision) {
-            listTransactions.list(accountId = pendingDelete.id).size
+        val transactionCount by remember(pendingDelete.id) { listTransactions.observe(accountId = pendingDelete.id).map { it.size } }
+            .collectAsStateWithLifecycle(initialValue = null)
+        // Nothing is asked until the count is known: a dialog saying "no transactions" for a frame would
+        // offer a plain delete that the account's history does not deserve.
+        transactionCount?.let { count ->
+            DeleteAccountDialog(
+                palette = palette,
+                accountName = pendingDelete.name.value,
+                transactionCount = count,
+                alreadyArchived = pendingDelete.archivedAt != null,
+                onDelete = {
+                    pendingDeleteId = null
+                    onDeleteAccount(pendingDelete.id, deleteChoices(count, alreadyArchived = false).deletesTransactions)
+                },
+                onArchive = {
+                    pendingDeleteId = null
+                    onArchiveAccount(pendingDelete.id)
+                },
+                onDismiss = { pendingDeleteId = null },
+            )
         }
-        DeleteAccountDialog(
-            palette = palette,
-            accountName = pendingDelete.name.value,
-            transactionCount = transactionCount,
-            alreadyArchived = pendingDelete.archivedAt != null,
-            onDelete = {
-                pendingDeleteId = null
-                onDeleteAccount(pendingDelete.id, deleteChoices(transactionCount, alreadyArchived = false).deletesTransactions)
-            },
-            onArchive = {
-                pendingDeleteId = null
-                onArchiveAccount(pendingDelete.id)
-            },
-            onDismiss = { pendingDeleteId = null },
-        )
     }
 }
 
