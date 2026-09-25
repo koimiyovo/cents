@@ -1,16 +1,18 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.aTransactionTitle
+import com.kyovo.cents.application.fakes.aSubcategory
+import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.application.fakes.anUpdateTransactionCommand
-import com.kyovo.cents.domain.model.IncomeSubcategory
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
@@ -36,7 +38,9 @@ class UpdateTransactionServiceArchivedAccountTest
 
     private val accountRepository = InMemoryAccountRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = UpdateTransactionService(accountRepository, transactionRepository)
+    private val subcategoryRepository = InMemorySubcategoryRepository()
+    private val refundId = aSubcategoryId("22222222-2222-2222-2222-222222222222")
+    private val service = UpdateTransactionService(accountRepository, transactionRepository, subcategoryRepository)
 
     private val archivedAccount = anAccount(id = accountId).copy(archivedAt = anInstant("2026-01-01T00:00:00Z"))
 
@@ -53,6 +57,7 @@ class UpdateTransactionServiceArchivedAccountTest
     {
         // GIVEN
         givenAnExpenseOnTheArchivedAccount()
+        subcategoryRepository.save(aSubcategory(id = refundId, kind = RecordableTransactionCategory.INCOME))
         val date = anInstant("2025-12-05T08:00:00Z")
 
         // WHEN
@@ -63,7 +68,7 @@ class UpdateTransactionServiceArchivedAccountTest
                 amount = aMoney(2_500),
                 title = aTransactionTitle("Titre corrigé"),
                 category = RecordableTransactionCategory.INCOME,
-                subcategory = IncomeSubcategory.REFUND,
+                subcategoryId = refundId,
                 description = TransactionDescription.of("Corrigé après coup"),
                 date = date,
             ),
@@ -76,7 +81,7 @@ class UpdateTransactionServiceArchivedAccountTest
             amount = aMoney(2_500),
             title = aTransactionTitle("Titre corrigé"),
             category = TransactionCategory.INCOME,
-            subcategory = IncomeSubcategory.REFUND,
+            subcategoryId = refundId,
             description = TransactionDescription.of("Corrigé après coup"),
             date = date,
         )

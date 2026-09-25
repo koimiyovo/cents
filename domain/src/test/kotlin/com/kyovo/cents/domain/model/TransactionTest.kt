@@ -15,6 +15,21 @@ class TransactionTest
     private val title = TransactionTitle("Courses de la semaine")
     private val date = Instant.parse("2026-09-22T10:00:00Z")
 
+    // A transaction stores the *id* of its subcategory, but is built from the subcategory itself:
+    // that is what lets it check, at construction, that the subcategory fits its category.
+    private val groceries = Subcategory(
+        SubcategoryId(Uuid.parse("55555555-5555-5555-5555-555555555555")),
+        RecordableTransactionCategory.EXPENSE,
+        SubcategoryName("Alimentation"),
+        null
+    )
+    private val salary = Subcategory(
+        SubcategoryId(Uuid.parse("66666666-6666-6666-6666-666666666666")),
+        RecordableTransactionCategory.INCOME,
+        SubcategoryName("Salaire"),
+        null
+    )
+
     @Test
     fun `an opening deposit is always of category INITIAL_DEPOSIT and has no subcategory`()
     {
@@ -23,7 +38,7 @@ class TransactionTest
 
         // THEN
         assertThat(transaction.category).isEqualTo(TransactionCategory.INITIAL_DEPOSIT)
-        assertThat(transaction.subcategory).isNull()
+        assertThat(transaction.subcategoryId).isNull()
     }
 
     @Test
@@ -129,7 +144,7 @@ class TransactionTest
             amount,
             title,
             RecordableTransactionCategory.EXPENSE,
-            ExpenseSubcategory.GROCERIES,
+            groceries,
             TransactionDescription.of("Courses de la semaine"),
             date
         )
@@ -139,7 +154,7 @@ class TransactionTest
     }
 
     @Test
-    fun `a recorded expense accepts an expense subcategory`()
+    fun `a recorded transaction has no subcategory unless one is given`()
     {
         // WHEN
         val transaction = Transaction.recorded(
@@ -148,17 +163,36 @@ class TransactionTest
             amount = amount,
             title = title,
             category = RecordableTransactionCategory.EXPENSE,
-            subcategory = ExpenseSubcategory.FUEL,
+            subcategory = null,
             description = null,
             date = date
         )
 
         // THEN
-        assertThat(transaction.subcategory).isEqualTo(ExpenseSubcategory.FUEL)
+        assertThat(transaction.subcategoryId).isNull()
     }
 
     @Test
-    fun `a recorded income accepts an income subcategory`()
+    fun `a recorded expense accepts an expense subcategory and keeps its id`()
+    {
+        // WHEN
+        val transaction = Transaction.recorded(
+            id = id,
+            accountId = accountId,
+            amount = amount,
+            title = title,
+            category = RecordableTransactionCategory.EXPENSE,
+            subcategory = groceries,
+            description = null,
+            date = date
+        )
+
+        // THEN
+        assertThat(transaction.subcategoryId).isEqualTo(groceries.id)
+    }
+
+    @Test
+    fun `a recorded income accepts an income subcategory and keeps its id`()
     {
         // WHEN
         val transaction = Transaction.recorded(
@@ -167,13 +201,13 @@ class TransactionTest
             amount = amount,
             title = title,
             category = RecordableTransactionCategory.INCOME,
-            subcategory = IncomeSubcategory.SALARY,
+            subcategory = salary,
             description = null,
             date = date
         )
 
         // THEN
-        assertThat(transaction.subcategory).isEqualTo(IncomeSubcategory.SALARY)
+        assertThat(transaction.subcategoryId).isEqualTo(salary.id)
     }
 
     @Test
@@ -187,7 +221,7 @@ class TransactionTest
                 amount = amount,
                 title = title,
                 category = RecordableTransactionCategory.EXPENSE,
-                subcategory = IncomeSubcategory.SALARY,
+                subcategory = salary,
                 description = null,
                 date = date
             )
@@ -205,7 +239,7 @@ class TransactionTest
                 amount = amount,
                 title = title,
                 category = RecordableTransactionCategory.INCOME,
-                subcategory = ExpenseSubcategory.GROCERIES,
+                subcategory = groceries,
                 description = null,
                 date = date
             )
@@ -268,7 +302,7 @@ class TransactionTest
 
         // THEN
         assertThat(transaction.category).isEqualTo(TransactionCategory.TRANSFER_OUT)
-        assertThat(transaction.subcategory).isNull()
+        assertThat(transaction.subcategoryId).isNull()
     }
 
     @Test
@@ -279,7 +313,7 @@ class TransactionTest
 
         // THEN
         assertThat(transaction.category).isEqualTo(TransactionCategory.TRANSFER_IN)
-        assertThat(transaction.subcategory).isNull()
+        assertThat(transaction.subcategoryId).isNull()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aTransaction
@@ -32,7 +33,7 @@ class UpdateTransactionServiceAccountChangeTest
 
     private val accountRepository = InMemoryAccountRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = UpdateTransactionService(accountRepository, transactionRepository)
+    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository())
 
     private val from = anAccount(id = fromId, name = AccountName("Compte courant"))
     private val to = anAccount(id = toId, name = AccountName("Livret A"))

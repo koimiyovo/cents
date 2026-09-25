@@ -10,7 +10,7 @@ data class Transaction private constructor(
     val amount: Money,
     val title: TransactionTitle,
     val category: TransactionCategory,
-    val subcategory: TransactionSubcategory?,
+    val subcategoryId: SubcategoryId?,
     val description: TransactionDescription?,
     val date: Instant
 )
@@ -32,7 +32,7 @@ data class Transaction private constructor(
                 amount = amount,
                 title = OPENING_DEPOSIT_TITLE,
                 category = TransactionCategory.INITIAL_DEPOSIT,
-                subcategory = null,
+                subcategoryId = null,
                 description = null,
                 date = date
             )
@@ -44,12 +44,12 @@ data class Transaction private constructor(
             amount: Money,
             title: TransactionTitle,
             category: RecordableTransactionCategory,
-            subcategory: TransactionSubcategory?,
+            subcategory: Subcategory?,
             description: TransactionDescription?,
             date: Instant
         ): Transaction
         {
-            if (subcategory != null && !category.accepts(subcategory))
+            if (subcategory != null && subcategory.kind != category)
             {
                 throw InvalidTransactionSubcategoryException()
             }
@@ -60,7 +60,7 @@ data class Transaction private constructor(
                 amount = amount,
                 title = title,
                 category = category.toTransactionCategory(),
-                subcategory = subcategory,
+                subcategoryId = subcategory?.id,
                 description = description,
                 date = date
             )
@@ -80,7 +80,7 @@ data class Transaction private constructor(
                 amount = amount,
                 title = title,
                 category = TransactionCategory.TRANSFER_OUT,
-                subcategory = null,
+                subcategoryId = null,
                 description = null,
                 date = date
             )
@@ -100,11 +100,20 @@ data class Transaction private constructor(
                 amount = amount,
                 title = title,
                 category = TransactionCategory.TRANSFER_IN,
-                subcategory = null,
+                subcategoryId = null,
                 description = null,
                 date = date
             )
         }
+    }
+
+    /**
+     * The same transaction, uncategorised. Used when the subcategory it pointed to is deleted: the
+     * transaction stays, and nothing else about it (so no balance) changes.
+     */
+    fun withoutSubcategory(): Transaction
+    {
+        return copy(subcategoryId = null)
     }
 
     val signedAmount: Long
