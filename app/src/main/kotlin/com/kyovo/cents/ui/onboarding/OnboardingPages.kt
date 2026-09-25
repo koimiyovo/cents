@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.IconTone
 
 @Composable
@@ -194,6 +195,11 @@ private fun AccountRow(
     }
 }
 
+/**
+ * A miniature of the real "Nouvelle transaction" form, with the same fields in the same order and the
+ * same labels: what the user sees here is what they will find when they add a transaction. (It shows
+ * nothing the form does not do: no shortcut chips, no status the form does not have.)
+ */
 @Composable
 private fun EntryPreviewCard(palette: OnboardingPalette) {
     Column(
@@ -204,39 +210,83 @@ private fun EntryPreviewCard(palette: OnboardingPalette) {
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = stringResource(R.string.onboarding_page3_entry_saved), color = palette.iconToneGreen, fontSize = 12.sp)
-            Text(text = stringResource(R.string.onboarding_page3_entry_offline), color = palette.textMuted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PreviewChip(stringResource(R.string.onboarding_page3_type_expense), selected = true, palette = palette)
+            PreviewChip(stringResource(R.string.onboarding_page3_type_income), selected = false, palette = palette)
+            PreviewChip(stringResource(R.string.onboarding_page3_type_transfer), selected = false, palette = palette)
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text(text = stringResource(R.string.onboarding_page3_entry_label), color = palette.textMuted, fontSize = 12.sp)
-            Text(
-                text = stringResource(R.string.onboarding_page3_entry_amount),
-                color = palette.textPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Column {
-            Text(text = stringResource(R.string.onboarding_page3_category_label), color = palette.textMuted, fontSize = 12.sp)
-            Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CategoryChip(stringResource(R.string.onboarding_page3_category_coffee), selected = false, palette = palette)
-                CategoryChip(stringResource(R.string.onboarding_page3_category_groceries), selected = true, palette = palette)
-                CategoryChip(stringResource(R.string.onboarding_page3_category_transport), selected = false, palette = palette)
-                CategoryChip(stringResource(R.string.onboarding_page3_category_restaurant), selected = false, palette = palette)
+        PreviewField(palette) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.onboarding_page3_entry_amount),
+                    color = palette.textPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(text = stringResource(R.string.onboarding_page3_entry_currency), color = palette.textSecondary, fontSize = 15.sp)
             }
         }
-        HorizontalDivider(palette)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = stringResource(R.string.onboarding_page3_account_name), color = palette.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(text = stringResource(R.string.onboarding_page3_account_note), color = palette.textMuted, fontSize = 12.sp)
+        PreviewField(palette) {
+            Text(text = stringResource(R.string.onboarding_page3_entry_title), color = palette.textPrimary, fontSize = 14.sp)
+        }
+        PreviewDropdown(
+            label = stringResource(R.string.onboarding_page3_subcategory_label),
+            value = stringResource(R.string.onboarding_page3_subcategory_value),
+            palette = palette,
+        )
+        PreviewDropdown(
+            label = stringResource(R.string.onboarding_page3_account_label),
+            value = stringResource(R.string.onboarding_page3_account_name),
+            palette = palette,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(50))
+                .background(palette.primaryButton)
+                .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.onboarding_page3_save),
+                color = palette.onPrimaryButton,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+/** A rounded box like a text field of the form, holding [content]. */
+@Composable
+private fun PreviewField(palette: OnboardingPalette, content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(palette.surfaceAlt)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        content()
+    }
+}
+
+/** A labelled field ending in a chevron, like the form's pick-one dropdowns. */
+@Composable
+private fun PreviewDropdown(label: String, value: String, palette: OnboardingPalette) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = label, color = palette.textMuted, fontSize = 12.sp)
+        PreviewField(palette) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = value, color = palette.textPrimary, fontSize = 14.sp)
+                ChevronDownIcon(tint = palette.textSecondary, modifier = Modifier.size(14.dp))
+            }
         }
     }
 }
 
 @Composable
-private fun CategoryChip(label: String, selected: Boolean, palette: OnboardingPalette) {
+private fun PreviewChip(label: String, selected: Boolean, palette: OnboardingPalette) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
