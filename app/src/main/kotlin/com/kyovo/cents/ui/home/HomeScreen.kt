@@ -68,17 +68,13 @@ import com.kyovo.cents.ui.transaction.NewSubcategoryDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
-import com.kyovo.cents.ui.transaction.canEditInitialDeposit
+import com.kyovo.cents.ui.transaction.TransactionTapTarget
+import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 
 private enum class HomeTab { Accounts, Transactions }
 
-/**
- * Where the user is, besides an opened account: on the tabs, in the settings, or one level below them,
- * on the screen managing the subcategories. Back goes up one level.
- */
-private enum class HomeDestination { Tabs, Settings, Subcategories }
 
 /**
  * Hosts the app's two bottom-nav destinations. Owns the safe-drawing insets for both: the tab
@@ -126,8 +122,13 @@ fun HomeScreen(
     // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
     // correct, an income or an expense has the full form (a transfer leg never reaches here).
     val openTransaction: (Transaction) -> Unit = { transaction ->
-        if (canEditInitialDeposit(transaction)) initialDepositFormViewModel.openForEdit(transaction)
-        else formViewModel.openForEdit(transaction, subcategories.find { it.id == transaction.subcategoryId })
+        when (transactionTapTarget(transaction))
+        {
+            TransactionTapTarget.INITIAL_DEPOSIT_FORM -> initialDepositFormViewModel.openForEdit(transaction)
+            TransactionTapTarget.TRANSACTION_FORM     ->
+                formViewModel.openForEdit(transaction, subcategories.find { it.id == transaction.subcategoryId })
+            TransactionTapTarget.NONE                 -> Unit
+        }
     }
 
     // Archiving and unarchiving are idempotent from the user's side: a gesture that fires twice,
@@ -191,8 +192,7 @@ fun HomeScreen(
     // there is something to close.
     BackHandler(enabled = openedAccountId != null) { openedAccountUuid = null }
     // One level up at a time: the subcategories go back to the settings, the settings to the tabs.
-    BackHandler(enabled = destination == HomeDestination.Subcategories) { destination = HomeDestination.Settings }
-    BackHandler(enabled = destination == HomeDestination.Settings) { destination = HomeDestination.Tabs }
+    BackHandler(enabled = destination.back() != null) { destination.back()?.let { destination = it } }
 
     Column(
         modifier = modifier
@@ -207,7 +207,7 @@ fun HomeScreen(
             // An archived account can't receive transactions (domain rule): no button rather than
             // a button leading to an error.
             val canAddTransaction = remember(openedAccountId, revision) {
-                getAccount.get(openedAccountId)?.let { it.archivedAt == null } ?: false
+                canAddTransactionTo(getAccount.get(openedAccountId))
             }
             Box(modifier = Modifier.weight(1f)) {
                 AccountDetailsScreen(

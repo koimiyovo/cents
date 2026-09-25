@@ -182,7 +182,7 @@ private fun SectionBlock(
                     .background(palette.surface),
             ) {
                 section.rows.forEachIndexed { index, row ->
-                    SubcategoryRowItem(palette, row, isExpense, onClick = { onEdit(row) })
+                    SubcategoryRowItem(palette, row, onClick = { onEdit(row) })
                     if (index != section.rows.lastIndex)
                     {
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(palette.divider))
@@ -205,7 +205,7 @@ private fun SectionBlock(
 }
 
 @Composable
-private fun SubcategoryRowItem(palette: AccountsPalette, row: SubcategoryRow, isExpense: Boolean, onClick: () -> Unit)
+private fun SubcategoryRowItem(palette: AccountsPalette, row: SubcategoryRow, onClick: () -> Unit)
 {
     val editLabel = stringResource(R.string.subcategories_edit_action)
     Row(
@@ -220,7 +220,7 @@ private fun SubcategoryRowItem(palette: AccountsPalette, row: SubcategoryRow, is
             contentAlignment = Alignment.Center,
         ) {
             // The category's own emoji stands in for a subcategory that has none.
-            Text(text = row.subcategory.emoji?.value ?: if (isExpense) "💳" else "💰", fontSize = 20.sp)
+            Text(text = row.displayEmoji(), fontSize = 20.sp)
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

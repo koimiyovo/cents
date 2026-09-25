@@ -105,7 +105,7 @@ fun TransactionFormSheet(
     val selectable = remember(accounts, form.originalAccountId) { form.accountChoices(accounts) }
 
     // Opens straight on the details when the edited transaction already has some.
-    var showDetails by rememberSaveable { mutableStateOf(form.subcategory != null || form.description.isNotBlank()) }
+    var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val errors = if (showErrors)
     {
