@@ -9,9 +9,17 @@ fun formatEuroCents(cents: Long): String
     return NumberFormat.getCurrencyInstance(Locale.FRANCE).format(cents / 100.0)
 }
 
-/** Same as [formatEuroCents] but always prefixed with an explicit "+" or "-", e.g. "+2 450,00 €". */
+/**
+ * Same as [formatEuroCents] but prefixed with an explicit "+" or "-", e.g. "+2 450,00 €". Zero has no
+ * sign: it is neither a gain nor a loss ("0,00 €", what a total shows when nothing happened).
+ */
 fun formatSignedEuroCents(cents: Long): String
 {
-    val sign = if (cents < 0) "-" else "+"
+    val sign = when
+    {
+        cents < 0 -> "-"
+        cents > 0 -> "+"
+        else      -> ""
+    }
     return sign + formatEuroCents(kotlin.math.abs(cents))
 }
