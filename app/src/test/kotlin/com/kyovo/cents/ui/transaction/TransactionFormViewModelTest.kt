@@ -3,6 +3,8 @@ package com.kyovo.cents.ui.transaction
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
+import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -19,6 +21,8 @@ import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
+import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
+import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -64,12 +68,41 @@ private class FakeRecordTransfer : RecordTransferUseCase
     }
 }
 
+/** Records what it is asked to update; can be told to fail instead. */
+private class FakeUpdateTransaction : UpdateTransactionUseCase
+{
+    val commands = mutableListOf<UpdateTransactionCommand>()
+    var failWith: RuntimeException? = null
+
+    override fun update(command: UpdateTransactionCommand): Transaction
+    {
+        failWith?.let { throw it }
+        commands += command
+        return Transaction.recorded(
+            command.id, command.accountId, command.amount, command.title, command.category,
+            command.subcategory, command.description, command.date,
+        )
+    }
+}
+
+private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Transaction.recorded(
+    id = TransactionId(Uuid.random()),
+    accountId = AccountId(Uuid.random()),
+    amount = Money(1_250),
+    title = TransactionTitle("Courses"),
+    category = RecordableTransactionCategory.EXPENSE,
+    subcategory = ExpenseSubcategory.GROCERIES,
+    description = null,
+    date = date,
+)
+
 class TransactionFormViewModelTest
 {
     private val recordTransaction = FakeRecordTransaction()
     private val recordTransfer = FakeRecordTransfer()
     private val revision = DataRevision()
-    private val viewModel = TransactionFormViewModel(recordTransaction, recordTransfer, revision, now = { NOW })
+    private val updateTransaction = FakeUpdateTransaction()
+    private val viewModel = TransactionFormViewModel(recordTransaction, recordTransfer, updateTransaction, revision, now = { NOW })
 
     private val checking = anAccount()
     private val savings = anAccount()
@@ -275,5 +308,180 @@ class TransactionFormViewModelTest
         // THEN
         assertThat(form!!.title).isEmpty()
         assertThat(viewModel.uiState.value.showErrors).isFalse()
+    }
+
+    @Test
+    fun `opening for edit pre-fills the form from the transaction`()
+    {
+        // GIVEN
+        val transaction = anExistingExpense()
+
+        // WHEN
+        viewModel.openForEdit(transaction)
+
+        // THEN
+        assertThat(form).isEqualTo(TransactionFormState.editing(transaction))
+        assertThat(viewModel.uiState.value.showErrors).isFalse()
+    }
+
+    @Test
+    fun `a transfer leg or an opening deposit is not opened for editing`()
+    {
+        // GIVEN
+        val leg = Transaction.transferOut(TransactionId(Uuid.random()), checking.id, Money(100), TransactionTitle("Retrait"), NOW)
+        val deposit = Transaction.openingDeposit(TransactionId(Uuid.random()), checking.id, Money(100), NOW)
+
+        // WHEN
+        viewModel.openForEdit(leg)
+        viewModel.openForEdit(deposit)
+
+        // THEN
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `a valid edit updates the transaction instead of recording one, refreshes the lists and closes`()
+    {
+        // GIVEN
+        val transaction = anExistingExpense()
+        viewModel.openForEdit(transaction)
+        viewModel.update(form!!.copy(amountText = "20"))
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands).isEmpty()
+        assertThat(updateTransaction.commands).hasSize(1)
+        assertThat(updateTransaction.commands.single().id).isEqualTo(transaction.id)
+        assertThat(updateTransaction.commands.single().amount).isEqualTo(Money(2_000))
+        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `saving an edit keeps the transaction's own date instead of stamping it with now`()
+    {
+        // GIVEN a transaction of this morning, while the clock says midday
+        val morning = NOW.minusSeconds(4 * 3600)
+        viewModel.openForEdit(anExistingExpense(date = morning))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(updateTransaction.commands.single().date).isEqualTo(morning)
+    }
+
+    @Test
+    fun `an edit with a blank title updates nothing, stays open and starts showing its errors`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.update(form!!.copy(title = " "))
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(updateTransaction.commands).isEmpty()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+        assertThat(form).isNotNull()
+        assertThat(viewModel.uiState.value.showErrors).isTrue()
+    }
+
+    @Test
+    fun `an edit of a transaction that no longer exists keeps the sheet open and says why`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        updateTransaction.failWith = TransactionNotFoundException()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
+        assertThat(form).isNotNull()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+    }
+
+    @Test
+    fun `an edit refused because the transaction cannot be changed says the same`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        updateTransaction.failWith = CannotUpdateInitialDepositException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
+        assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `opening a new transaction after an edit starts from a clean form`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.close()
+
+        // WHEN
+        viewModel.open(listOf(checking), preselectedAccountId = null)
+
+        // THEN
+        assertThat(form!!.isEditing).isFalse()
+        assertThat(form!!.title).isEmpty()
+    }
+
+    @Test
+    fun `an edit that changes the account moves the transaction to it`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.update(form!!.copy(accountId = savings.id))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(updateTransaction.commands.single().accountId).isEqualTo(savings.id)
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `moving a transaction to an archived account keeps the sheet open and says why`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.update(form!!.copy(accountId = archived.id))
+        updateTransaction.failWith = CannotRecordTransactionOnArchivedAccountException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.ARCHIVED_ACCOUNT)
+        assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `moving a transaction to an account that no longer exists keeps the sheet open and says why`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        updateTransaction.failWith = AccountNotFoundException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.ACCOUNT_NOT_FOUND)
+        assertThat(form).isNotNull()
     }
 }

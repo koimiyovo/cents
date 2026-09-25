@@ -48,6 +48,7 @@ import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
@@ -75,6 +76,7 @@ fun AccountDetailsScreen(
     onUnarchive: () -> Unit,
     onEdit: () -> Unit,
     onDelete: (deleteTransactions: Boolean) -> Unit,
+    onTransactionClick: (Transaction) -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -222,7 +224,7 @@ fun AccountDetailsScreen(
                 groupedByDay.forEach { (date, dayTransactions) ->
                     // No account lookup: every row is on this account, so repeating its name in
                     // each row's subtitle would just be noise.
-                    DayGroup(palette, date, dayTransactions, accountsById = emptyMap())
+                    DayGroup(palette, date, dayTransactions, accountsById = emptyMap(), onTransactionClick = onTransactionClick)
                 }
             }
         }

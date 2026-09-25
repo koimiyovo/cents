@@ -4,11 +4,16 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
+import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionSubcategory
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
+import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
+import com.kyovo.cents.ui.common.formatCentsForInput
 import com.kyovo.cents.ui.common.parseAmountToCents
 import java.time.Instant
 import java.time.LocalDate
@@ -18,6 +23,26 @@ import java.time.ZoneId
 fun selectableAccounts(accounts: List<Account>): List<Account>
 {
     return accounts.filter { it.archivedAt == null }
+}
+
+/**
+ * The accounts a form offers: the active ones, plus — when editing — the account the transaction
+ * currently sits on even if it is archived, so that it stays visible (and selectable again after
+ * trying another). An archived account is otherwise never offered: it takes no new transaction.
+ */
+fun accountChoicesFor(accounts: List<Account>, originalAccountId: AccountId?): List<Account>
+{
+    return accounts.filter { it.archivedAt == null || it.id == originalAccountId }
+}
+
+/**
+ * Only an income or an expense can be edited here. An opening deposit is refused by the domain; a
+ * transfer is two legs that nothing links together, and the update command only knows income and
+ * expense — editing one leg would turn it into a plain movement and leave the other orphaned.
+ */
+fun canEditTransaction(transaction: Transaction): Boolean
+{
+    return transaction.category == TransactionCategory.EXPENSE || transaction.category == TransactionCategory.INCOME
 }
 
 /**
@@ -34,10 +59,37 @@ data class TransactionFormState(
     val subcategory: TransactionSubcategory? = null,
     val description: String = "",
     val date: Instant,
+    /** Set when an existing transaction is being edited instead of a new one recorded. */
+    val editingId: TransactionId? = null,
+    /** The account the edited transaction sat on when the form was opened. */
+    val originalAccountId: AccountId? = null,
 )
 {
+    val isEditing: Boolean get() = editingId != null
+
     companion object
     {
+        /**
+         * A form pre-filled with [transaction]'s values, saving as an update. The account is
+         * pre-selected but can be changed: the transaction is then moved to the other one.
+         */
+        fun editing(transaction: Transaction): TransactionFormState
+        {
+            require(canEditTransaction(transaction)) { "Only an income or an expense can be edited" }
+            return TransactionFormState(
+                type = if (transaction.category == TransactionCategory.INCOME) TransactionFormType.INCOME
+                else TransactionFormType.EXPENSE,
+                accountId = transaction.accountId,
+                amountText = formatCentsForInput(transaction.amount.value),
+                title = transaction.title.value,
+                subcategory = transaction.subcategory,
+                description = transaction.description?.value.orEmpty(),
+                date = transaction.date,
+                editingId = transaction.id,
+                originalAccountId = transaction.accountId,
+            )
+        }
+
         fun initial(
             accounts: List<Account>,
             preselectedAccountId: AccountId?,
@@ -72,6 +124,26 @@ data class TransactionFormState(
         } else if (subcategory != null && !category.accepts(subcategory))
         {
             errors += FormError.SUBCATEGORY_MISMATCH
+        }
+
+        if (editingId != null)
+        {
+            if (errors.isNotEmpty() || amountCents == null || category == null || accountId == null)
+            {
+                return FormSubmission.Invalid(errors)
+            }
+            return FormSubmission.Update(
+                UpdateTransactionCommand(
+                    id = editingId,
+                    accountId = accountId,
+                    amount = Money(amountCents),
+                    title = TransactionTitle(title),
+                    category = category,
+                    subcategory = subcategory,
+                    description = TransactionDescription.of(description),
+                    date = date,
+                ),
+            )
         }
 
         // The extra null checks are only for smart casts: each one implies an error reported above.
@@ -113,6 +185,13 @@ data class TransactionFormState(
     /** Moves the transaction to [day], keeping the time of day of [now] (see [dateOnDay]). */
     fun withDay(day: LocalDate, now: Instant, zone: ZoneId = ZoneId.systemDefault()): TransactionFormState
     {
+        if (editingId != null)
+        {
+            // An edited transaction keeps its own time of day, so it stays where it was among that
+            // day's others — but never lands in the future, which the date picker doesn't allow either.
+            val moved = dateOnDay(day, date, zone)
+            return copy(date = if (moved.isAfter(now)) now else moved)
+        }
         return copy(date = dateOnDay(day, now, zone))
     }
 
@@ -123,6 +202,8 @@ data class TransactionFormState(
      */
     fun stampedAt(now: Instant, zone: ZoneId = ZoneId.systemDefault()): TransactionFormState
     {
+        // An edited transaction has a date of its own: saving must not silently move it to "now".
+        if (isEditing) return this
         return if (day(zone) == now.atZone(zone).toLocalDate()) copy(date = now) else this
     }
 
@@ -134,11 +215,27 @@ data class TransactionFormState(
      */
     fun withType(type: TransactionFormType): TransactionFormState
     {
+        // An income can become an expense and back, but not a transfer (see [canEditTransaction]).
+        if (isEditing && type == TransactionFormType.TRANSFER) return this
         val category = type.recordableCategory()
         val keptSubcategory = subcategory?.takeIf { category != null && category.accepts(it) }
         val keptDestination = toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
         return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination)
     }
+
+    /**
+     * The account the edited transaction sits on, if that account is archived. Editing what an
+     * archived account holds is allowed (its history stays correctable), but it changes the balance
+     * of an account the user considers closed, so the form says so.
+     */
+    fun archivedOriginalAccount(accounts: List<Account>): Account?
+    {
+        val original = originalAccountId ?: return null
+        return accounts.firstOrNull { it.id == original && it.archivedAt != null }
+    }
+
+    /** The accounts this form offers (see [accountChoicesFor]). */
+    fun accountChoices(accounts: List<Account>): List<Account> = accountChoicesFor(accounts, originalAccountId)
 
     /**
      * Accounts a transfer can leave from: every selectable one except the chosen destination — a

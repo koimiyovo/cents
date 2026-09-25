@@ -13,6 +13,7 @@ import com.kyovo.cents.application.usecase.RecordTransferService
 import com.kyovo.cents.application.usecase.ReorderAccountsService
 import com.kyovo.cents.application.usecase.UnarchiveAccountService
 import com.kyovo.cents.application.usecase.UpdateAccountService
+import com.kyovo.cents.application.usecase.UpdateTransactionService
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
@@ -28,6 +29,7 @@ import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
+import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.ListAccountRepository
@@ -51,6 +53,7 @@ class AppContainer {
     val archiveAccount: ArchiveAccountUseCase = ArchiveAccountService(accountRepository, Clock.systemUTC())
     val unarchiveAccount: UnarchiveAccountUseCase = UnarchiveAccountService(accountRepository)
     val updateAccount: UpdateAccountUseCase = UpdateAccountService(accountRepository)
+    val updateTransaction: UpdateTransactionUseCase = UpdateTransactionService(accountRepository, transactionRepository)
     val reorderAccounts: ReorderAccountsUseCase = ReorderAccountsService(accountRepository)
     val deleteAccount: DeleteAccountUseCase =
         DeleteAccountService(accountRepository, transactionRepository, unitOfWork)

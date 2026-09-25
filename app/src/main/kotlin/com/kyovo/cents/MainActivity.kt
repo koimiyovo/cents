@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
                 TransactionFormViewModel(
                     recordTransaction = appContainer.recordTransaction,
                     recordTransfer = appContainer.recordTransfer,
+                    updateTransaction = appContainer.updateTransaction,
                     dataRevision = appContainer.dataRevision,
                 )
             }

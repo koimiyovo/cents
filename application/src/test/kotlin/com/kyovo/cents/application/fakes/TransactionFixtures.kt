@@ -104,6 +104,7 @@ fun aRecordTransferCommand(
 
 fun anUpdateTransactionCommand(
     id: TransactionId = aTransactionId(),
+    accountId: AccountId = anAccountId(),
     amount: Money = aMoney(1_000),
     title: TransactionTitle = aTransactionTitle(),
     category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
@@ -112,5 +113,5 @@ fun anUpdateTransactionCommand(
     description: TransactionDescription? = null
 ): UpdateTransactionCommand
 {
-    return UpdateTransactionCommand(id, amount, title, category, subcategory, description, date)
+    return UpdateTransactionCommand(id, accountId, amount, title, category, subcategory, description, date)
 }

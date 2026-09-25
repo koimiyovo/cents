@@ -65,6 +65,7 @@ import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectableOptionRow
 import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.ui.transaction.canEditTransaction
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -78,6 +79,7 @@ fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
     listArchivedAccounts: ListArchivedAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
+    onTransactionClick: (Transaction) -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -193,7 +195,7 @@ fun TransactionsScreen(
         {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(palette, date, dayTransactions, accountsById)
+                    DayGroup(palette, date, dayTransactions, accountsById, onTransactionClick)
                 }
             }
         }
@@ -679,6 +681,7 @@ internal fun DayGroup(
     date: LocalDate,
     transactions: List<Transaction>,
     accountsById: Map<AccountId, Account>,
+    onTransactionClick: ((Transaction) -> Unit)? = null,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -706,7 +709,15 @@ internal fun DayGroup(
                 .background(palette.surface),
         ) {
             transactions.forEachIndexed { index, transaction ->
-                TransactionRow(palette, transaction, accountsById[transaction.accountId])
+                TransactionRow(
+                    palette = palette,
+                    transaction = transaction,
+                    account = accountsById[transaction.accountId],
+                    // Only what can be edited reacts to a tap: a transfer or an opening deposit doesn't.
+                    onClick = onTransactionClick
+                        ?.takeIf { canEditTransaction(transaction) }
+                        ?.let { open -> { open(transaction) } },
+                )
                 if (index != transactions.lastIndex)
                 {
                     Box(
@@ -722,11 +733,18 @@ internal fun DayGroup(
 }
 
 @Composable
-private fun TransactionRow(palette: AccountsPalette, transaction: Transaction, account: Account?)
+private fun TransactionRow(
+    palette: AccountsPalette,
+    transaction: Transaction,
+    account: Account?,
+    onClick: (() -> Unit)?,
+)
 {
+    val editLabel = stringResource(R.string.account_edit_action)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClickLabel = editLabel, onClick = onClick) else Modifier)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
