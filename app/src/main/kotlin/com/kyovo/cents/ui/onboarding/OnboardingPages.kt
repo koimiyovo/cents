@@ -17,11 +17,11 @@ import com.kyovo.cents.ui.common.IconTone
 
 @Composable
 fun OnboardingPage1(palette: OnboardingPalette, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
         PageIcon(icon = "🔒", tone = IconTone.Green, palette = palette)
         Pill(text = stringResource(R.string.onboarding_page1_badge), palette = palette)
         PageTitle(text = stringResource(R.string.onboarding_page1_title), palette = palette)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             FeatureRow(
                 tone = IconTone.Green,
                 title = stringResource(R.string.onboarding_page1_feature1_title),
@@ -46,11 +46,11 @@ fun OnboardingPage1(palette: OnboardingPalette, modifier: Modifier = Modifier) {
 
 @Composable
 fun OnboardingPage2(palette: OnboardingPalette, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
         PageIcon(icon = "🏦", tone = IconTone.Gold, palette = palette)
         Pill(text = stringResource(R.string.onboarding_page2_badge), palette = palette)
         PageTitle(text = stringResource(R.string.onboarding_page2_title), palette = palette)
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             FeatureRow(
                 tone = IconTone.Gold,
                 title = stringResource(R.string.onboarding_page2_feature2_title),
@@ -69,7 +69,7 @@ fun OnboardingPage2(palette: OnboardingPalette, modifier: Modifier = Modifier) {
 
 @Composable
 fun OnboardingPage3(palette: OnboardingPalette, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
         PageIcon(icon = "✏️", tone = IconTone.Mint, palette = palette)
         Pill(text = stringResource(R.string.onboarding_page3_badge), palette = palette)
         PageTitle(text = stringResource(R.string.onboarding_page3_title), palette = palette)
@@ -87,7 +87,7 @@ private fun PageTitle(text: String, palette: OnboardingPalette) {
     Text(
         text = text,
         color = palette.textPrimary,
-        fontSize = 28.sp,
+        fontSize = 32.sp,
         fontWeight = FontWeight.Bold,
     )
 }
