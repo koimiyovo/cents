@@ -19,6 +19,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -168,6 +169,9 @@ fun HomeScreen(
         dataRevision.bump()
     }
 
+    // An account created from the transaction form (when there was none) is chosen in it at once.
+    LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
+
     // Back closes the details screen instead of leaving the app. In the old View system this was
     // onBackPressed() overridden in the Activity; here it's declarative and only active while
     // there is something to close.
@@ -291,6 +295,7 @@ fun HomeScreen(
             onSubmit = formViewModel::submit,
             onDelete = formViewModel::askToDelete,
             onCreateSubcategory = formViewModel::askToCreateSubcategory,
+            onCreateAccount = accountFormViewModel::open,
             onDismiss = formViewModel::close,
         )
     }

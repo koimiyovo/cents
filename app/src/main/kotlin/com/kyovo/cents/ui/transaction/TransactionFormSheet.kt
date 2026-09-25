@@ -57,6 +57,7 @@ import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
+import com.kyovo.cents.ui.common.OutlinedFormButton
 import com.kyovo.cents.ui.common.SectionLabel
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
@@ -96,6 +97,7 @@ fun TransactionFormSheet(
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
     onCreateSubcategory: () -> Unit,
+    onCreateAccount: () -> Unit,
     onDismiss: () -> Unit,
 )
 {
@@ -187,11 +189,13 @@ fun TransactionFormSheet(
 
             if (selectable.isEmpty())
             {
+                // Nothing to record against yet: say so, and offer the way out right here.
                 Text(
                     text = stringResource(R.string.transaction_form_no_active_account),
                     color = palette.textMuted,
                     fontSize = 13.sp,
                 )
+                OutlinedFormButton(palette, stringResource(R.string.transaction_form_create_account), onCreateAccount)
             } else
             {
                 val isTransfer = form.type == TransactionFormType.TRANSFER
