@@ -1,6 +1,7 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -11,6 +12,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import java.time.Instant
 import java.util.Currency
 import java.util.UUID
@@ -74,5 +77,56 @@ class RoomPersistenceTest
 
         // THEN the rollback undid the write made through the repository
         assertThat(persistence.accounts.findAll()).containsExactly(anAccount(1))
+    }
+
+    // ------------------------------------------------------------------ a file, and its version
+
+    @TempDir
+    lateinit var folder: File
+
+    private fun setUserVersion(path: String, version: Int)
+    {
+        BundledSQLiteDriver().open(path).use { it.execSQL("PRAGMA user_version = $version") }
+    }
+
+    @Test
+    fun `what was saved in a file is still there when it is opened again`() = realTime()
+    {
+        // GIVEN
+        val path = File(folder, "cents.db").absolutePath
+        RoomPersistence.openFile(path, BundledSQLiteDriver()).also { it.accounts.save(anAccount(1)); it.close() }
+
+        // WHEN
+        val reopened = RoomPersistence.openFile(path, BundledSQLiteDriver())
+        val found = reopened.accounts.findAll()
+        reopened.close()
+
+        // THEN
+        assertThat(found).containsExactly(anAccount(1))
+    }
+
+    // A phone that got a newer version of the app, then an older one: the older app must not "fix" the
+    // mismatch by erasing the data. Room recreating the tables silently is what a destructive migration
+    // fallback would do, and it is deliberately not configured.
+    @Test
+    fun `refuses a database written by a newer version instead of wiping it`() = realTime()
+    {
+        // GIVEN a file with an account, marked as written by a much newer version
+        val path = File(folder, "cents.db").absolutePath
+        RoomPersistence.openFile(path, BundledSQLiteDriver()).also { it.accounts.save(anAccount(1)); it.close() }
+        setUserVersion(path, 99)
+
+        // WHEN / THEN opening it fails
+        val refusing = RoomPersistence.openFile(path, BundledSQLiteDriver())
+        val failure = runCatching { refusing.accounts.findAll() }.exceptionOrNull()
+        refusing.close()
+        assertThat(failure).isInstanceOf(IllegalStateException::class.java)
+
+        // AND nothing was lost: with the right version again, the account is there
+        setUserVersion(path, 1)
+        val restored = RoomPersistence.openFile(path, BundledSQLiteDriver())
+        val found = restored.accounts.findAll()
+        restored.close()
+        assertThat(found).containsExactly(anAccount(1))
     }
 }
