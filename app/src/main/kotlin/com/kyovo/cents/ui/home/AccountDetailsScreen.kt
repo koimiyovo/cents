@@ -75,7 +75,6 @@ fun AccountDetailsScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
-    revision: Int,
     onBack: () -> Unit,
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,

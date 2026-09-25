@@ -83,7 +83,6 @@ fun TransactionsScreen(
     listSubcategories: ListSubcategoriesUseCase,
     onTransactionClick: (Transaction) -> Unit,
     onOpenSettings: () -> Unit,
-    revision: Int,
     modifier: Modifier = Modifier,
 )
 {

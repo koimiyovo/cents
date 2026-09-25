@@ -20,7 +20,6 @@ import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.application.usecase.UpdateInitialDepositService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
@@ -102,8 +101,6 @@ class AppContainer {
         unitOfWork,
     )
 
-    /** Bumped after each write so the screens re-read (see [DataRevision]). */
-    val dataRevision = DataRevision()
 
     init {
         // Temporary bridge: the seeding suspends now, but the container is built synchronously. It goes

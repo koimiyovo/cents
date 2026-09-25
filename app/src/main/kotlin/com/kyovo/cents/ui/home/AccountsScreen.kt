@@ -106,7 +106,6 @@ fun AccountsScreen(
     onDeleteAccount: (AccountId, Boolean) -> Unit,
     onReorderAccounts: (List<AccountId>) -> Unit,
     onOpenSettings: () -> Unit,
-    revision: Int,
     modifier: Modifier = Modifier,
 )
 {
@@ -119,8 +118,8 @@ fun AccountsScreen(
 
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The order the user has just dropped the rows in, shown until the saved list catches up: the
-    // list re-reads on the next revision, and showing the old order for that one frame would make
-    // the dropped row flick back before jumping to its place.
+    // list is observed and emits the new order a moment after the write, and showing the old order
+    // for that moment would make the dropped row flick back before jumping to its place.
     var droppedOrder by remember { mutableStateOf<List<AccountId>?>(null) }
     val displayedAccounts = remember(accounts, droppedOrder) {
         val order = droppedOrder

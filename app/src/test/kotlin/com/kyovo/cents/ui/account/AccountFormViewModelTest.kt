@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.account
 
 import org.junit.jupiter.api.extension.ExtendWith
 import com.kyovo.cents.MainDispatcherExtension
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -62,8 +61,7 @@ class AccountFormViewModelTest
 {
     private val openAccount = FakeOpenAccount()
     private val updateAccount = FakeUpdateAccount()
-    private val revision = DataRevision()
-    private val viewModel = AccountFormViewModel(openAccount, updateAccount, revision)
+    private val viewModel = AccountFormViewModel(openAccount, updateAccount)
 
     private val form get() = viewModel.uiState.value.form
 
@@ -97,11 +95,10 @@ class AccountFormViewModelTest
     }
 
     @Test
-    fun `a valid form opens the account, tells the lists to refresh, and the sheet closes`()
+    fun `a valid form opens the account and the sheet closes`()
     {
         // GIVEN
         openAndFill()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -109,7 +106,6 @@ class AccountFormViewModelTest
         // THEN
         assertThat(openAccount.commands).hasSize(1)
         assertThat(openAccount.commands.single().type).isEqualTo(AccountType.SAVINGS)
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
     }
 
@@ -118,14 +114,12 @@ class AccountFormViewModelTest
     {
         // GIVEN
         viewModel.open()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(openAccount.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(form).isNotNull()
         assertThat(viewModel.uiState.value.showErrors).isTrue()
     }
@@ -136,7 +130,6 @@ class AccountFormViewModelTest
         // GIVEN
         openAndFill()
         openAccount.failWith = DuplicateAccountNameException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -144,7 +137,6 @@ class AccountFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(AccountSubmitFailure.DUPLICATE_NAME)
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -203,13 +195,12 @@ class AccountFormViewModelTest
     }
 
     @Test
-    fun `a valid edit updates the account instead of opening one, refreshes the lists and closes`()
+    fun `a valid edit updates the account instead of opening one and closes`()
     {
         // GIVEN
         val account = anExistingAccount()
         viewModel.openForEdit(account)
         viewModel.update(form!!.copy(name = "Livret B", type = AccountType.CHECKING))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -220,7 +211,6 @@ class AccountFormViewModelTest
         assertThat(updateAccount.commands.single().id).isEqualTo(account.id)
         assertThat(updateAccount.commands.single().name).isEqualTo(AccountName("Livret B"))
         assertThat(updateAccount.commands.single().type).isEqualTo(AccountType.CHECKING)
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
     }
 
@@ -230,14 +220,12 @@ class AccountFormViewModelTest
         // GIVEN
         viewModel.openForEdit(anExistingAccount())
         viewModel.update(form!!.copy(name = "  "))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(updateAccount.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(form).isNotNull()
         assertThat(viewModel.uiState.value.showErrors).isTrue()
     }
@@ -249,7 +237,6 @@ class AccountFormViewModelTest
         viewModel.openForEdit(anExistingAccount())
         viewModel.update(form!!.copy(name = "Compte courant"))
         updateAccount.failWith = DuplicateAccountNameException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -257,7 +244,6 @@ class AccountFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(AccountSubmitFailure.DUPLICATE_NAME)
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test

@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
@@ -33,7 +32,6 @@ data class AccountFormUiState(
 class AccountFormViewModel(
     private val openAccount: OpenAccountUseCase,
     private val updateAccount: UpdateAccountUseCase,
-    private val dataRevision: DataRevision,
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(AccountFormUiState())
@@ -86,8 +84,7 @@ class AccountFormViewModel(
                 _uiState.update { it.copy(failure = AccountSubmitFailure.DUPLICATE_NAME) }
                 return@launch
             }
-            // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-            dataRevision.bump()
+            // Close only once the write went through.
             close()
         }
     }
