@@ -38,5 +38,8 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testImplementation(libs.kotlinx.coroutines.test)
+    // A real SQLite for the JVM the unit tests run on: the Android driver only loads on a device. The
+    // -jvm artifact is named explicitly, since asking for plain "sqlite-bundled" resolves to the Android one.
+    testImplementation(libs.androidx.sqlite.bundled.jvm)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

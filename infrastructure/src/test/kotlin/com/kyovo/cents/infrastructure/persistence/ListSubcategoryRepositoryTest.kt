@@ -26,76 +26,8 @@ class ListSubcategoryRepositoryTest
         null
     )
 
-    @Test
-    fun `finds a subcategory that has been saved`() = runTest()
-    {
-        // GIVEN
-        val groceries = aSubcategory(1, "Alimentation")
-        repository.save(groceries)
-
-        // WHEN / THEN
-        assertThat(repository.findById(groceries.id)).isEqualTo(groceries)
-    }
-
-    @Test
-    fun `finds nothing for an unknown id`() = runTest()
-    {
-        assertThat(repository.findById(aSubcategory(1, "Alimentation").id)).isNull()
-    }
-
-    @Test
-    fun `saving an existing subcategory replaces it where it stands`() = runTest()
-    {
-        // GIVEN
-        val first = aSubcategory(1, "Alimentation")
-        val second = aSubcategory(2, "Transport")
-        repository.save(first)
-        repository.save(second)
-
-        // WHEN
-        val renamed = first.copy(name = SubcategoryName("Courses"))
-        repository.save(renamed)
-
-        // THEN
-        assertThat(repository.findAll()).containsExactly(renamed, second)
-    }
-
-    @Test
-    fun `deletes a subcategory, and is silent about an unknown one`() = runTest()
-    {
-        // GIVEN
-        val first = aSubcategory(1, "Alimentation")
-        val second = aSubcategory(2, "Transport")
-        repository.save(first)
-        repository.save(second)
-
-        // WHEN
-        repository.deleteById(first.id)
-
-        // THEN
-        assertThat(repository.findAll()).containsExactly(second)
-        repository.deleteById(first.id)
-    }
-
-    // ------------------------------------------------------------------ observed
-
-    @Test
-    fun `an observer first gets what is stored`() = runTest()
-    {
-        // GIVEN
-        val groceries = aSubcategory(1, "Alimentation")
-        repository.save(groceries)
-
-        // WHEN / THEN
-        assertThat(repository.observeAll().first()).containsExactly(groceries)
-    }
-
-    @Test
-    fun `an observer of an empty repository gets an empty list`() = runTest()
-    {
-        assertThat(repository.observeAll().first()).isEmpty()
-    }
-
+    // What the contract (SubcategoryRepositoryContract) does not say, because a database may fold quick
+    // changes into one emission: this list emits once per change, exactly.
     @Test
     fun `an observer sees every change as it happens, in the stored order`() = runTest()
     {
@@ -122,17 +54,5 @@ class ListSubcategoryRepositoryTest
             listOf("Courses", "Transport"),
             listOf("Transport"),
         )
-    }
-
-    @Test
-    fun `an observer collecting late still gets the current state`() = runTest()
-    {
-        // GIVEN changes made before anyone observes
-        repository.save(aSubcategory(1, "Alimentation"))
-        repository.save(aSubcategory(2, "Transport"))
-        repository.deleteById(aSubcategory(1, "Alimentation").id)
-
-        // WHEN / THEN
-        assertThat(repository.observeAll().first().map { it.name.value }).containsExactly("Transport")
     }
 }
