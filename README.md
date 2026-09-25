@@ -30,7 +30,7 @@ The user interface is in French.
 - A new subcategory can also be created on the spot, from the transaction form.
 
 ### Data and privacy
-- Everything is stored in a local database on the device and kept from one launch to the next. The app never sends anything over the network.
+- Everything is stored in a local database on the device and kept from one launch to the next. The app never sends anything over the network, and the database is left out of Android's cloud backup.
 - Amounts are integers in cents (never floating point), in euros.
 - Light and dark themes, following the system.
 
