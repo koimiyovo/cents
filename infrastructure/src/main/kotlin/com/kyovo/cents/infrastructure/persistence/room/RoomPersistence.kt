@@ -43,6 +43,21 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
         {
             val database = Room.databaseBuilder(context.applicationContext, CentsDatabase::class.java, name)
                 .setDriver(AndroidSQLiteDriver())
+                .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                .build()
+            return RoomPersistence(database)
+        }
+
+        /**
+         * A database file at a given path, with a given driver, configured exactly like [open] (same
+         * migrations, no destructive fallback). Room 3 builds a database without a `Context`, so this is
+         * what the tests use to check what opening a file does, on the computer's JVM.
+         */
+        fun openFile(path: String, driver: SQLiteDriver): RoomPersistence
+        {
+            val database = Room.databaseBuilder<CentsDatabase>(path)
+                .setDriver(driver)
+                .addMigrations(*CentsMigrations.ALL.toTypedArray())
                 .build()
             return RoomPersistence(database)
         }
