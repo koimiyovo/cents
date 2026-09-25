@@ -30,7 +30,6 @@ data class AccountsPalette(
     val primaryButtonBorder: Color,
     val primaryButtonContent: Color,
     val statusActiveColor: Color,
-    val tipIconTone: Color,
     val divider: Color,
     val error: Color,
 )
@@ -57,7 +56,6 @@ val LightAccountsPalette = AccountsPalette(
     primaryButtonBorder = Color(0xFF16342A),
     primaryButtonContent = Color(0xFF16342A),
     statusActiveColor = Color(0xFF1D6F63),
-    tipIconTone = Color(0xFFD6982E),
     divider = Color(0xFFCBD9D0),
     error = Color(0xFFB3261E),
 )
@@ -84,7 +82,6 @@ val DarkAccountsPalette = AccountsPalette(
     primaryButtonBorder = Color(0xFF1D6F63),
     primaryButtonContent = Color(0xFFFFFFFF),
     statusActiveColor = Color(0xFF6FE39A),
-    tipIconTone = Color(0xFFE3A83E),
     divider = Color(0xFF23352C),
     error = Color(0xFFF2B8B5),
 )

@@ -77,7 +77,6 @@
     <string name="accounts_hidden_balance">••••••</string>
     <string name="accounts_new_account_button">⊕ Nouveau compte</string>
     <string name="accounts_section_title">Mes Comptes</string>
-    <string name="accounts_manage_link">Gérer</string>
     <string name="accounts_status_archived">Archivé</string>
     <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
 
