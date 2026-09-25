@@ -28,10 +28,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
+import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.common.SectionLabel
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.acceptsAmountInput
@@ -97,7 +99,8 @@ fun AccountFormSheet(
             FormTextField(
                 palette = palette,
                 value = form.name,
-                onValueChange = { onFormChange(form.copy(name = it)) },
+                // Typing stops at the domain's limit: the field never holds a name it would refuse.
+                onValueChange = { onFormChange(form.copy(name = limitNameInput(it, AccountName.MAX_LENGTH))) },
                 placeholder = stringResource(R.string.account_form_name_placeholder),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
