@@ -9,13 +9,13 @@ import com.kyovo.cents.domain.model.TransactionTitle
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val WHEN_IT_HAPPENED = Instant.parse("2026-09-20T08:30:00Z")
 
 private fun anExpenseWith(subcategoryId: Boolean) = Transaction.recorded(
-    id = TransactionId(Uuid.random()),
-    accountId = AccountId(Uuid.random()),
+    id = TransactionId(UUID.randomUUID()),
+    accountId = AccountId(UUID.randomUUID()),
     amount = Money(1_250),
     title = TransactionTitle("Courses"),
     category = RecordableTransactionCategory.EXPENSE,
@@ -95,7 +95,7 @@ class TransactionFormSubcategoryTest
         val mismatched = form.copy(
             amountText = "12,50",
             title = "Courses",
-            accountId = AccountId(Uuid.random()),
+            accountId = AccountId(UUID.randomUUID()),
             subcategory = SALARY_SUBCATEGORY,
         )
 

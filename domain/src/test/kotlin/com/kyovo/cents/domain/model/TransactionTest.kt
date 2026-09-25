@@ -5,12 +5,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 class TransactionTest
 {
-    private val id = TransactionId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
-    private val accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+    private val id = TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
+    private val accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
     private val amount = Money(1_000)
     private val title = TransactionTitle("Courses de la semaine")
     private val date = Instant.parse("2026-09-22T10:00:00Z")
@@ -18,13 +18,13 @@ class TransactionTest
     // A transaction stores the *id* of its subcategory, but is built from the subcategory itself:
     // that is what lets it check, at construction, that the subcategory fits its category.
     private val groceries = Subcategory(
-        SubcategoryId(Uuid.parse("55555555-5555-5555-5555-555555555555")),
+        SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555555")),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName("Alimentation"),
         null
     )
     private val salary = Subcategory(
-        SubcategoryId(Uuid.parse("66666666-6666-6666-6666-666666666666")),
+        SubcategoryId(UUID.fromString("66666666-6666-6666-6666-666666666666")),
         RecordableTransactionCategory.INCOME,
         SubcategoryName("Salaire"),
         null

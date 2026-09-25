@@ -15,7 +15,7 @@ import com.kyovo.cents.domain.port.input.UpdateInitialDepositUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val OPENED = Instant.parse("2026-01-01T00:00:00Z")
 
@@ -29,12 +29,12 @@ private class FakeUpdateInitialDeposit : UpdateInitialDepositUseCase
     {
         failWith?.let { throw it }
         calls += id to amount
-        return Transaction.openingDeposit(id, AccountId(Uuid.random()), amount, OPENED)
+        return Transaction.openingDeposit(id, AccountId(UUID.randomUUID()), amount, OPENED)
     }
 }
 
 private fun aDeposit(cents: Long = 10_000) =
-    Transaction.openingDeposit(TransactionId(Uuid.random()), AccountId(Uuid.random()), Money(cents), OPENED)
+    Transaction.openingDeposit(TransactionId(UUID.randomUUID()), AccountId(UUID.randomUUID()), Money(cents), OPENED)
 
 @ExtendWith(MainDispatcherExtension::class)
 class InitialDepositFormViewModelTest
@@ -71,7 +71,7 @@ class InitialDepositFormViewModelTest
     {
         // GIVEN
         val expense = Transaction.recorded(
-            TransactionId(Uuid.random()), AccountId(Uuid.random()), Money(100), TransactionTitle("Courses"),
+            TransactionId(UUID.randomUUID()), AccountId(UUID.randomUUID()), Money(100), TransactionTitle("Courses"),
             RecordableTransactionCategory.EXPENSE, null, null, OPENED,
         )
 

@@ -17,7 +17,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /** Records what it is asked to open; can be told to refuse instead. */
 private class FakeOpenAccount : OpenAccountUseCase
@@ -29,7 +29,7 @@ private class FakeOpenAccount : OpenAccountUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return command.toAccount(AccountId(Uuid.random()), Instant.parse("2026-09-23T12:00:00Z"))
+        return command.toAccount(AccountId(UUID.randomUUID()), Instant.parse("2026-09-23T12:00:00Z"))
     }
 }
 
@@ -47,7 +47,7 @@ private class FakeUpdateAccount : UpdateAccountUseCase
     }
 }
 
-private fun anExistingAccount(id: AccountId = AccountId(Uuid.random())) = Account(
+private fun anExistingAccount(id: AccountId = AccountId(UUID.randomUUID())) = Account(
     id = id,
     name = AccountName("Livret A"),
     type = AccountType.SAVINGS,

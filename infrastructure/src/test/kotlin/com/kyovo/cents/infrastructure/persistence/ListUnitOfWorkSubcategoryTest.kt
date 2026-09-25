@@ -17,7 +17,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * Deleting a subcategory writes to two repositories — the transactions that used it lose it, then
@@ -37,21 +37,21 @@ class ListUnitOfWorkSubcategoryTest
     private val subcategoryRepository = ListSubcategoryRepository()
     private val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, subcategoryRepository)
 
-    private val accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+    private val accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
     private val moment = Instant.parse("2026-09-22T10:00:00Z")
 
     private val groceries = aSubcategory(1, "Alimentation")
     private val transport = aSubcategory(2, "Transport")
 
     private fun aSubcategory(suffix: Int, name: String) = Subcategory(
-        SubcategoryId(Uuid.parse("55555555-5555-5555-5555-55555555555$suffix")),
+        SubcategoryId(UUID.fromString("55555555-5555-5555-5555-55555555555$suffix")),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName(name),
         null,
     )
 
     private fun anExpense(suffix: Int, subcategory: Subcategory?) = Transaction.recorded(
-        id = TransactionId(Uuid.parse("33333333-3333-3333-3333-33333333333$suffix")),
+        id = TransactionId(UUID.fromString("33333333-3333-3333-3333-33333333333$suffix")),
         accountId = accountId,
         amount = Money(1_000),
         title = TransactionTitle("Courses"),

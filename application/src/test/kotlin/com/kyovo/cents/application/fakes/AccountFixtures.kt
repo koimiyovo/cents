@@ -11,11 +11,11 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 fun anAccountId(value: String = "11111111-1111-1111-1111-111111111111"): AccountId
 {
-    return AccountId(Uuid.parse(value))
+    return AccountId(UUID.fromString(value))
 }
 
 fun aCurrency(code: String = "EUR"): AccountCurrency

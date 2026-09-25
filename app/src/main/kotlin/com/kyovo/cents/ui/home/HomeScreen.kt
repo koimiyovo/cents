@@ -70,7 +70,7 @@ import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionTapTarget
 import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private enum class HomeTab { Accounts, Transactions }
 
@@ -109,11 +109,11 @@ fun HomeScreen(
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
-    // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
+    // The opened account is kept as its UUID string: AccountId (a value class over java.util.UUID)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     var destination by rememberSaveable { mutableStateOf(HomeDestination.Tabs) }
-    val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
+    val openedAccountId = openedAccountUuid?.let { AccountId(UUID.fromString(it)) }
 
     // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
     // correct, an income or an expense has the full form (a transfer leg never reaches here).

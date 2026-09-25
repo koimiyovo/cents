@@ -15,12 +15,12 @@ import com.kyovo.cents.ui.transaction.SALARY_SUBCATEGORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private fun aTransaction(subcategory: Subcategory?, kind: RecordableTransactionCategory? = subcategory?.kind) =
     Transaction.recorded(
-        id = TransactionId(Uuid.random()),
-        accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")),
+        id = TransactionId(UUID.randomUUID()),
+        accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111")),
         amount = Money(1_000),
         title = TransactionTitle("Achat"),
         category = kind ?: RecordableTransactionCategory.EXPENSE,
@@ -131,7 +131,7 @@ class SubcategorySectionsTest
     {
         // GIVEN
         val unknown = Subcategory(
-            SubcategoryId(Uuid.random()),
+            SubcategoryId(UUID.randomUUID()),
             RecordableTransactionCategory.EXPENSE,
             SubcategoryName("Inconnue"),
             null,

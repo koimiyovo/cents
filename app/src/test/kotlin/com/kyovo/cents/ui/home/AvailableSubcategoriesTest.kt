@@ -15,13 +15,13 @@ import com.kyovo.cents.ui.transaction.SALARY_SUBCATEGORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
-private val ACCOUNT = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+private val ACCOUNT = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
 private val WHEN_SPENT = Instant.parse("2026-09-20T08:30:00Z")
 
 private fun anExpense(subcategory: Subcategory?) = Transaction.recorded(
-    id = TransactionId(Uuid.random()),
+    id = TransactionId(UUID.randomUUID()),
     accountId = ACCOUNT,
     amount = Money(1_000),
     title = TransactionTitle("Achat"),
@@ -99,7 +99,7 @@ class AvailableSubcategoriesTest
     {
         // GIVEN a transaction pointing to a subcategory the list doesn't know
         val unknown = Subcategory(
-            SubcategoryId(Uuid.random()),
+            SubcategoryId(UUID.randomUUID()),
             RecordableTransactionCategory.EXPENSE,
             SubcategoryName("Inconnue"),
             null,

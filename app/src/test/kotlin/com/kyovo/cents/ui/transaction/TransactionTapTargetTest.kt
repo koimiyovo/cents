@@ -9,14 +9,14 @@ import com.kyovo.cents.domain.model.TransactionTitle
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
-private val OWNER = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
+private val OWNER = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
 private val THEN = Instant.parse("2026-09-20T08:30:00Z")
 private val TITLE = TransactionTitle("Achat")
 
 private fun aRecorded(category: RecordableTransactionCategory) = Transaction.recorded(
-    TransactionId(Uuid.random()), OWNER, Money(1_000), TITLE, category, null, null, THEN,
+    TransactionId(UUID.randomUUID()), OWNER, Money(1_000), TITLE, category, null, null, THEN,
 )
 
 /**
@@ -43,7 +43,7 @@ class TransactionTapTargetTest
     @Test
     fun `an opening deposit opens its own form`()
     {
-        val deposit = Transaction.openingDeposit(TransactionId(Uuid.random()), OWNER, Money(10_000), THEN)
+        val deposit = Transaction.openingDeposit(TransactionId(UUID.randomUUID()), OWNER, Money(10_000), THEN)
 
         assertThat(transactionTapTarget(deposit)).isEqualTo(TransactionTapTarget.INITIAL_DEPOSIT_FORM)
     }
@@ -51,8 +51,8 @@ class TransactionTapTargetTest
     @Test
     fun `neither leg of a transfer opens anything`()
     {
-        val out = Transaction.transferOut(TransactionId(Uuid.random()), OWNER, Money(500), TITLE, THEN)
-        val into = Transaction.transferIn(TransactionId(Uuid.random()), OWNER, Money(500), TITLE, THEN)
+        val out = Transaction.transferOut(TransactionId(UUID.randomUUID()), OWNER, Money(500), TITLE, THEN)
+        val into = Transaction.transferIn(TransactionId(UUID.randomUUID()), OWNER, Money(500), TITLE, THEN)
 
         assertThat(transactionTapTarget(out)).isEqualTo(TransactionTapTarget.NONE)
         assertThat(transactionTapTarget(into)).isEqualTo(TransactionTapTarget.NONE)
@@ -65,9 +65,9 @@ class TransactionTapTargetTest
         val all = listOf(
             aRecorded(RecordableTransactionCategory.EXPENSE),
             aRecorded(RecordableTransactionCategory.INCOME),
-            Transaction.openingDeposit(TransactionId(Uuid.random()), OWNER, Money(1), THEN),
-            Transaction.transferOut(TransactionId(Uuid.random()), OWNER, Money(1), TITLE, THEN),
-            Transaction.transferIn(TransactionId(Uuid.random()), OWNER, Money(1), TITLE, THEN),
+            Transaction.openingDeposit(TransactionId(UUID.randomUUID()), OWNER, Money(1), THEN),
+            Transaction.transferOut(TransactionId(UUID.randomUUID()), OWNER, Money(1), TITLE, THEN),
+            Transaction.transferIn(TransactionId(UUID.randomUUID()), OWNER, Money(1), TITLE, THEN),
         )
 
         // WHEN / THEN only the transfer legs are inert
@@ -79,7 +79,7 @@ class TransactionTapTargetTest
     {
         val all = listOf(
             aRecorded(RecordableTransactionCategory.EXPENSE),
-            Transaction.openingDeposit(TransactionId(Uuid.random()), OWNER, Money(1), THEN),
+            Transaction.openingDeposit(TransactionId(UUID.randomUUID()), OWNER, Money(1), THEN),
         )
 
         all.forEach {

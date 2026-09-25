@@ -12,7 +12,7 @@ import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * What a screen collecting the transactions sees: the stored list now, then every change to it.
@@ -23,9 +23,9 @@ class ListTransactionRepositoryObserveTest
 {
     private val repository = ListTransactionRepository()
 
-    private val accountId = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
-    private val idA = TransactionId(Uuid.parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
-    private val idB = TransactionId(Uuid.parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
+    private val accountId = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
+    private val idA = TransactionId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+    private val idB = TransactionId(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 
     private fun aDeposit(id: TransactionId, cents: Long) =
         Transaction.openingDeposit(id, accountId, Money(cents), Instant.parse("2026-09-22T10:00:00Z"))

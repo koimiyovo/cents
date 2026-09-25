@@ -16,7 +16,7 @@ import com.kyovo.cents.domain.port.input.UpdateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private const val CART = "🛒"
 private val EXPENSE = RecordableTransactionCategory.EXPENSE
@@ -32,7 +32,7 @@ private class RecordingCreate : CreateSubcategoryUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return Subcategory(SubcategoryId(Uuid.random()), command.kind, command.name, command.emoji)
+        return Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
     }
 }
 
@@ -67,7 +67,7 @@ private fun aRow(
 ) =
     SubcategoryRow(
         Subcategory(
-            SubcategoryId(Uuid.random()),
+            SubcategoryId(UUID.randomUUID()),
             kind,
             SubcategoryName(name),
             SubcategoryEmoji(CART)

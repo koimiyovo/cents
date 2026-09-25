@@ -1,6 +1,6 @@
 package com.kyovo.cents.domain.model
 
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 @JvmInline
-value class TransactionId(val value: Uuid)
+value class TransactionId(val value: UUID)

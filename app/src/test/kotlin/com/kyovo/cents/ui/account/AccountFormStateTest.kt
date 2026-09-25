@@ -16,7 +16,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private fun errorsOf(submission: AccountFormSubmission): Set<AccountFormError> =
     (submission as AccountFormSubmission.Invalid).errors
@@ -131,7 +131,7 @@ class AccountFormStateTest
 }
 
 private fun anAccountToEdit(description: String? = "Épargne de précaution") = Account(
-    id = AccountId(Uuid.random()),
+    id = AccountId(UUID.randomUUID()),
     name = AccountName("Livret A"),
     type = AccountType.SAVINGS,
     currency = AccountCurrency(Currency.getInstance("EUR")),

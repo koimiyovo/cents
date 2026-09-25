@@ -9,13 +9,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.Currency
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 private val SOMETIME = Instant.parse("2026-09-23T12:00:00Z")
 
-private val CHECKING = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))
-private val SAVINGS = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222"))
-private val NEW_ONE = AccountId(Uuid.parse("33333333-3333-3333-3333-333333333333"))
+private val CHECKING = AccountId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
+private val SAVINGS = AccountId(UUID.fromString("22222222-2222-2222-2222-222222222222"))
+private val NEW_ONE = AccountId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
 
 private fun anAccount(id: AccountId, archived: Boolean = false) = Account(
     id = id,

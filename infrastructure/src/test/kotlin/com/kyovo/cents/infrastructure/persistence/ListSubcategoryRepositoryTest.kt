@@ -12,7 +12,7 @@ import com.kyovo.cents.domain.model.SubcategoryName
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ListSubcategoryRepositoryTest
@@ -20,7 +20,7 @@ class ListSubcategoryRepositoryTest
     private val repository = ListSubcategoryRepository()
 
     private fun aSubcategory(suffix: Int, name: String) = Subcategory(
-        SubcategoryId(Uuid.parse("55555555-5555-5555-5555-55555555555$suffix")),
+        SubcategoryId(UUID.fromString("55555555-5555-5555-5555-55555555555$suffix")),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName(name),
         null
