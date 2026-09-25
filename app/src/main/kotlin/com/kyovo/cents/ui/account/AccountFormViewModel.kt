@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.account
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** Why a valid-looking form still could not be saved (a rule only the use case can check). */
 enum class AccountSubmitFailure
@@ -71,18 +73,22 @@ class AccountFormViewModel(
         }
     }
 
-    private fun save(write: () -> Unit)
+    // Opening an account is a suspend call (it will hit the database): it runs in the view model's scope,
+    // which is cancelled with the view model and survives a rotation.
+    private fun save(write: suspend () -> Unit)
     {
-        try
-        {
-            write()
-        } catch (_: DuplicateAccountNameException)
-        {
-            _uiState.update { it.copy(failure = AccountSubmitFailure.DUPLICATE_NAME) }
-            return
+        viewModelScope.launch {
+            try
+            {
+                write()
+            } catch (_: DuplicateAccountNameException)
+            {
+                _uiState.update { it.copy(failure = AccountSubmitFailure.DUPLICATE_NAME) }
+                return@launch
+            }
+            // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
+            dataRevision.bump()
+            close()
         }
-        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-        dataRevision.bump()
-        close()
     }
 }

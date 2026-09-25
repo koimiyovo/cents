@@ -155,16 +155,19 @@ fun HomeScreen(
         dataRevision.bump()
     }
     val delete: (AccountId, Boolean) -> Unit = { id, deleteTransactions ->
-        try
-        {
-            deleteAccount.delete(id, deleteTransactions)
-        } catch (e: CannotDeleteAccountWithTransactionsException)
-        {
-            // Transactions appeared after the dialog was built (it said there were none): refuse
-            // rather than erase what the user was never told about. The refreshed screens show
-            // the account as it is now.
+        // Deleting is a suspend call: launched in the screen's scope, the page it leaves does not wait for it.
+        coroutineScope.launch {
+            try
+            {
+                deleteAccount.delete(id, deleteTransactions)
+            } catch (e: CannotDeleteAccountWithTransactionsException)
+            {
+                // Transactions appeared after the dialog was built (it said there were none): refuse
+                // rather than erase what the user was never told about. The refreshed screens show
+                // the account as it is now.
+            }
+            dataRevision.bump()
         }
-        dataRevision.bump()
     }
     // The name of the account whose unarchiving was refused, while its dialog is up. Refusals
     // come from one rule only: an active account took the name in the meantime. Shared by the

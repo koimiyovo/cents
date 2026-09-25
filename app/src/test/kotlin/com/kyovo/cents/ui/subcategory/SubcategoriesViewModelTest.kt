@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.subcategory
 
+import org.junit.jupiter.api.extension.ExtendWith
+import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
@@ -53,18 +55,28 @@ private class RecordingDelete : DeleteSubcategoryUseCase
 {
     val deleted = mutableListOf<SubcategoryId>()
 
-    override fun delete(id: SubcategoryId)
+    override suspend fun delete(id: SubcategoryId)
     {
         deleted += id
     }
 }
 
-private fun aRow(name: String = "Alimentation", count: Int = 12, kind: RecordableTransactionCategory = EXPENSE) =
+private fun aRow(
+    name: String = "Alimentation",
+    count: Int = 12,
+    kind: RecordableTransactionCategory = EXPENSE
+) =
     SubcategoryRow(
-        Subcategory(SubcategoryId(Uuid.random()), kind, SubcategoryName(name), SubcategoryEmoji(CART)),
+        Subcategory(
+            SubcategoryId(Uuid.random()),
+            kind,
+            SubcategoryName(name),
+            SubcategoryEmoji(CART)
+        ),
         count,
     )
 
+@ExtendWith(MainDispatcherExtension::class)
 class SubcategoriesViewModelTest
 {
     private val create = RecordingCreate()
@@ -218,7 +230,11 @@ class SubcategoriesViewModelTest
 
         // THEN
         assertThat(update.commands).containsExactly(
-            UpdateSubcategoryCommand(row.subcategory.id, SubcategoryName("Courses"), SubcategoryEmoji(CART)),
+            UpdateSubcategoryCommand(
+                row.subcategory.id,
+                SubcategoryName("Courses"),
+                SubcategoryEmoji(CART)
+            ),
         )
         assertThat(create.commands).isEmpty()
         assertThat(revisionNow).isEqualTo(revisionBefore + 1)

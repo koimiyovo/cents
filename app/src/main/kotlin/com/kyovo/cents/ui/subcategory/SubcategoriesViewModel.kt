@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.subcategory
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * What the deletion dialog says: which subcategory, and how many transactions will lose it (they are
@@ -135,8 +137,10 @@ class SubcategoriesViewModel(
         val state = _uiState.value
         if (state.confirmingDelete == null) return
         val id = state.form?.editingId ?: return
-        deleteSubcategory.delete(id)
-        dataRevision.bump()
-        close()
+        viewModelScope.launch {
+            deleteSubcategory.delete(id)
+            dataRevision.bump()
+            close()
+        }
     }
 }

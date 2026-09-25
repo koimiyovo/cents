@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -56,14 +57,14 @@ class ListUnitOfWorkSubcategoryTest
         date = moment,
     )
 
-    private fun failing(block: () -> Unit)
+    private suspend fun failing(block: suspend () -> Unit)
     {
-        assertThatThrownBy { unitOfWork.execute { block(); throw RuntimeException("boom") } }
+        assertThatThrownBySuspending { unitOfWork.execute { block(); throw RuntimeException("boom") } }
             .isInstanceOf(RuntimeException::class.java)
     }
 
     @Test
-    fun `keeps the subcategory writes of a block that completes`()
+    fun `keeps the subcategory writes of a block that completes`() = runTest()
     {
         // WHEN
         unitOfWork.execute {
@@ -76,7 +77,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `rolls back a subcategory created inside a block that throws`()
+    fun `rolls back a subcategory created inside a block that throws`() = runTest()
     {
         // WHEN
         failing { subcategoryRepository.save(groceries) }
@@ -86,7 +87,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `rolls back a subcategory deleted inside a block that throws, at the place it was`()
+    fun `rolls back a subcategory deleted inside a block that throws, at the place it was`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -100,7 +101,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `rolls back a subcategory renamed inside a block that throws`()
+    fun `rolls back a subcategory renamed inside a block that throws`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -113,7 +114,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `does not roll back subcategories saved before the failing block started`()
+    fun `does not roll back subcategories saved before the failing block started`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -126,7 +127,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `rolls back a transaction changed inside a block that throws`()
+    fun `rolls back a transaction changed inside a block that throws`() = runTest()
     {
         // GIVEN
         val original = anExpense(1, groceries)
@@ -142,7 +143,7 @@ class ListUnitOfWorkSubcategoryTest
     // The very sequence of DeleteSubcategoryService: strip the transactions, then delete the
     // subcategory — and something fails before the end.
     @Test
-    fun `a deletion that fails halfway leaves the subcategory and its transactions untouched`()
+    fun `a deletion that fails halfway leaves the subcategory and its transactions untouched`() = runTest()
     {
         // GIVEN a subcategory used by two transactions
         subcategoryRepository.save(groceries)
@@ -163,7 +164,7 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `a deletion that completes is kept, transactions and subcategory together`()
+    fun `a deletion that completes is kept, transactions and subcategory together`() = runTest()
     {
         // GIVEN
         subcategoryRepository.save(groceries)
@@ -182,10 +183,10 @@ class ListUnitOfWorkSubcategoryTest
     }
 
     @Test
-    fun `an exception is rethrown as it was, whatever the repository that was written`()
+    fun `an exception is rethrown as it was, whatever the repository that was written`() = runTest()
     {
         // WHEN / THEN
-        assertThatThrownBy {
+        assertThatThrownBySuspending {
             unitOfWork.execute {
                 subcategoryRepository.save(groceries)
                 throw IllegalStateException("specific")

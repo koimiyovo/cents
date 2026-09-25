@@ -12,7 +12,7 @@ class DeleteSubcategoryService(
     private val unitOfWork: UnitOfWork
 ) : DeleteSubcategoryUseCase
 {
-    override fun delete(id: SubcategoryId)
+    override suspend fun delete(id: SubcategoryId)
     {
         // One all-or-nothing step: never a deleted subcategory whose transactions still point to it,
         // nor transactions stripped of a subcategory that is still there.

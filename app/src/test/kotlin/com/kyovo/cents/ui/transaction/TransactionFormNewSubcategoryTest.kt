@@ -1,7 +1,5 @@
 package com.kyovo.cents.ui.transaction
 
-import com.kyovo.cents.domain.model.TransactionTitle
-import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.model.Account
@@ -9,11 +7,13 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
+import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
@@ -63,7 +63,7 @@ private val unusedRecord = object : RecordTransactionUseCase
 }
 private val unusedTransfer = object : RecordTransferUseCase
 {
-    override fun record(command: RecordTransferCommand): TransferResult = error("not used")
+    override suspend fun record(command: RecordTransferCommand): TransferResult = error("not used")
 }
 private val unusedUpdate = object : UpdateTransactionUseCase
 {
@@ -84,7 +84,13 @@ class TransactionFormNewSubcategoryTest
     private val create = RecordingCreateSubcategory()
     private val revision = DataRevision()
     private val viewModel = TransactionFormViewModel(
-        unusedRecord, unusedTransfer, unusedUpdate, unusedDelete, create, revision, now = { MOMENT },
+        unusedRecord,
+        unusedTransfer,
+        unusedUpdate,
+        unusedDelete,
+        create,
+        revision,
+        now = { MOMENT },
     )
 
     private val state get() = viewModel.uiState.value
@@ -188,7 +194,12 @@ class TransactionFormNewSubcategoryTest
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft("   ", NewSubcategoryError.NAME_REQUIRED))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                "   ",
+                NewSubcategoryError.NAME_REQUIRED
+            )
+        )
         assertThat(create.commands).isEmpty()
         assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
@@ -207,7 +218,12 @@ class TransactionFormNewSubcategoryTest
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft("Alimentation", NewSubcategoryError.NAME_TAKEN))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                "Alimentation",
+                NewSubcategoryError.NAME_TAKEN
+            )
+        )
         assertThat(state.form).isEqualTo(formBefore)
     }
 
@@ -361,7 +377,13 @@ class TransactionFormNewSubcategoryTest
         viewModel.confirmNewSubcategory()
 
         // THEN
-        assertThat(state.newSubcategory).isEqualTo(NewSubcategoryDraft(" ", NewSubcategoryError.NAME_REQUIRED, CART))
+        assertThat(state.newSubcategory).isEqualTo(
+            NewSubcategoryDraft(
+                " ",
+                NewSubcategoryError.NAME_REQUIRED,
+                CART
+            )
+        )
     }
 
     // The picker only offers valid emojis; a blank one is the domain's "no", answered on screen.

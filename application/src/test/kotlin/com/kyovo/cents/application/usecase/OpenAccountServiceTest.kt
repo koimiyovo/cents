@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedAccountIdGenerator
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
@@ -29,7 +31,7 @@ import java.time.Clock
 class OpenAccountServiceTest
 {
     @Test
-    fun `opens an account with the given name, type and currency, a generated id and the current instant, and saves it`()
+    fun `opens an account with the given name, type and currency, a generated id and the current instant, and saves it`() = runTest()
     {
         // GIVEN
         val generatedId = anAccountId()
@@ -48,7 +50,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `opens another account with its own name, type, currency, generated id and creation instant`()
+    fun `opens another account with its own name, type, currency, generated id and creation instant`() = runTest()
     {
         // GIVEN
         val generatedId = anAccountId("22222222-2222-2222-2222-222222222222")
@@ -77,7 +79,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `keeps the description given when opening the account`()
+    fun `keeps the description given when opening the account`() = runTest()
     {
         // GIVEN
         val generatedId = anAccountId()
@@ -99,7 +101,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `opens an account without description when none is given`()
+    fun `opens an account without description when none is given`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -120,7 +122,7 @@ class OpenAccountServiceTest
     @ValueSource(strings = ["Livret A", "livret a", "  livret A  "])
     fun `refuses to open an account whose name is already used by an existing account`(
         duplicateNameVariant: String
-    )
+    ) = runTest()
     {
         // GIVEN
         val name = AccountName("Livret A")
@@ -131,12 +133,12 @@ class OpenAccountServiceTest
         val command = anOpenAccountCommand(name = AccountName(duplicateNameVariant))
 
         // WHEN / THEN
-        assertThatThrownBy { service.open(command) }
+        assertThatThrownBySuspending { service.open(command) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @Test
-    fun `does not save an account whose name is already used by an existing account`()
+    fun `does not save an account whose name is already used by an existing account`() = runTest()
     {
         // GIVEN
         val name = AccountName("Livret A")
@@ -147,7 +149,7 @@ class OpenAccountServiceTest
         val command = anOpenAccountCommand(name = name)
 
         // WHEN
-        assertThatThrownBy { service.open(command) }
+        assertThatThrownBySuspending { service.open(command) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
 
         // THEN
@@ -155,7 +157,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `opens a second account when its name differs from an existing account's name`()
+    fun `opens a second account when its name differs from an existing account's name`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -175,7 +177,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `opens an account whose name was used by another account that has since been deleted`()
+    fun `opens an account whose name was used by another account that has since been deleted`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -203,7 +205,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `opens an account whose name was used by another account that has since been archived`()
+    fun `opens an account whose name was used by another account that has since been archived`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -230,7 +232,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `records the initial amount as a transaction when opening an account`()
+    fun `records the initial amount as a transaction when opening an account`() = runTest()
     {
         // GIVEN
         val generatedAccountId = anAccountId()
@@ -262,7 +264,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `does not record any transaction when opening an account with no initial amount`()
+    fun `does not record any transaction when opening an account with no initial amount`() = runTest()
     {
         // GIVEN
         val transactionRepository = InMemoryTransactionRepository()
@@ -281,7 +283,7 @@ class OpenAccountServiceTest
     }
 
     @Test
-    fun `wraps the account and transaction creation in a single unit of work`()
+    fun `wraps the account and transaction creation in a single unit of work`() = runTest()
     {
         // GIVEN
         val unitOfWork = InMemoryUnitOfWork()
