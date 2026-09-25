@@ -18,7 +18,8 @@ data class Transaction private constructor(
 {
     companion object
     {
-        private val OPENING_DEPOSIT_TITLE = TransactionTitle("Initial deposit")
+        // Shown as it is in the transactions list, whose language is French.
+        private val OPENING_DEPOSIT_TITLE = TransactionTitle("Dépôt initial")
 
         fun openingDeposit(
             id: TransactionId,
