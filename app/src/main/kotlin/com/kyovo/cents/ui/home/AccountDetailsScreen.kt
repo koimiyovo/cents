@@ -139,9 +139,8 @@ fun AccountDetailsScreen(
             .sumOf { it.amount.value }
     }
     // Chips only offer subcategories that exist in the period, so a chip never yields an empty list.
-    val availableSubcategories = remember(transactionsInPeriod, subcategories) {
-        val usedIds = transactionsInPeriod.mapNotNull { it.subcategoryId }.toSet()
-        subcategories.filter { it.id in usedIds }
+    val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
+        availableSubcategories(transactionsInPeriod, subcategories)
     }
 
     val filteredTransactions =
@@ -218,7 +217,7 @@ fun AccountDetailsScreen(
         }
         SubcategoryFilter(
             palette = palette,
-            subcategories = availableSubcategories,
+            subcategories = subcategoriesInPeriod,
             selected = selectedSubcategory,
             onSelect = { selectedSubcategory = it },
         )
