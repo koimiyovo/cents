@@ -295,7 +295,11 @@ fun HomeScreen(
             onSubmit = formViewModel::submit,
             onDelete = formViewModel::askToDelete,
             onCreateSubcategory = formViewModel::askToCreateSubcategory,
-            onCreateAccount = accountFormViewModel::open,
+            onCreateAccount = { field ->
+                // Remember which accounts exist, to recognise the new one and choose it for that field.
+                formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
+                accountFormViewModel.open()
+            },
             onDismiss = formViewModel::close,
         )
     }

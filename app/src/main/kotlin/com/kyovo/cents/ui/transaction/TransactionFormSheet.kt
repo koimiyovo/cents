@@ -97,7 +97,7 @@ fun TransactionFormSheet(
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
     onCreateSubcategory: () -> Unit,
-    onCreateAccount: () -> Unit,
+    onCreateAccount: (AccountField) -> Unit,
     onDismiss: () -> Unit,
 )
 {
@@ -195,7 +195,10 @@ fun TransactionFormSheet(
                     color = palette.textMuted,
                     fontSize = 13.sp,
                 )
-                OutlinedFormButton(palette, stringResource(R.string.transaction_form_create_account), onCreateAccount)
+                OutlinedFormButton(
+                    palette,
+                    stringResource(R.string.transaction_form_create_account),
+                ) { onCreateAccount(AccountField.SOURCE) }
             } else
             {
                 val isTransfer = form.type == TransactionFormType.TRANSFER
@@ -208,6 +211,7 @@ fun TransactionFormSheet(
                     accounts = form.sourceChoices(selectable),
                     selectedId = form.accountId,
                     onSelect = { onFormChange(form.copy(accountId = it)) },
+                    onCreate = { onCreateAccount(AccountField.SOURCE) },
                 )
                 FieldError(palette, FormError.ACCOUNT_REQUIRED in errors, FormError.ACCOUNT_REQUIRED)
                 if (isTransfer)
@@ -218,6 +222,7 @@ fun TransactionFormSheet(
                         accounts = form.destinationChoices(selectable),
                         selectedId = form.toAccountId,
                         onSelect = { onFormChange(form.copy(toAccountId = it)) },
+                        onCreate = { onCreateAccount(AccountField.DESTINATION) },
                     )
                     FieldError(
                         palette,
@@ -356,6 +361,7 @@ private fun AccountPicker(
     accounts: List<Account>,
     selectedId: AccountId?,
     onSelect: (AccountId) -> Unit,
+    onCreate: () -> Unit,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -368,6 +374,8 @@ private fun AccountPicker(
             selected = selectedId,
             onSelect = { it?.let(onSelect) },
             fillWidth = true,
+            footerLabel = stringResource(R.string.transaction_form_account_create),
+            onFooterClick = onCreate,
             placeholder = stringResource(R.string.transaction_form_account_placeholder),
         )
     }

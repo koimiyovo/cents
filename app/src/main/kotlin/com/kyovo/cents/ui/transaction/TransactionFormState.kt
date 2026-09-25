@@ -19,6 +19,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+/** Which account of the form is meant: the one money leaves from (or the only one), or the one a transfer goes to. */
+enum class AccountField { SOURCE, DESTINATION }
+
 /** Archived accounts can't receive new transactions (domain rule), so the form never offers them. */
 fun selectableAccounts(accounts: List<Account>): List<Account>
 {
@@ -249,6 +252,16 @@ data class TransactionFormState(
     {
         val category = type.recordableCategory() ?: return emptyList()
         return subcategories.filter { it.kind == category }
+    }
+
+    /**
+     * The form with [id] chosen as its [field]. Choosing a new source that is also the destination
+     * clears the destination (a transfer to the same account is meaningless).
+     */
+    fun withAccountSelected(field: AccountField, id: AccountId): TransactionFormState = when (field)
+    {
+        AccountField.SOURCE      -> copy(accountId = id, toAccountId = toAccountId?.takeUnless { it == id })
+        AccountField.DESTINATION -> copy(toAccountId = id)
     }
 
     /**

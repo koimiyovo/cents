@@ -2,11 +2,15 @@ package com.kyovo.cents.ui.common
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,8 +55,9 @@ internal class SelectOption<T>(val value: T, val label: String)
  * Unfolding hides the keyboard: inside a form the amount field is focused and its keyboard would
  * cover the very options that were just unfolded.
  *
- * [footerLabel] adds an action after the options ("+ New ..."): it is not a value to select, so it
- * calls [onFooterClick] instead of [onSelect], and closes the list.
+ * [footerLabel] adds an action ("+ New ...") pinned under the options: it is not a value to select, so
+ * it calls [onFooterClick] instead of [onSelect], and closes the list. It sits outside the scrolling
+ * part on purpose — at the end of a long list it would take a scroll to reach; here it never does.
  */
 @Composable
 internal fun <T> SelectDropdown(
@@ -68,6 +75,10 @@ internal fun <T> SelectDropdown(
 {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // Unfolding at the bottom of a scrolling form would leave the list, and its footer action, off
+    // screen: the form scrolls to show the whole of it.
+    val listRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(expanded) { if (expanded) listRequester.bringIntoView() }
     val keyboard = LocalSoftwareKeyboardController.current
     val selectedLabel = options.firstOrNull { it.value == selected }?.label
 
@@ -95,22 +106,30 @@ internal fun <T> SelectDropdown(
                     .padding(top = 8.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.surface)
-                    .heightIn(max = MAX_OPTIONS_HEIGHT)
-                    .verticalScroll(rememberScrollState()),
+                    .bringIntoViewRequester(listRequester),
             ) {
-                options.forEach { option ->
-                    SelectableOptionRow(
-                        label = option.label,
-                        selected = option.value == selected,
-                        palette = palette,
-                        onClick = {
-                            expanded = false
-                            onSelect(option.value)
-                        },
-                    )
+                // Only the options scroll: the footer action below stays in view, however long the list.
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = MAX_OPTIONS_HEIGHT)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    options.forEach { option ->
+                        SelectableOptionRow(
+                            label = option.label,
+                            selected = option.value == selected,
+                            palette = palette,
+                            onClick = {
+                                expanded = false
+                                onSelect(option.value)
+                            },
+                        )
+                    }
                 }
                 if (footerLabel != null && onFooterClick != null)
                 {
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(palette.divider))
                     Text(
                         text = footerLabel,
                         color = palette.kicker,

@@ -845,4 +845,127 @@ class TransactionFormViewModelTest
         assertThat(recordTransaction.commands.single().accountId).isEqualTo(checking.id)
         assertThat(form).isNull()
     }
+
+    // "+ Créer un compte" sits in the accounts dropdown itself: the account that appears is the one the
+    // user meant, whether or not other accounts already exist.
+    @Test
+    fun `an account created from the dropdown is chosen, though other accounts exist`()
+    {
+        // GIVEN a form with two accounts and none chosen
+        viewModel.open(listOf(checking, savings), preselectedAccountId = null)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+        val created = anAccount()
+
+        // WHEN the account appears
+        viewModel.accountsChanged(listOf(checking, savings, created))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(created.id)
+    }
+
+    @Test
+    fun `it replaces the account that was chosen, since the user asked for another`()
+    {
+        // GIVEN
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+        val created = anAccount()
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking, savings, created))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(created.id)
+    }
+
+    @Test
+    fun `for a transfer, an account created for the destination becomes the destination`()
+    {
+        // GIVEN a transfer from checking, asking for the destination
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+        viewModel.update(form!!.withType(TransactionFormType.TRANSFER))
+        viewModel.askToCreateAccount(AccountField.DESTINATION, listOf(checking, savings))
+        val created = anAccount()
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking, savings, created))
+
+        // THEN the source is untouched
+        assertThat(form!!.toAccountId).isEqualTo(created.id)
+        assertThat(form!!.accountId).isEqualTo(checking.id)
+    }
+
+    @Test
+    fun `nothing changes while no new account has appeared`()
+    {
+        // GIVEN the user asked, then backed out of the account form
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+
+        // WHEN the accounts are read again, unchanged
+        viewModel.accountsChanged(listOf(checking, savings))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(checking.id)
+    }
+
+    @Test
+    fun `a new archived account is not chosen, it takes no transaction`()
+    {
+        // GIVEN
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking, savings, archived))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(checking.id)
+    }
+
+    @Test
+    fun `an account that appears without having been asked for does not change the choice`()
+    {
+        // GIVEN
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking, savings, anAccount()))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(checking.id)
+    }
+
+    @Test
+    fun `closing the form forgets what was asked`()
+    {
+        // GIVEN a request left over from a form that was closed
+        viewModel.open(listOf(checking, savings), preselectedAccountId = null)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+        viewModel.close()
+        viewModel.open(listOf(checking, savings), preselectedAccountId = null)
+
+        // WHEN an account appears in the new form
+        viewModel.accountsChanged(listOf(checking, savings, anAccount()))
+
+        // THEN it is not chosen for a request the user no longer has
+        assertThat(form!!.accountId).isNull()
+    }
+
+    @Test
+    fun `the request is used once`()
+    {
+        // GIVEN one account created for the form
+        viewModel.open(listOf(checking, savings), preselectedAccountId = null)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(checking, savings))
+        val first = anAccount()
+        viewModel.accountsChanged(listOf(checking, savings, first))
+        viewModel.update(form!!.copy(accountId = savings.id))
+
+        // WHEN another account appears later, on its own
+        viewModel.accountsChanged(listOf(checking, savings, first, anAccount()))
+
+        // THEN the user's later choice stands
+        assertThat(form!!.accountId).isEqualTo(savings.id)
+    }
 }
