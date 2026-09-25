@@ -7,6 +7,16 @@ import com.kyovo.cents.domain.model.Transaction
 /** A subcategory and how many transactions use it: what a row of the management screen shows. */
 data class SubcategoryRow(val subcategory: Subcategory, val transactionCount: Int)
 
+/** The icon a subcategory without an emoji of its own shows: it says which kind it is. */
+fun defaultSubcategoryEmoji(kind: RecordableTransactionCategory): String = when (kind)
+{
+    RecordableTransactionCategory.EXPENSE -> "\uD83D\uDCB3"
+    RecordableTransactionCategory.INCOME  -> "\uD83D\uDCB0"
+}
+
+/** The icon of a row: the subcategory's own emoji, or the default of its kind — never blank. */
+fun SubcategoryRow.displayEmoji(): String = subcategory.emoji?.value ?: defaultSubcategoryEmoji(subcategory.kind)
+
 /** The subcategories of one kind, in the order given. */
 data class SubcategorySection(val kind: RecordableTransactionCategory, val rows: List<SubcategoryRow>)
 
