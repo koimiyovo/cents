@@ -66,6 +66,7 @@ import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
+import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.LightAccountsPalette
 import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.datePickerColorScheme
@@ -95,6 +96,7 @@ fun TransactionFormSheet(
     failure: SubmitFailure?,
     onFormChange: (TransactionFormState) -> Unit,
     onSubmit: () -> Unit,
+    onDelete: () -> Unit,
     onDismiss: () -> Unit,
 )
 {
@@ -278,6 +280,11 @@ fun TransactionFormSheet(
             }
 
             SubmitButton(palette, stringResource(R.string.transaction_form_submit), onSubmit)
+            // Only for a transaction that exists: there is nothing to delete in a new one.
+            if (form.isEditing)
+            {
+                DestructiveButton(palette, stringResource(R.string.transaction_form_delete), onDelete)
+            }
         }
     }
 

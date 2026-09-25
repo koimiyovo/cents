@@ -3,7 +3,10 @@ package com.kyovo.cents.ui.transaction
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
+import com.kyovo.cents.domain.exception.CannotDeleteTransferException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
+import com.kyovo.cents.domain.exception.CannotUpdateTransferException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -17,6 +20,7 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
+import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
@@ -85,6 +89,19 @@ private class FakeUpdateTransaction : UpdateTransactionUseCase
     }
 }
 
+/** Records the ids it is asked to delete; can be told to refuse instead. */
+private class FakeDeleteTransaction : DeleteTransactionUseCase
+{
+    val deleted = mutableListOf<TransactionId>()
+    var failWith: RuntimeException? = null
+
+    override fun delete(id: TransactionId)
+    {
+        failWith?.let { throw it }
+        deleted += id
+    }
+}
+
 private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Transaction.recorded(
     id = TransactionId(Uuid.random()),
     accountId = AccountId(Uuid.random()),
@@ -102,7 +119,10 @@ class TransactionFormViewModelTest
     private val recordTransfer = FakeRecordTransfer()
     private val revision = DataRevision()
     private val updateTransaction = FakeUpdateTransaction()
-    private val viewModel = TransactionFormViewModel(recordTransaction, recordTransfer, updateTransaction, revision, now = { NOW })
+    private val deleteTransaction = FakeDeleteTransaction()
+    private val viewModel = TransactionFormViewModel(
+        recordTransaction, recordTransfer, updateTransaction, deleteTransaction, revision, now = { NOW },
+    )
 
     private val checking = anAccount()
     private val savings = anAccount()
@@ -483,5 +503,200 @@ class TransactionFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.ACCOUNT_NOT_FOUND)
         assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `asking to delete an edited expense asks for confirmation, naming it and its amount`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+
+        // WHEN
+        viewModel.askToDelete()
+
+        // THEN an expense weighs negatively
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Courses", -1_250))
+        assertThat(form).isNotNull()
+        assertThat(deleteTransaction.deleted).isEmpty()
+    }
+
+    @Test
+    fun `an income is named with a positive amount`()
+    {
+        // GIVEN
+        val income = Transaction.recorded(
+            id = TransactionId(Uuid.random()), accountId = checking.id, amount = Money(245_000),
+            title = TransactionTitle("Salaire"), category = RecordableTransactionCategory.INCOME,
+            subcategory = null, description = null, date = NOW,
+        )
+        viewModel.openForEdit(income)
+
+        // WHEN
+        viewModel.askToDelete()
+
+        // THEN
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Salaire", 245_000))
+    }
+
+    @Test
+    fun `the confirmation names the transaction as it was, not as the form was changed`()
+    {
+        // GIVEN the user retitled and re-priced it without saving, then changed their mind
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.update(form!!.copy(title = "Autre chose", amountText = "999"))
+
+        // WHEN
+        viewModel.askToDelete()
+
+        // THEN what would be erased is the stored transaction
+        assertThat(viewModel.uiState.value.confirmingDelete).isEqualTo(TransactionToDelete("Courses", -1_250))
+    }
+
+    @Test
+    fun `there is nothing to delete in a new transaction`()
+    {
+        // GIVEN
+        viewModel.open(listOf(checking), preselectedAccountId = null)
+
+        // WHEN
+        viewModel.askToDelete()
+
+        // THEN
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+    }
+
+    @Test
+    fun `dismissing the confirmation keeps the form open and deletes nothing`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.askToDelete()
+
+        // WHEN
+        viewModel.dismissDeleteConfirmation()
+
+        // THEN
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+        assertThat(form).isNotNull()
+        assertThat(deleteTransaction.deleted).isEmpty()
+    }
+
+    @Test
+    fun `confirming deletes the transaction, refreshes the lists and closes everything`()
+    {
+        // GIVEN
+        val transaction = anExistingExpense()
+        viewModel.openForEdit(transaction)
+        viewModel.askToDelete()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.confirmDelete()
+
+        // THEN
+        assertThat(deleteTransaction.deleted).containsExactly(transaction.id)
+        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
+        assertThat(form).isNull()
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+    }
+
+    @Test
+    fun `a refused deletion keeps the form open and says why`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.askToDelete()
+        deleteTransaction.failWith = CannotDeleteInitialDepositException()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.confirmDelete()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+        assertThat(form).isNotNull()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+    }
+
+    @Test
+    fun `confirming with no form open deletes nothing`()
+    {
+        // WHEN
+        viewModel.confirmDelete()
+
+        // THEN
+        assertThat(deleteTransaction.deleted).isEmpty()
+    }
+
+    @Test
+    fun `closing the sheet drops a pending confirmation`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.askToDelete()
+
+        // WHEN
+        viewModel.close()
+
+        // THEN
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+    }
+
+    @Test
+    fun `a later edit is about its own transaction, not a previous one`()
+    {
+        // GIVEN a first edit that was abandoned
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.close()
+        val second = Transaction.recorded(
+            id = TransactionId(Uuid.random()), accountId = checking.id, amount = Money(500),
+            title = TransactionTitle("Café"), category = RecordableTransactionCategory.EXPENSE,
+            subcategory = null, description = null, date = NOW,
+        )
+
+        // WHEN
+        viewModel.openForEdit(second)
+        viewModel.askToDelete()
+        viewModel.confirmDelete()
+
+        // THEN
+        assertThat(deleteTransaction.deleted).containsExactly(second.id)
+    }
+
+    @Test
+    fun `an edit refused because the transaction is a transfer leg is an answer on screen, not a crash`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        updateTransaction.failWith = CannotUpdateTransferException()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
+        assertThat(form).isNotNull()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
+    }
+
+    @Test
+    fun `a deletion refused because the transaction is a transfer leg is an answer on screen, not a crash`()
+    {
+        // GIVEN
+        viewModel.openForEdit(anExistingExpense())
+        viewModel.askToDelete()
+        deleteTransaction.failWith = CannotDeleteTransferException()
+        val revisionBefore = revision.value.value
+
+        // WHEN
+        viewModel.confirmDelete()
+
+        // THEN
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
+        assertThat(viewModel.uiState.value.confirmingDelete).isNull()
+        assertThat(form).isNotNull()
+        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 }
