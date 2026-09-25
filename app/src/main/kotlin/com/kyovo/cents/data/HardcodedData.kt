@@ -24,9 +24,9 @@ import java.util.Currency
 import java.util.UUID
 
 /**
- * Fixed demo data for the accounts/transactions screens, seeded straight into the in-memory
- * repositories. Stands in for real user input until account creation and transaction recording
- * are wired into the UI.
+ * Fixed demo data for the accounts/transactions screens, put into the storage by [seedDemoDataIfEmpty]
+ * (debug builds only). Gives a debug build something to look at, next to what the user records
+ * themselves.
  */
 suspend fun seedHardcodedData(
     accountRepository: AccountRepository,
