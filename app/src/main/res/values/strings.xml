@@ -123,6 +123,10 @@
     <!-- Transaction form -->
     <string name="transaction_form_title">Nouvelle transaction</string>
     <string name="transaction_form_title_edit">Modifier la transaction</string>
+    <string name="transaction_form_delete">Supprimer la transaction</string>
+    <string name="transaction_delete_title">Supprimer cette transaction ?</string>
+    <string name="transaction_delete_body">« %1$s » (%2$s) sera supprimée définitivement, et le solde de son compte sera recalculé.</string>
+    <string name="transaction_delete_confirm">Supprimer</string>
     <string name="transaction_form_archived_notice">Le compte « %1$s » est archivé : modifier cette transaction change son solde final.</string>
     <string name="transaction_form_type_expense">Dépense</string>
     <string name="transaction_form_type_income">Revenu</string>

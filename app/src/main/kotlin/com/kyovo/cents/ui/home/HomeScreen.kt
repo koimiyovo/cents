@@ -54,6 +54,7 @@ import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
+import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import kotlinx.coroutines.launch
@@ -268,7 +269,16 @@ fun HomeScreen(
             failure = formState.failure,
             onFormChange = formViewModel::update,
             onSubmit = formViewModel::submit,
+            onDelete = formViewModel::askToDelete,
             onDismiss = formViewModel::close,
+        )
+    }
+    formState.confirmingDelete?.let { transaction ->
+        DeleteTransactionDialog(
+            palette = palette,
+            transaction = transaction,
+            onConfirm = formViewModel::confirmDelete,
+            onDismiss = formViewModel::dismissDeleteConfirmation,
         )
     }
     accountFormState.form?.let { form ->

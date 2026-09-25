@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
                     recordTransaction = appContainer.recordTransaction,
                     recordTransfer = appContainer.recordTransfer,
                     updateTransaction = appContainer.updateTransaction,
+                    deleteTransaction = appContainer.deleteTransaction,
                     dataRevision = appContainer.dataRevision,
                 )
             }
