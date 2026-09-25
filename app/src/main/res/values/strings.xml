@@ -2,7 +2,7 @@
     <string name="app_name">Cents</string>
 
     <string name="splash_tagline">Votre argent, simplement suivi</string>
-    <string name="splash_privacy_badge">100% sur l\'appareil &amp; privé</string>
+    <string name="splash_privacy_badge" formatted="false">100% sur l\'appareil &amp; privé</string>
     <string name="splash_status">Chargement de vos données</string>
     <string name="splash_version">v%1$s</string>
 
@@ -11,9 +11,9 @@
     <string name="onboarding_back">← Retour</string>
 
     <!-- Onboarding — page 1 -->
-    <string name="onboarding_page1_badge">100% Hors-ligne &amp; Privé</string>
+    <string name="onboarding_page1_badge" formatted="false">100% Hors-ligne &amp; Privé</string>
     <string name="onboarding_page1_title">Reprenez le contrôle de vos finances</string>
-    <string name="onboarding_page1_feature1_title">100% hors-ligne</string>
+    <string name="onboarding_page1_feature1_title" formatted="false">100% hors-ligne</string>
     <string name="onboarding_page1_feature1_description">Aucune donnée envoyée, aucun compte.</string>
     <string name="onboarding_page1_feature2_title">Tous vos comptes</string>
     <string name="onboarding_page1_feature2_description">Courant, épargne et espèces.</string>
@@ -36,7 +36,7 @@
     <string name="onboarding_page2_feature3_title">Vos données restent chez vous</string>
     <string name="onboarding_page2_feature3_description">Rien n\'est envoyé sur internet.</string>
     <string name="onboarding_page2_button">Suivant →</string>
-    <string name="onboarding_page2_caption">🔒 100% sur cet appareil</string>
+    <string name="onboarding_page2_caption" formatted="false">🔒 100% sur cet appareil</string>
 
     <!-- Onboarding — page 3 -->
     <string name="onboarding_page3_badge">Saisie rapide</string>
