@@ -96,11 +96,4 @@ class AppContainer(persistence: RoomPersistence) {
         unitOfWork,
     )
 
-
-    /**
-     * Puts the demo data into an empty database (see [seedDemoDataIfEmpty]); a debug build asks for it
-     * once at startup, off the main thread.
-     */
-    suspend fun seedDemoDataIfEmpty(): Boolean =
-        com.kyovo.cents.data.seedDemoDataIfEmpty(accountRepository, transactionRepository, subcategoryRepository, unitOfWork)
 }
