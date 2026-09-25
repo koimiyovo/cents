@@ -1,0 +1,10 @@
+package com.kyovo.cents.domain.model
+
+enum class TransactionCategory
+{
+    INCOME,
+    EXPENSE,
+    INITIAL_DEPOSIT,
+    TRANSFER_OUT,
+    TRANSFER_IN
+}

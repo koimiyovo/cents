@@ -7,5 +7,7 @@ data class Account(
     val name: AccountName,
     val type: AccountType,
     val currency: AccountCurrency,
-    val createdAt: Instant
+    val createdAt: Instant,
+    val archivedAt: Instant? = null,
+    val description: AccountDescription? = null
 )

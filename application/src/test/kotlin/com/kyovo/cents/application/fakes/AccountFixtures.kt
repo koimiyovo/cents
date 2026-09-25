@@ -5,6 +5,7 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import java.time.Clock
 import java.time.Instant
@@ -37,17 +38,19 @@ fun anAccount(
     name: AccountName = AccountName("Livret A"),
     type: AccountType = AccountType.CHECKING,
     currency: AccountCurrency = aCurrency(),
-    createdAt: Instant = anInstant()
+    createdAt: Instant = anInstant(),
+    archivedAt: Instant? = null
 ): Account
 {
-    return Account(id, name, type, currency, createdAt)
+    return Account(id, name, type, currency, createdAt, archivedAt)
 }
 
 fun anOpenAccountCommand(
     name: AccountName = AccountName("Livret A"),
     type: AccountType = AccountType.CHECKING,
-    currency: AccountCurrency = aCurrency()
+    currency: AccountCurrency = aCurrency(),
+    initialAmount: Money = aMoney()
 ): OpenAccountCommand
 {
-    return OpenAccountCommand(name, type, currency)
+    return OpenAccountCommand(name, type, currency, initialAmount)
 }

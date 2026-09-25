@@ -11,13 +11,20 @@ class InMemoryAccountRepository : AccountRepository
 
     override fun save(account: Account)
     {
-        saved.removeAll { it.id == account.id }
-        saved.add(account)
+        val index = saved.indexOfFirst { it.id == account.id }
+        if (index >= 0) saved[index] = account else saved.add(account)
+    }
+
+    override fun reorder(orderedIds: List<AccountId>)
+    {
+        val byId = saved.associateBy { it.id }
+        val positions = saved.indices.filter { saved[it].id in orderedIds }
+        positions.zip(orderedIds).forEach { (position, id) -> saved[position] = byId.getValue(id) }
     }
 
     override fun existsByName(name: AccountName): Boolean
     {
-        return saved.any { it.name.matches(name) }
+        return saved.any { it.archivedAt == null && it.name.matches(name) }
     }
 
     override fun findById(id: AccountId): Account?
