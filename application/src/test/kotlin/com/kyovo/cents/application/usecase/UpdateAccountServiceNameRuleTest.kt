@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
@@ -32,7 +34,7 @@ class UpdateAccountServiceNameRuleTest
         UpdateAccountCommand(accountId, AccountName(name), AccountType.CHECKING, description = null)
 
     @Test
-    fun `allows renaming an account to a name only an archived account holds`()
+    fun `allows renaming an account to a name only an archived account holds`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -49,7 +51,7 @@ class UpdateAccountServiceNameRuleTest
     }
 
     @Test
-    fun `still refuses a name held by an active account when an archived account holds it too`()
+    fun `still refuses a name held by an active account when an archived account holds it too`() = runTest()
     {
         // GIVEN the archived twin must not hide the active one
         val repository = InMemoryAccountRepository()
@@ -59,13 +61,13 @@ class UpdateAccountServiceNameRuleTest
         val service = UpdateAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(renameTo("Compte courant")) }
+        assertThatThrownBySuspending { service.update(renameTo("Compte courant")) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["Compte courant", "compte courant", "  COMPTE COURANT  "])
-    fun `refuses any case or spacing variant of an active account's name`(variant: String)
+    fun `refuses any case or spacing variant of an active account's name`(variant: String) = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -74,12 +76,12 @@ class UpdateAccountServiceNameRuleTest
         val service = UpdateAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(renameTo(variant)) }
+        assertThatThrownBySuspending { service.update(renameTo(variant)) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @Test
-    fun `refuses renaming an archived account to a name held by an active account`()
+    fun `refuses renaming an archived account to a name held by an active account`() = runTest()
     {
         // GIVEN it would only create a conflict waiting to happen at unarchiving time
         val repository = InMemoryAccountRepository()
@@ -88,12 +90,12 @@ class UpdateAccountServiceNameRuleTest
         val service = UpdateAccountService(repository)
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(renameTo("Compte courant")) }
+        assertThatThrownBySuspending { service.update(renameTo("Compte courant")) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @Test
-    fun `allows renaming an archived account to a name only other archived accounts hold`()
+    fun `allows renaming an archived account to a name only other archived accounts hold`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -109,7 +111,7 @@ class UpdateAccountServiceNameRuleTest
     }
 
     @Test
-    fun `lets an archived account keep its own name when only its description changes`()
+    fun `lets an archived account keep its own name when only its description changes`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -130,7 +132,7 @@ class UpdateAccountServiceNameRuleTest
     }
 
     @Test
-    fun `renaming an archived account leaves it archived`()
+    fun `renaming an archived account leaves it archived`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()

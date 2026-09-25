@@ -9,7 +9,7 @@ import com.kyovo.cents.domain.port.output.AccountRepository
 class ReorderAccountsService(private val accountRepository: AccountRepository) :
     ReorderAccountsUseCase
 {
-    override fun reorder(orderedIds: List<AccountId>)
+    override suspend fun reorder(orderedIds: List<AccountId>)
     {
         if (orderedIds.toSet().size != orderedIds.size)
         {

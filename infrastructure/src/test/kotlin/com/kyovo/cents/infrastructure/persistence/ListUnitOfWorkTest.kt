@@ -1,5 +1,9 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -16,6 +20,7 @@ import java.time.Instant
 import java.util.Currency
 import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ListUnitOfWorkTest
 {
     @Test
@@ -87,6 +92,59 @@ class ListUnitOfWorkTest
 
         // THEN
         assertThat(accountRepository.findAll()).containsExactly(existingAccount)
+    }
+
+    // A screen collecting the accounts must not be left showing what a failed unit of work had
+    // written: the rollback restores the repository *and* tells its observers.
+    @Test
+    fun `a rollback is seen by the observers of the accounts`() = runTest()
+    {
+        // GIVEN a screen collecting the accounts
+        val accountRepository = ListAccountRepository()
+        val unitOfWork = ListUnitOfWork(accountRepository, ListTransactionRepository(), ListSubcategoryRepository())
+        val existing = anAccount(name = AccountName("Livret A"))
+        accountRepository.save(existing)
+        val seen = mutableListOf<List<String>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))
+        {
+            accountRepository.observeAll().collect { list -> seen += list.map { it.name.value } }
+        }
+
+        // WHEN a unit of work fails after having added an account
+        assertThatThrownBySuspending {
+            unitOfWork.execute {
+                accountRepository.save(
+                    anAccount(id = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222")), name = AccountName("Compte courant")),
+                )
+                throw RuntimeException("boom")
+            }
+        }.isInstanceOf(RuntimeException::class.java)
+
+        // THEN the observer saw the account come, then go
+        assertThat(seen).containsExactly(listOf("Livret A"), listOf("Livret A", "Compte courant"), listOf("Livret A"))
+    }
+
+    @Test
+    fun `a rollback puts a reordered list back for the observers`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = ListAccountRepository()
+        val unitOfWork = ListUnitOfWork(accountRepository, ListTransactionRepository(), ListSubcategoryRepository())
+        val first = anAccount(id = AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")), name = AccountName("A"))
+        val second = anAccount(id = AccountId(Uuid.parse("22222222-2222-2222-2222-222222222222")), name = AccountName("B"))
+        accountRepository.save(first)
+        accountRepository.save(second)
+
+        // WHEN a reorder is followed by a failure
+        assertThatThrownBySuspending {
+            unitOfWork.execute {
+                accountRepository.reorder(listOf(second.id, first.id))
+                throw RuntimeException("boom")
+            }
+        }.isInstanceOf(RuntimeException::class.java)
+
+        // THEN
+        assertThat(accountRepository.observeAll().first()).containsExactly(first, second)
     }
 
     private fun anAccount(

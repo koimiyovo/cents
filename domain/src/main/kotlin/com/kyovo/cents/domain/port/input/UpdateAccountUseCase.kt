@@ -4,5 +4,5 @@ import com.kyovo.cents.domain.model.Account
 
 interface UpdateAccountUseCase
 {
-    fun update(command: UpdateAccountCommand): Account
+    suspend fun update(command: UpdateAccountCommand): Account
 }

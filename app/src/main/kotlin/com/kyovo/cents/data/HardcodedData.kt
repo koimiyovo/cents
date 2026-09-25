@@ -68,7 +68,7 @@ suspend fun seedHardcodedData(
         description = AccountDescription.of("Compte joint clos après le déménagement"),
     )
 
-    listOf(checking, cash, oldJoint).forEach(accountRepository::save)
+    listOf(checking, cash, oldJoint).forEach { accountRepository.save(it) }
 
     fun deposit(accountId: AccountId, amountCents: Long, date: Instant)
     {

@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.home
 
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -84,7 +86,16 @@ fun AccountDetailsScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
-    val account = remember(accountId, revision) { getAccount.get(accountId) }
+    // Observed, so a rename or an archival made from this very page shows at once. Null while the first
+    // value is on its way (nothing to show yet, and above all not "account not found").
+    val lookup by remember(accountId) { getAccount.observe(accountId).map { AccountLookup(it) } }
+        .collectAsStateWithLifecycle(initialValue = null)
+    val account = lookup?.account
+    if (lookup == null)
+    {
+        Box(modifier = modifier.fillMaxSize().background(palette.background))
+        return
+    }
 
     if (account == null)
     {
@@ -105,8 +116,10 @@ fun AccountDetailsScreen(
         return
     }
 
-    val balanceCents =
-        remember(accountId, revision) { getAccountBalance.getBalance(accountId)?.value ?: 0L }
+    // Computed from the transactions, which are not observed yet: recomputed (suspending) on each revision.
+    val balanceCents by produceState(0L, accountId, revision) {
+        value = getAccountBalance.getBalance(accountId)?.value ?: 0L
+    }
     val accountTransactions =
         remember(accountId, revision) { listTransactions.list(accountId = accountId) }
     // Already ordered by name by the use case.
@@ -524,4 +537,7 @@ internal fun ArchiveConfirmationDialog(
             }
         },
     )
-}
+}
+
+/** The account a page asked for, or none if there is no such account (as opposed to "not loaded yet"). */
+private class AccountLookup(val account: Account?)

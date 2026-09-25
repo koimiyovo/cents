@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import kotlinx.coroutines.runBlocking
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
@@ -57,7 +58,7 @@ class SubcategoryScenariosTest
 
     init
     {
-        accountRepository.save(anAccount(id = accountId))
+        runBlocking { accountRepository.save(anAccount(id = accountId)) }
     }
 
     private suspend fun spend(cents: Long, subcategoryId: SubcategoryId?) =

@@ -11,7 +11,7 @@ class GetAccountBalanceService(
     private val transactionRepository: TransactionRepository
 ) : GetAccountBalanceUseCase
 {
-    override fun getBalance(accountId: AccountId): AccountBalance?
+    override suspend fun getBalance(accountId: AccountId): AccountBalance?
     {
         accountRepository.findById(accountId) ?: return null
         

@@ -89,10 +89,10 @@ fun TransactionsScreen(
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
 
-    val accounts = remember(revision) { listAccounts.list() }
+    val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The account filter offers the active accounts only, but the list still shows the history of
     // archived ones: their names must resolve too, or those rows would lose their account.
-    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val accountsById =
         remember(accounts, archivedAccounts) { (accounts + archivedAccounts).associateBy { it.id } }
     val allTransactions = remember(revision) { listTransactions.list() }
