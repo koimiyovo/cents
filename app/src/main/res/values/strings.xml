@@ -122,6 +122,8 @@
 
     <!-- Transaction form -->
     <string name="transaction_form_title">Nouvelle transaction</string>
+    <string name="transaction_form_title_edit">Modifier la transaction</string>
+    <string name="transaction_form_archived_notice">Le compte « %1$s » est archivé : modifier cette transaction change son solde final.</string>
     <string name="transaction_form_type_expense">Dépense</string>
     <string name="transaction_form_type_income">Revenu</string>
     <string name="transaction_form_type_transfer">Virement</string>
@@ -149,6 +151,7 @@
     <string name="transaction_form_date_ok">OK</string>
     <string name="transaction_form_date_cancel">Annuler</string>
     <string name="transaction_form_failure_account_not_found">Ce compte n\'existe plus.</string>
+    <string name="transaction_form_failure_unavailable">Cette transaction n\'existe plus ou ne peut plus être modifiée.</string>
     <string name="transaction_form_failure_archived">Ce compte est archivé : il ne peut plus recevoir de transaction.</string>
     <string name="transaction_form_add_label">Transaction</string>
 
