@@ -126,4 +126,30 @@ class UpdateSubcategoryServiceTest
         // THEN
         assertThat(result.name).isEqualTo(SubcategoryName("Transport"))
     }
+
+    @Test
+    fun `throws when another subcategory of the same kind has that name with other accents`()
+    {
+        // GIVEN
+        repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
+        repository.save(aSubcategory(id = otherId, name = SubcategoryName("Éducation")))
+
+        // WHEN / THEN
+        assertThatThrownBy { service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("education"))) }
+            .isInstanceOf(DuplicateSubcategoryNameException::class.java)
+    }
+
+    // Adding the accent it was missing is a change of its own name, not a clash with itself.
+    @Test
+    fun `accepts adding an accent to its own name`()
+    {
+        // GIVEN
+        repository.save(aSubcategory(id = id, name = SubcategoryName("Education")))
+
+        // WHEN
+        val result = service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Éducation")))
+
+        // THEN
+        assertThat(result.name.value).isEqualTo("Éducation")
+    }
 }

@@ -107,4 +107,34 @@ class ListSubcategoriesServiceTest
         // THEN
         assertThat(service.list().map { it.name.value }).containsExactly("Transport", "Zoo")
     }
+
+    // The same name under both kinds is legitimate ("Autre"); neither goes first by rule, so the
+    // stored order decides — and stays, listing after listing.
+    @Test
+    fun `equal names keep the stored order`()
+    {
+        // GIVEN
+        val incomeOther = aNamed(1, "Autre", RecordableTransactionCategory.INCOME)
+        val expenseOther = aNamed(2, "Autre", RecordableTransactionCategory.EXPENSE)
+        repository.save(incomeOther)
+        repository.save(expenseOther)
+
+        // WHEN / THEN
+        assertThat(service.list()).containsExactly(incomeOther, expenseOther)
+    }
+
+    @Test
+    fun `names that only differ by case or accents count as equal, and keep the stored order`()
+    {
+        // GIVEN
+        val lower = aNamed(1, "éducation", RecordableTransactionCategory.INCOME)
+        val plain = aNamed(2, "Education", RecordableTransactionCategory.EXPENSE)
+        val other = aNamed(3, "Divers")
+        repository.save(lower)
+        repository.save(plain)
+        repository.save(other)
+
+        // WHEN / THEN
+        assertThat(service.list()).containsExactly(other, lower, plain)
+    }
 }
