@@ -40,7 +40,7 @@ private class FakeUpdateAccount : UpdateAccountUseCase
     val commands = mutableListOf<UpdateAccountCommand>()
     var failWith: RuntimeException? = null
 
-    override fun update(command: UpdateAccountCommand): Account
+    override suspend fun update(command: UpdateAccountCommand): Account
     {
         failWith?.let { throw it }
         commands += command

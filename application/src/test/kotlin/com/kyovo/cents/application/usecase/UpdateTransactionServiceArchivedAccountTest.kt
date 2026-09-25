@@ -46,7 +46,7 @@ class UpdateTransactionServiceArchivedAccountTest
 
     private val archivedAccount = anAccount(id = accountId).copy(archivedAt = anInstant("2026-01-01T00:00:00Z"))
 
-    private fun givenAnExpenseOnTheArchivedAccount()
+    private suspend fun givenAnExpenseOnTheArchivedAccount()
     {
         accountRepository.save(archivedAccount)
         transactionRepository.save(

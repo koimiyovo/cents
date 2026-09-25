@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -31,17 +32,17 @@ class ListAccountRepositoryOrderTest
         createdAt = Instant.parse("2026-09-22T10:00:00Z"),
     )
 
-    private fun repositoryWith(ids: List<AccountId>): ListAccountRepository
+    private suspend fun repositoryWith(ids: List<AccountId>): ListAccountRepository
     {
         val repository = ListAccountRepository()
         ids.forEach { repository.save(anAccount(it)) }
         return repository
     }
 
-    private fun ListAccountRepository.ids(): List<AccountId> = findAll().map { it.id }
+    private suspend fun ListAccountRepository.ids(): List<AccountId> = findAll().map { it.id }
 
     @Test
-    fun `a new account is added at the end`()
+    fun `a new account is added at the end`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB))
@@ -54,7 +55,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `saving an existing account again keeps its position`()
+    fun `saving an existing account again keeps its position`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB, idC))
@@ -68,7 +69,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `saving an existing account again does not duplicate it`()
+    fun `saving an existing account again does not duplicate it`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB))
@@ -81,7 +82,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `reordering puts the accounts in the given order`()
+    fun `reordering puts the accounts in the given order`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB, idC))
@@ -94,7 +95,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `reordering does not alter the accounts themselves`()
+    fun `reordering does not alter the accounts themselves`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB, idC))
@@ -108,7 +109,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `reordering leaves the accounts that are not listed where they are`()
+    fun `reordering leaves the accounts that are not listed where they are`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idD, idB, idC))
@@ -121,7 +122,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `reordering only some of the accounts shuffles them among their own positions`()
+    fun `reordering only some of the accounts shuffles them among their own positions`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB, idC))
@@ -134,7 +135,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `reordering with an empty list changes nothing`()
+    fun `reordering with an empty list changes nothing`() = runTest()
     {
         // GIVEN
         val repository = repositoryWith(listOf(idA, idB, idC))
@@ -147,7 +148,7 @@ class ListAccountRepositoryOrderTest
     }
 
     @Test
-    fun `the order survives a snapshot and restore`()
+    fun `the order survives a snapshot and restore`() = runTest()
     {
         // GIVEN a failed multi-write is rolled back with these, and must not scramble the list
         val repository = repositoryWith(listOf(idA, idB, idC))

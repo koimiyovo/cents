@@ -13,7 +13,7 @@ class ArchiveAccountService(
     private val clock: Clock
 ) : ArchiveAccountUseCase
 {
-    override fun archive(id: AccountId): Account
+    override suspend fun archive(id: AccountId): Account
     {
         val account = accountRepository.findById(id) ?: throw AccountNotFoundException()
         if (account.archivedAt != null)

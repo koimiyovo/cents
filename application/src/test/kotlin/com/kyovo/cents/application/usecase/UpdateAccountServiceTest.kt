@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.anAccount
@@ -18,7 +20,7 @@ import org.junit.jupiter.api.Test
 class UpdateAccountServiceTest
 {
     @Test
-    fun `updates the name and type of an existing account while keeping its currency and creation instant`()
+    fun `updates the name and type of an existing account while keeping its currency and creation instant`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -54,7 +56,7 @@ class UpdateAccountServiceTest
     }
 
     @Test
-    fun `throws when no account matches the given id`()
+    fun `throws when no account matches the given id`() = runTest()
     {
         // GIVEN
         val repository = InMemoryAccountRepository()
@@ -67,12 +69,12 @@ class UpdateAccountServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(AccountNotFoundException::class.java)
     }
 
     @Test
-    fun `throws when the new name is already used by a different account`()
+    fun `throws when the new name is already used by a different account`() = runTest()
     {
         // GIVEN
         val idToUpdate = anAccountId()
@@ -89,12 +91,12 @@ class UpdateAccountServiceTest
         )
 
         // WHEN / THEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
     }
 
     @Test
-    fun `does not save the account when the new name is already used by a different account`()
+    fun `does not save the account when the new name is already used by a different account`() = runTest()
     {
         // GIVEN
         val idToUpdate = anAccountId()
@@ -112,7 +114,7 @@ class UpdateAccountServiceTest
         )
 
         // WHEN
-        assertThatThrownBy { service.update(command) }
+        assertThatThrownBySuspending { service.update(command) }
             .isInstanceOf(DuplicateAccountNameException::class.java)
 
         // THEN
@@ -120,7 +122,7 @@ class UpdateAccountServiceTest
     }
 
     @Test
-    fun `allows keeping the account's own name, even with a different case, when updating its type`()
+    fun `allows keeping the account's own name, even with a different case, when updating its type`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -137,7 +139,7 @@ class UpdateAccountServiceTest
     }
 
     @Test
-    fun `sets the description of an account that had none`()
+    fun `sets the description of an account that had none`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -156,7 +158,7 @@ class UpdateAccountServiceTest
     }
 
     @Test
-    fun `replaces an existing description`()
+    fun `replaces an existing description`() = runTest()
     {
         // GIVEN
         val id = anAccountId()
@@ -176,7 +178,7 @@ class UpdateAccountServiceTest
     }
 
     @Test
-    fun `clears the description when the command carries none`()
+    fun `clears the description when the command carries none`() = runTest()
     {
         // GIVEN
         val id = anAccountId()

@@ -5,5 +5,5 @@ import com.kyovo.cents.domain.model.AccountId
 
 interface GetAccountBalanceUseCase
 {
-    fun getBalance(accountId: AccountId): AccountBalance?
+    suspend fun getBalance(accountId: AccountId): AccountBalance?
 }

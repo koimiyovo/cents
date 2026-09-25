@@ -110,8 +110,8 @@ fun HomeScreen(
     val initialDepositFormState by initialDepositFormViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
-    val accounts = remember(revision) { listAccounts.list() }
-    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
@@ -135,24 +135,28 @@ fun HomeScreen(
     // or on an account that already is in the wanted state, must not crash the app — the wanted
     // state is reached either way, so there is nothing to report.
     val archive: (AccountId) -> Unit = { id ->
-        try
-        {
-            archiveAccount.archive(id)
-        } catch (e: AccountAlreadyArchivedException)
-        {
-            // already archived: nothing to do
+        coroutineScope.launch {
+            try
+            {
+                archiveAccount.archive(id)
+            } catch (e: AccountAlreadyArchivedException)
+            {
+                // already archived: nothing to do
+            }
+            dataRevision.bump()
         }
-        dataRevision.bump()
     }
     val reorder: (List<AccountId>) -> Unit = { ids ->
-        try
-        {
-            reorderAccounts.reorder(ids)
-        } catch (e: AccountNotFoundException)
-        {
-            // An account vanished since the list was read: nothing to reorder, just refresh.
+        coroutineScope.launch {
+            try
+            {
+                reorderAccounts.reorder(ids)
+            } catch (e: AccountNotFoundException)
+            {
+                // An account vanished since the list was read: nothing to reorder, just refresh.
+            }
+            dataRevision.bump()
         }
-        dataRevision.bump()
     }
     val delete: (AccountId, Boolean) -> Unit = { id, deleteTransactions ->
         // Deleting is a suspend call: launched in the screen's scope, the page it leaves does not wait for it.
@@ -174,17 +178,19 @@ fun HomeScreen(
     // details button and the list swipe, hence held here rather than in either screen.
     var unarchiveBlockedName by rememberSaveable { mutableStateOf<String?>(null) }
     val unarchive: (AccountId) -> Unit = { id ->
-        try
-        {
-            unarchiveAccount.unarchive(id)
-        } catch (e: AccountNotArchivedException)
-        {
-            // already active: nothing to do
-        } catch (e: DuplicateAccountNameException)
-        {
-            unarchiveBlockedName = getAccount.get(id)?.name?.value
+        coroutineScope.launch {
+            try
+            {
+                unarchiveAccount.unarchive(id)
+            } catch (e: AccountNotArchivedException)
+            {
+                // already active: nothing to do
+            } catch (e: DuplicateAccountNameException)
+            {
+                unarchiveBlockedName = getAccount.get(id)?.name?.value
+            }
+            dataRevision.bump()
         }
-        dataRevision.bump()
     }
 
     // An account created from the transaction form (when there was none) is chosen in it at once.
@@ -209,9 +215,8 @@ fun HomeScreen(
         {
             // An archived account can't receive transactions (domain rule): no button rather than
             // a button leading to an error.
-            val canAddTransaction = remember(openedAccountId, revision) {
-                canAddTransactionTo(getAccount.get(openedAccountId))
-            }
+            val openedAccount = (accounts + archivedAccounts).find { it.id == openedAccountId }
+            val canAddTransaction = canAddTransactionTo(openedAccount)
             Box(modifier = Modifier.weight(1f)) {
                 AccountDetailsScreen(
                     accountId = openedAccountId,
@@ -229,7 +234,7 @@ fun HomeScreen(
                     },
                     // Stays on the page: the account is active again, so the "+" button reappears.
                     onUnarchive = { unarchive(openedAccountId) },
-                    onEdit = { getAccount.get(openedAccountId)?.let(accountFormViewModel::openForEdit) },
+                    onEdit = { openedAccount?.let(accountFormViewModel::openForEdit) },
                     // The account is gone: back to the list.
                     onDelete = { deleteTransactions ->
                         delete(openedAccountId, deleteTransactions)

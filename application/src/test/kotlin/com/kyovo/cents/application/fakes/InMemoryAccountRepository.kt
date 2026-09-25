@@ -4,41 +4,55 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.port.output.AccountRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class InMemoryAccountRepository : AccountRepository
 {
-    val saved = mutableListOf<Account>()
+    private val state = MutableStateFlow<List<Account>>(emptyList())
 
-    override fun save(account: Account)
+    /** What is stored, in order (for the tests to look at). */
+    val saved: List<Account> get() = state.value
+
+    override suspend fun save(account: Account)
     {
-        val index = saved.indexOfFirst { it.id == account.id }
-        if (index >= 0) saved[index] = account else saved.add(account)
+        val current = state.value
+        val index = current.indexOfFirst { it.id == account.id }
+        state.value = if (index >= 0) current.toMutableList().also { it[index] = account } else current + account
     }
 
-    override fun reorder(orderedIds: List<AccountId>)
+    override suspend fun reorder(orderedIds: List<AccountId>)
     {
-        val byId = saved.associateBy { it.id }
-        val positions = saved.indices.filter { saved[it].id in orderedIds }
-        positions.zip(orderedIds).forEach { (position, id) -> saved[position] = byId.getValue(id) }
+        val current = state.value
+        val byId = current.associateBy { it.id }
+        val positions = current.indices.filter { current[it].id in orderedIds }
+        val reordered = current.toMutableList()
+        positions.zip(orderedIds).forEach { (position, id) -> reordered[position] = byId.getValue(id) }
+        state.value = reordered
     }
 
-    override fun existsByName(name: AccountName): Boolean
+    override suspend fun existsByName(name: AccountName): Boolean
     {
-        return saved.any { it.archivedAt == null && it.name.matches(name) }
+        return state.value.any { it.archivedAt == null && it.name.matches(name) }
     }
 
-    override fun findById(id: AccountId): Account?
+    override suspend fun findById(id: AccountId): Account?
     {
-        return saved.find { it.id == id }
+        return state.value.find { it.id == id }
     }
 
-    override fun findAll(): List<Account>
+    override suspend fun findAll(): List<Account>
     {
-        return saved.toList()
+        return state.value
     }
 
-    override fun deleteById(id: AccountId)
+    override suspend fun deleteById(id: AccountId)
     {
-        saved.removeAll { it.id == id }
+        state.value = state.value.filterNot { it.id == id }
+    }
+
+    override fun observeAll(): Flow<List<Account>>
+    {
+        return state
     }
 }

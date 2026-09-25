@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.home
 
+import androidx.compose.runtime.produceState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.res.Configuration
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Canvas
@@ -114,7 +116,7 @@ fun AccountsScreen(
     // needing a scroll just to see the balance.
     val isCompact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val accounts = remember(revision) { listAccounts.list() }
+    val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The order the user has just dropped the rows in, shown until the saved list catches up: the
     // list re-reads on the next revision, and showing the old order for that one frame would make
     // the dropped row flick back before jumping to its place.
@@ -143,14 +145,16 @@ fun AccountsScreen(
     // for the same reason. One at a time: opening a row closes the previous one.
     var revealedId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
-    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The account whose deletion the user is being asked to confirm: from either list.
     var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingDelete = pendingDeleteId?.let { id ->
         (accounts + archivedAccounts).firstOrNull { it.id.value.toString() == id }
     }
-    val balanceByAccountId = remember(accounts, archivedAccounts, revision) {
-        (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
+    // A balance is computed from the transactions, which are not observed yet: recomputed (suspending)
+    // when the accounts or the revision change, the previous figures staying up meanwhile.
+    val balanceByAccountId by produceState(emptyMap<AccountId, Long>(), accounts, archivedAccounts, revision) {
+        value = (accounts + archivedAccounts).associate { it.id to (getAccountBalance.getBalance(it.id)?.value ?: 0L) }
     }
     // The consolidated figures cover the active accounts only: an archived account is closed, so
     // it counts neither in the total nor in the income/expense lines below.

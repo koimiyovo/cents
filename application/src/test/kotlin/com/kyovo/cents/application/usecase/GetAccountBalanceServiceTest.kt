@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
@@ -15,7 +17,7 @@ import org.junit.jupiter.api.Test
 class GetAccountBalanceServiceTest
 {
     @Test
-    fun `returns the account's balance as the sum of its transactions`()
+    fun `returns the account's balance as the sum of its transactions`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -56,7 +58,7 @@ class GetAccountBalanceServiceTest
     }
 
     @Test
-    fun `returns a zero balance when the account has no transactions`()
+    fun `returns a zero balance when the account has no transactions`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -73,7 +75,7 @@ class GetAccountBalanceServiceTest
     }
 
     @Test
-    fun `does not include transactions belonging to other accounts`()
+    fun `does not include transactions belonging to other accounts`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId("11111111-1111-1111-1111-111111111111")
@@ -107,7 +109,7 @@ class GetAccountBalanceServiceTest
     }
 
     @Test
-    fun `returns null when the account does not exist`()
+    fun `returns null when the account does not exist`() = runTest()
     {
         // GIVEN
         val accountRepository = InMemoryAccountRepository()

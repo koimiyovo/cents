@@ -1,12 +1,12 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -17,7 +17,7 @@ import kotlin.uuid.Uuid
 class ListAccountRepositoryTest
 {
     @Test
-    fun `does not consider a name used when no account has been saved`()
+    fun `does not consider a name used when no account has been saved`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -27,7 +27,7 @@ class ListAccountRepositoryTest
     }
 
     @Test
-    fun `considers a name used once an account with that name has been saved`()
+    fun `considers a name used once an account with that name has been saved`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -39,7 +39,7 @@ class ListAccountRepositoryTest
 
     @ParameterizedTest
     @ValueSource(strings = ["livret a", "  Livret A  ", "LIVRET A"])
-    fun `considers a name used regardless of case or surrounding whitespace`(nameVariant: String)
+    fun `considers a name used regardless of case or surrounding whitespace`(nameVariant: String) = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -50,7 +50,7 @@ class ListAccountRepositoryTest
     }
 
     @Test
-    fun `does not consider an unrelated name used`()
+    fun `does not consider an unrelated name used`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -61,7 +61,7 @@ class ListAccountRepositoryTest
     }
 
     @Test
-    fun `replaces an existing account when saving another account with the same id`()
+    fun `replaces an existing account when saving another account with the same id`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -77,7 +77,7 @@ class ListAccountRepositoryTest
     }
 
     @Test
-    fun `no longer finds an account once it has been deleted`()
+    fun `no longer finds an account once it has been deleted`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
@@ -92,18 +92,17 @@ class ListAccountRepositoryTest
     }
 
     @Test
-    fun `does not throw when deleting an account that does not exist`()
+    fun `does not throw when deleting an account that does not exist`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
 
         // WHEN / THEN
-        assertThatCode { repository.deleteById(AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111"))) }
-            .doesNotThrowAnyException()
+        repository.deleteById(AccountId(Uuid.parse("11111111-1111-1111-1111-111111111111")))
     }
 
     @Test
-    fun `does not consider a name used by an archived account`()
+    fun `does not consider a name used by an archived account`() = runTest()
     {
         // GIVEN
         val repository = ListAccountRepository()
