@@ -123,6 +123,9 @@
     <!-- Transaction form -->
     <string name="transaction_form_title">Nouvelle transaction</string>
     <string name="transaction_form_title_edit">Modifier la transaction</string>
+    <string name="initial_deposit_form_title">Modifier le dépôt initial</string>
+    <string name="initial_deposit_form_hint">Seul le montant peut être corrigé : le solde du compte suivra.</string>
+    <string name="initial_deposit_form_failure_unavailable">Ce dépôt n\'existe plus ou ne peut plus être modifié.</string>
     <string name="transaction_form_delete">Supprimer la transaction</string>
     <string name="transaction_delete_title">Supprimer cette transaction ?</string>
     <string name="transaction_delete_body">« %1$s » (%2$s) sera supprimée définitivement, et le solde de son compte sera recalculé.</string>

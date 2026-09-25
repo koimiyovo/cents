@@ -42,6 +42,7 @@ import com.kyovo.cents.domain.exception.CannotDeleteAccountWithTransactionsExcep
 import com.kyovo.cents.domain.exception.AccountNotArchivedException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
@@ -55,8 +56,11 @@ import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
+import com.kyovo.cents.ui.transaction.InitialDepositFormSheet
+import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
+import com.kyovo.cents.ui.transaction.canEditInitialDeposit
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 
@@ -81,6 +85,7 @@ fun HomeScreen(
     listTransactions: ListTransactionsUseCase,
     dataRevision: DataRevision,
     formViewModel: TransactionFormViewModel,
+    initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -90,6 +95,7 @@ fun HomeScreen(
     // Bumped after every write: re-reading on change is how the lists notice a new transaction.
     val revision by dataRevision.value.collectAsStateWithLifecycle()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
+    val initialDepositFormState by initialDepositFormViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
@@ -97,6 +103,13 @@ fun HomeScreen(
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
+
+    // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
+    // correct, an income or an expense has the full form (a transfer leg never reaches here).
+    val openTransaction: (Transaction) -> Unit = { transaction ->
+        if (canEditInitialDeposit(transaction)) initialDepositFormViewModel.openForEdit(transaction)
+        else formViewModel.openForEdit(transaction)
+    }
 
     // Archiving and unarchiving are idempotent from the user's side: a gesture that fires twice,
     // or on an account that already is in the wanted state, must not crash the app — the wanted
@@ -193,7 +206,7 @@ fun HomeScreen(
                         delete(openedAccountId, deleteTransactions)
                         openedAccountUuid = null
                     },
-                    onTransactionClick = formViewModel::openForEdit,
+                    onTransactionClick = openTransaction,
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
@@ -233,7 +246,7 @@ fun HomeScreen(
                                 listAccounts,
                                 listArchivedAccounts,
                                 listTransactions,
-                                onTransactionClick = formViewModel::openForEdit,
+                                onTransactionClick = openTransaction,
                                 revision = revision,
                             )
                     }
@@ -279,6 +292,16 @@ fun HomeScreen(
             transaction = transaction,
             onConfirm = formViewModel::confirmDelete,
             onDismiss = formViewModel::dismissDeleteConfirmation,
+        )
+    }
+    initialDepositFormState.form?.let { form ->
+        InitialDepositFormSheet(
+            form = form,
+            showErrors = initialDepositFormState.showErrors,
+            failure = initialDepositFormState.failure,
+            onFormChange = initialDepositFormViewModel::update,
+            onSubmit = initialDepositFormViewModel::submit,
+            onDismiss = initialDepositFormViewModel::close,
         )
     }
     accountFormState.form?.let { form ->
