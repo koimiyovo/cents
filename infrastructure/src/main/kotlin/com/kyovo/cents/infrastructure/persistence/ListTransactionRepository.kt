@@ -12,7 +12,10 @@ class ListTransactionRepository : TransactionRepository
 
     override suspend fun save(transaction: Transaction)
     {
-        transactions.value = transactions.value.filterNot { it.id == transaction.id } + transaction
+        // An existing transaction is replaced where it stands, like the other repositories.
+        val current = transactions.value
+        val index = current.indexOfFirst { it.id == transaction.id }
+        transactions.value = if (index >= 0) current.toMutableList().also { it[index] = transaction } else current + transaction
     }
 
     internal fun snapshot(): List<Transaction>

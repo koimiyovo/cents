@@ -15,7 +15,9 @@ class InMemoryTransactionRepository : TransactionRepository
 
     override suspend fun save(transaction: Transaction)
     {
-        state.value = state.value.filterNot { it.id == transaction.id } + transaction
+        val current = state.value
+        val index = current.indexOfFirst { it.id == transaction.id }
+        state.value = if (index >= 0) current.toMutableList().also { it[index] = transaction } else current + transaction
     }
 
     override suspend fun findById(id: TransactionId): Transaction?
