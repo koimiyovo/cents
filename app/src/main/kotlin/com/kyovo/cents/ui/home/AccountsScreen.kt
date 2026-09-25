@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -101,6 +102,7 @@ fun AccountsScreen(
     onEditAccount: (Account) -> Unit,
     onDeleteAccount: (AccountId, Boolean) -> Unit,
     onReorderAccounts: (List<AccountId>) -> Unit,
+    onOpenSettings: () -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -184,7 +186,7 @@ fun AccountsScreen(
             .padding(start = 16.dp, end = 16.dp, top = if (isCompact) 10.dp else 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 20.dp),
     ) {
-        HomeTopBar(palette, stringResource(R.string.accounts_title))
+        HomeTopBar(palette, stringResource(R.string.accounts_title), onOpenSettings)
         GreetingRow(palette)
         TotalBalanceCard(
             palette = palette,
@@ -309,23 +311,44 @@ fun AccountsScreen(
     }
 }
 
-/** Shared by every Home tab: the "CENTS" kicker plus that tab's own title. */
+/**
+ * Shared by every Home tab: the "CENTS" kicker plus that tab's own title. The tabs also pass
+ * [onSettingsClick] to show the settings button (a gear) at the right; a screen that has its own
+ * actions leaves it out.
+ */
 @Composable
-internal fun HomeTopBar(palette: AccountsPalette, title: String)
+internal fun HomeTopBar(palette: AccountsPalette, title: String, onSettingsClick: (() -> Unit)? = null)
 {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.accounts_kicker),
-            color = palette.kicker,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = title,
-            color = palette.textPrimary,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-        )
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.accounts_kicker),
+                color = palette.kicker,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = title,
+                color = palette.textPrimary,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        if (onSettingsClick != null)
+        {
+            val description = stringResource(R.string.settings_button_description)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(palette.surface)
+                    .clickable(onClick = onSettingsClick)
+                    .semantics { contentDescription = description },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = "\u2699\uFE0F", fontSize = 20.sp)
+            }
+        }
     }
 }
 

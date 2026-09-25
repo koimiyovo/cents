@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.common.NameAndEmojiField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,17 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryName
-import com.kyovo.cents.ui.common.EmojiPickerField
 import com.kyovo.cents.ui.common.ErrorText
-import com.kyovo.cents.ui.common.FormTextField
 import com.kyovo.cents.ui.common.SUBCATEGORY_EMOJIS
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.limitNameInput
@@ -76,24 +72,17 @@ internal fun NewSubcategoryDialog(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
-            FormTextField(
+            NameAndEmojiField(
                 palette = palette,
-                value = draft.name,
-                onValueChange = { onNameChange(limitNameInput(it, SubcategoryName.MAX_LENGTH)) },
+                name = draft.name,
+                // Typing stops at the domain's limit: the field never holds a name it would refuse.
+                onNameChange = { onNameChange(limitNameInput(it, SubcategoryName.MAX_LENGTH)) },
                 placeholder = stringResource(R.string.new_subcategory_name_placeholder),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done,
-                ),
-                focusRequester = focus,
-            )
-            EmojiPickerField(
-                palette = palette,
+                emoji = draft.emoji,
+                onEmojiChange = onEmojiChange,
                 emojis = SUBCATEGORY_EMOJIS,
-                selected = draft.emoji,
-                onSelect = onEmojiChange,
-                label = stringResource(R.string.new_subcategory_emoji_label),
-                noneLabel = stringResource(R.string.new_subcategory_emoji_none),
+                emojiDescription = stringResource(R.string.new_subcategory_emoji_description),
+                focusRequester = focus,
             )
             draft.error?.let {
                 ErrorText(

@@ -15,6 +15,7 @@ import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
+import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 
@@ -48,6 +49,19 @@ class MainActivity : ComponentActivity() {
             initializer {
                 InitialDepositFormViewModel(
                     updateInitialDeposit = appContainer.updateInitialDeposit,
+                    dataRevision = appContainer.dataRevision,
+                )
+            }
+        }
+    }
+
+    private val subcategoriesViewModel: SubcategoriesViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                SubcategoriesViewModel(
+                    createSubcategory = appContainer.createSubcategory,
+                    updateSubcategory = appContainer.updateSubcategory,
+                    deleteSubcategory = appContainer.deleteSubcategory,
                     dataRevision = appContainer.dataRevision,
                 )
             }
@@ -92,6 +106,7 @@ class MainActivity : ComponentActivity() {
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
+                    subcategoriesViewModel = subcategoriesViewModel,
                 )
             }
         }

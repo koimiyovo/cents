@@ -117,7 +117,9 @@ fun AccountDetailsScreen(
     var selectedPeriod by remember { mutableStateOf(TransactionsPeriod.ALL_TIME) }
     var customFrom by remember { mutableStateOf<LocalDate?>(null) }
     var customTo by remember { mutableStateOf<LocalDate?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
+    var chosenSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
+    // One deleted from the management screen meanwhile no longer filters: back to "all".
+    val selectedSubcategory = validSubcategoryFilter(chosenSubcategory, subcategories)
     var periodMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -219,7 +221,7 @@ fun AccountDetailsScreen(
             palette = palette,
             subcategories = subcategoriesInPeriod,
             selected = selectedSubcategory,
-            onSelect = { selectedSubcategory = it },
+            onSelect = { chosenSubcategory = it },
         )
         if (groupedByDay.isEmpty())
         {
@@ -432,7 +434,7 @@ internal fun accountTypeLabelRes(type: AccountType): Int = when (type)
 
 /** Round surface button with a hand-drawn left chevron (same reasoning as the dropdown chevron: glyph arrows don't align across fonts). */
 @Composable
-private fun BackButton(palette: AccountsPalette, onClick: () -> Unit)
+internal fun BackButton(palette: AccountsPalette, onClick: () -> Unit)
 {
     val description = stringResource(R.string.account_details_back)
     Canvas(
