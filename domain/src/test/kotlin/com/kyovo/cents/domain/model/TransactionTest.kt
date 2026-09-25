@@ -74,7 +74,7 @@ class TransactionTest
         val transaction = Transaction.openingDeposit(id, accountId, amount, date)
 
         // THEN
-        assertThat(transaction.title.value).isEqualTo("Initial deposit")
+        assertThat(transaction.title.value).isEqualTo("Dépôt initial")
     }
 
     @Test
