@@ -82,6 +82,7 @@ fun TransactionsScreen(
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     onTransactionClick: (Transaction) -> Unit,
+    onOpenSettings: () -> Unit,
     revision: Int,
     modifier: Modifier = Modifier,
 )
@@ -105,7 +106,9 @@ fun TransactionsScreen(
     var customFrom by remember { mutableStateOf<LocalDate?>(null) }
     var customTo by remember { mutableStateOf<LocalDate?>(null) }
     var selectedAccountId by remember { mutableStateOf<AccountId?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
+    var chosenSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
+    // One deleted from the management screen meanwhile no longer filters: back to "all".
+    val selectedSubcategory = validSubcategoryFilter(chosenSubcategory, subcategories)
     var periodMenuExpanded by remember { mutableStateOf(false) }
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
@@ -159,7 +162,7 @@ fun TransactionsScreen(
             .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        HomeTopBar(palette, stringResource(R.string.transactions_title))
+        HomeTopBar(palette, stringResource(R.string.transactions_title), onOpenSettings)
         Text(
             text = stringResource(R.string.transactions_subtitle),
             color = palette.textMuted,
@@ -194,7 +197,7 @@ fun TransactionsScreen(
             palette = palette,
             subcategories = subcategoriesInPeriod,
             selected = selectedSubcategory,
-            onSelect = { selectedSubcategory = it },
+            onSelect = { chosenSubcategory = it },
         )
         if (groupedByDay.isEmpty())
         {

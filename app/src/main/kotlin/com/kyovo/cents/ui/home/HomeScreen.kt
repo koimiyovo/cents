@@ -58,6 +58,11 @@ import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
+import com.kyovo.cents.ui.settings.SettingsScreen
+import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
+import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
+import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
+import com.kyovo.cents.ui.subcategory.SubcategoryFormSheet
 import com.kyovo.cents.ui.transaction.InitialDepositFormSheet
 import com.kyovo.cents.ui.transaction.NewSubcategoryDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
@@ -68,6 +73,12 @@ import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
 
 private enum class HomeTab { Accounts, Transactions }
+
+/**
+ * Where the user is, besides an opened account: on the tabs, in the settings, or one level below them,
+ * on the screen managing the subcategories. Back goes up one level.
+ */
+private enum class HomeDestination { Tabs, Settings, Subcategories }
 
 /**
  * Hosts the app's two bottom-nav destinations. Owns the safe-drawing insets for both: the tab
@@ -91,6 +102,7 @@ fun HomeScreen(
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
+    subcategoriesViewModel: SubcategoriesViewModel,
     modifier: Modifier = Modifier,
 ) {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
@@ -101,12 +113,14 @@ fun HomeScreen(
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
     val initialDepositFormState by initialDepositFormViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
+    val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
     val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
     val subcategories = remember(revision) { listSubcategories.list() }
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    var destination by rememberSaveable { mutableStateOf(HomeDestination.Tabs) }
     val openedAccountId = openedAccountUuid?.let { AccountId(Uuid.parse(it)) }
 
     // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
@@ -176,6 +190,9 @@ fun HomeScreen(
     // onBackPressed() overridden in the Activity; here it's declarative and only active while
     // there is something to close.
     BackHandler(enabled = openedAccountId != null) { openedAccountUuid = null }
+    // One level up at a time: the subcategories go back to the settings, the settings to the tabs.
+    BackHandler(enabled = destination == HomeDestination.Subcategories) { destination = HomeDestination.Settings }
+    BackHandler(enabled = destination == HomeDestination.Settings) { destination = HomeDestination.Tabs }
 
     Column(
         modifier = modifier
@@ -228,6 +245,24 @@ fun HomeScreen(
                     )
                 }
             }
+        } else if (destination == HomeDestination.Settings)
+        {
+            SettingsScreen(
+                onBack = { destination = HomeDestination.Tabs },
+                onOpenSubcategories = { destination = HomeDestination.Subcategories },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (destination == HomeDestination.Subcategories)
+        {
+            SubcategoriesScreen(
+                listSubcategories = listSubcategories,
+                listTransactions = listTransactions,
+                revision = revision,
+                onBack = { destination = HomeDestination.Settings },
+                onCreate = subcategoriesViewModel::openCreate,
+                onEdit = subcategoriesViewModel::openForEdit,
+                modifier = Modifier.weight(1f),
+            )
         } else
         {
             Box(modifier = Modifier.weight(1f)) {
@@ -248,6 +283,7 @@ fun HomeScreen(
                             onEditAccount = accountFormViewModel::openForEdit,
                             onReorderAccounts = reorder,
                             onDeleteAccount = delete,
+                            onOpenSettings = { destination = HomeDestination.Settings },
                             revision = revision,
                         )
                         HomeTab.Transactions ->
@@ -257,6 +293,7 @@ fun HomeScreen(
                                 listTransactions,
                                 listSubcategories,
                                 onTransactionClick = openTransaction,
+                                onOpenSettings = { destination = HomeDestination.Settings },
                                 revision = revision,
                             )
                     }
@@ -332,6 +369,25 @@ fun HomeScreen(
             onFormChange = initialDepositFormViewModel::update,
             onSubmit = initialDepositFormViewModel::submit,
             onDismiss = initialDepositFormViewModel::close,
+        )
+    }
+    subcategoriesState.form?.let { form ->
+        SubcategoryFormSheet(
+            form = form,
+            errors = subcategoriesState.errors,
+            editedTransactionCount = subcategoriesState.editedTransactionCount,
+            onFormChange = subcategoriesViewModel::update,
+            onSubmit = subcategoriesViewModel::submit,
+            onDelete = subcategoriesViewModel::askToDelete,
+            onDismiss = subcategoriesViewModel::close,
+        )
+    }
+    subcategoriesState.confirmingDelete?.let { subcategory ->
+        DeleteSubcategoryDialog(
+            palette = palette,
+            subcategory = subcategory,
+            onConfirm = subcategoriesViewModel::confirmDelete,
+            onDismiss = subcategoriesViewModel::dismissDelete,
         )
     }
     accountFormState.form?.let { form ->
