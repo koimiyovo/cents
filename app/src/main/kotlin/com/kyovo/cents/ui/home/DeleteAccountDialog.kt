@@ -116,26 +116,33 @@ internal fun DeleteAccountDialog(
                     ),
                     onClick = onDelete,
                 )
-                Text(
-                    text = stringResource(R.string.account_archive_dialog_cancel),
-                    color = palette.textSecondary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(50))
-                        .clickable(onClick = onDismiss)
-                        .padding(vertical = 12.dp),
-                    textAlign = TextAlign.Center,
-                )
+                DialogCancelButton(palette, onDismiss)
             }
         }
     }
 }
 
+/** The plain "Annuler" that closes a confirmation dialog without doing anything. */
+@Composable
+internal fun DialogCancelButton(palette: AccountsPalette, onClick: () -> Unit)
+{
+    Text(
+        text = stringResource(R.string.account_archive_dialog_cancel),
+        color = palette.textSecondary,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        textAlign = TextAlign.Center,
+    )
+}
+
 /** Outlined rather than filled: it must be clearly the dangerous one, not the inviting one. */
 @Composable
-private fun DestructiveButton(palette: AccountsPalette, label: String, onClick: () -> Unit)
+internal fun DestructiveButton(palette: AccountsPalette, label: String, onClick: () -> Unit)
 {
     Box(
         modifier = Modifier
