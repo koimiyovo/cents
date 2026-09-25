@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.transaction
 
 import org.junit.jupiter.api.extension.ExtendWith
 import com.kyovo.cents.MainDispatcherExtension
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -85,14 +84,12 @@ private val unusedDelete = object : DeleteTransactionUseCase
 class TransactionFormNewSubcategoryTest
 {
     private val create = RecordingCreateSubcategory()
-    private val revision = DataRevision()
     private val viewModel = TransactionFormViewModel(
         unusedRecord,
         unusedTransfer,
         unusedUpdate,
         unusedDelete,
         create,
-        revision,
         now = { MOMENT },
     )
 
@@ -153,7 +150,6 @@ class TransactionFormNewSubcategoryTest
         openExpenseForm()
         viewModel.askToCreateSubcategory()
         type("  Loisirs ")
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
@@ -164,8 +160,6 @@ class TransactionFormNewSubcategoryTest
         assertThat(create.commands.single().name.value).isEqualTo("Loisirs")
         assertThat(state.form!!.subcategory?.name?.value).isEqualTo("Loisirs")
         assertThat(state.newSubcategory).isNull()
-        // and the lists are told to re-read, so every dropdown offers it
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
     }
 
     @Test
@@ -191,7 +185,6 @@ class TransactionFormNewSubcategoryTest
         openExpenseForm()
         viewModel.askToCreateSubcategory()
         type("   ")
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
@@ -204,7 +197,6 @@ class TransactionFormNewSubcategoryTest
             )
         )
         assertThat(create.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -459,14 +451,12 @@ class TransactionFormNewSubcategoryTest
     {
         // GIVEN
         openExpenseForm()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmNewSubcategory()
 
         // THEN
         assertThat(create.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(state.newSubcategory).isNull()
     }
 

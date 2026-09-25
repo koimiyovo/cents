@@ -3,7 +3,6 @@ package com.kyovo.cents.ui.transaction
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.InvalidInitialDepositAmountException
 import com.kyovo.cents.domain.exception.NotAnInitialDepositException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
@@ -34,7 +33,6 @@ data class InitialDepositUiState(
  */
 class InitialDepositFormViewModel(
     private val updateInitialDeposit: UpdateInitialDepositUseCase,
-    private val dataRevision: DataRevision,
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(InitialDepositUiState())
@@ -96,8 +94,7 @@ class InitialDepositFormViewModel(
             }
         }
 
-        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-        dataRevision.bump()
+        // Close only once the write went through.
         close()
     }
 }

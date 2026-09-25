@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.transaction
 
 import org.junit.jupiter.api.extension.ExtendWith
 import com.kyovo.cents.MainDispatcherExtension
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
 import com.kyovo.cents.domain.exception.CannotDeleteTransferException
@@ -145,7 +144,6 @@ class TransactionFormViewModelTest
 {
     private val recordTransaction = FakeRecordTransaction()
     private val recordTransfer = FakeRecordTransfer()
-    private val revision = DataRevision()
     private val updateTransaction = FakeUpdateTransaction()
     private val deleteTransaction = FakeDeleteTransaction()
     private val createSubcategory = FakeCreateSubcategory()
@@ -155,7 +153,6 @@ class TransactionFormViewModelTest
         updateTransaction,
         deleteTransaction,
         createSubcategory,
-        revision,
         now = { NOW },
     )
 
@@ -210,12 +207,11 @@ class TransactionFormViewModelTest
     }
 
     @Test
-    fun `a valid form is recorded, the lists are told to refresh, and the sheet closes`()
+    fun `a valid form is recorded and the sheet closes`()
     {
         // GIVEN
         openAndFillExpense()
         viewModel.update(form!!.copy(subcategory = GROCERIES_SUBCATEGORY))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -232,7 +228,6 @@ class TransactionFormViewModelTest
                 date = NOW,
             ),
         )
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
     }
 
@@ -261,14 +256,12 @@ class TransactionFormViewModelTest
     {
         // GIVEN
         viewModel.open(listOf(checking, savings), preselectedAccountId = null)
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(recordTransaction.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(form).isNotNull()
         assertThat(viewModel.uiState.value.showErrors).isTrue()
     }
@@ -294,7 +287,6 @@ class TransactionFormViewModelTest
         // GIVEN
         openAndFillExpense()
         recordTransaction.failWith = CannotRecordTransactionOnArchivedAccountException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -302,7 +294,6 @@ class TransactionFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.ARCHIVED_ACCOUNT)
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -402,13 +393,12 @@ class TransactionFormViewModelTest
     }
 
     @Test
-    fun `a valid edit updates the transaction instead of recording one, refreshes the lists and closes`()
+    fun `a valid edit updates the transaction instead of recording one and closes`()
     {
         // GIVEN
         val transaction = anExistingExpense()
         viewModel.openForEdit(transaction)
         viewModel.update(form!!.copy(amountText = "20"))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -418,7 +408,6 @@ class TransactionFormViewModelTest
         assertThat(updateTransaction.commands).hasSize(1)
         assertThat(updateTransaction.commands.single().id).isEqualTo(transaction.id)
         assertThat(updateTransaction.commands.single().amount).isEqualTo(Money(2_000))
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
     }
 
@@ -442,14 +431,12 @@ class TransactionFormViewModelTest
         // GIVEN
         viewModel.openForEdit(anExistingExpense())
         viewModel.update(form!!.copy(title = " "))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(updateTransaction.commands).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
         assertThat(form).isNotNull()
         assertThat(viewModel.uiState.value.showErrors).isTrue()
     }
@@ -460,7 +447,6 @@ class TransactionFormViewModelTest
         // GIVEN
         viewModel.openForEdit(anExistingExpense())
         updateTransaction.failWith = TransactionNotFoundException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -468,7 +454,6 @@ class TransactionFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -639,20 +624,18 @@ class TransactionFormViewModelTest
     }
 
     @Test
-    fun `confirming deletes the transaction, refreshes the lists and closes everything`()
+    fun `confirming deletes the transaction and closes everything`()
     {
         // GIVEN
         val transaction = anExistingExpense()
         viewModel.openForEdit(transaction)
         viewModel.askToDelete()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmDelete()
 
         // THEN
         assertThat(deleteTransaction.deleted).containsExactly(transaction.id)
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
         assertThat(viewModel.uiState.value.confirmingDelete).isNull()
     }
@@ -664,7 +647,6 @@ class TransactionFormViewModelTest
         viewModel.openForEdit(anExistingExpense())
         viewModel.askToDelete()
         deleteTransaction.failWith = CannotDeleteInitialDepositException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmDelete()
@@ -673,7 +655,6 @@ class TransactionFormViewModelTest
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
         assertThat(viewModel.uiState.value.confirmingDelete).isNull()
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -727,7 +708,6 @@ class TransactionFormViewModelTest
         // GIVEN
         viewModel.openForEdit(anExistingExpense())
         updateTransaction.failWith = CannotUpdateTransferException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -735,7 +715,6 @@ class TransactionFormViewModelTest
         // THEN
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -745,7 +724,6 @@ class TransactionFormViewModelTest
         viewModel.openForEdit(anExistingExpense())
         viewModel.askToDelete()
         deleteTransaction.failWith = CannotDeleteTransferException()
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.confirmDelete()
@@ -754,7 +732,6 @@ class TransactionFormViewModelTest
         assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.TRANSACTION_UNAVAILABLE)
         assertThat(viewModel.uiState.value.confirmingDelete).isNull()
         assertThat(form).isNotNull()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     // With no account, the form offers to create one; once it exists there is nothing left to choose.

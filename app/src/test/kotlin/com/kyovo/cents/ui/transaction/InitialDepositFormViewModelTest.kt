@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.transaction
 
 import org.junit.jupiter.api.extension.ExtendWith
 import com.kyovo.cents.MainDispatcherExtension
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.InvalidInitialDepositAmountException
 import com.kyovo.cents.domain.exception.NotAnInitialDepositException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
@@ -41,8 +40,7 @@ private fun aDeposit(cents: Long = 10_000) =
 class InitialDepositFormViewModelTest
 {
     private val updateInitialDeposit = FakeUpdateInitialDeposit()
-    private val revision = DataRevision()
-    private val viewModel = InitialDepositFormViewModel(updateInitialDeposit, revision)
+    private val viewModel = InitialDepositFormViewModel(updateInitialDeposit)
 
     private val state get() = viewModel.uiState.value
     private val form get() = state.form
@@ -98,20 +96,18 @@ class InitialDepositFormViewModelTest
     }
 
     @Test
-    fun `a valid amount is saved, the lists are told to refresh, and the sheet closes`()
+    fun `a valid amount is saved and the sheet closes`()
     {
         // GIVEN
         val deposit = aDeposit(cents = 10_000)
         viewModel.openForEdit(deposit)
         viewModel.update(form!!.copy(amountText = "300,50"))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
 
         // THEN
         assertThat(updateInitialDeposit.calls).containsExactly(deposit.id to Money(30_050))
-        assertThat(revision.value.value).isEqualTo(revisionBefore + 1)
         assertThat(form).isNull()
     }
 
@@ -121,7 +117,6 @@ class InitialDepositFormViewModelTest
         // GIVEN
         viewModel.openForEdit(aDeposit())
         viewModel.update(form!!.copy(amountText = "0"))
-        val revisionBefore = revision.value.value
 
         // WHEN
         viewModel.submit()
@@ -130,7 +125,6 @@ class InitialDepositFormViewModelTest
         assertThat(state.showErrors).isTrue()
         assertThat(form).isNotNull()
         assertThat(updateInitialDeposit.calls).isEmpty()
-        assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
 
     @Test
@@ -140,15 +134,13 @@ class InitialDepositFormViewModelTest
             // GIVEN
             viewModel.openForEdit(aDeposit())
             updateInitialDeposit.failWith = refusal
-            val revisionBefore = revision.value.value
 
             // WHEN
             viewModel.submit()
 
-            // THEN the form stays open with the reason, and nothing is refreshed
+            // THEN the form stays open with the reason
             assertThat(state.failure).isEqualTo(InitialDepositFailure.DEPOSIT_UNAVAILABLE)
             assertThat(form).isNotNull()
-            assertThat(revision.value.value).isEqualTo(revisionBefore)
             viewModel.close()
         }
     }

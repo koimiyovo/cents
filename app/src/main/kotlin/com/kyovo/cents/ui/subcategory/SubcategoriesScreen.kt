@@ -58,7 +58,6 @@ import com.kyovo.cents.ui.home.LightAccountsPalette
 fun SubcategoriesScreen(
     listSubcategories: ListSubcategoriesUseCase,
     listTransactions: ListTransactionsUseCase,
-    revision: Int,
     onBack: () -> Unit,
     onCreate: (RecordableTransactionCategory) -> Unit,
     onEdit: (SubcategoryRow) -> Unit,

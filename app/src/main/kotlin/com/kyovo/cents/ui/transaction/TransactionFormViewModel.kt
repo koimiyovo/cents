@@ -2,7 +2,6 @@ package com.kyovo.cents.ui.transaction
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteInitialDepositException
 import com.kyovo.cents.domain.exception.CannotDeleteTransferException
@@ -100,7 +99,6 @@ class TransactionFormViewModel(
     private val updateTransaction: UpdateTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
     private val createSubcategory: CreateSubcategoryUseCase,
-    private val dataRevision: DataRevision,
     private val now: () -> Instant = { Instant.now() },
 ) : ViewModel()
 {
@@ -215,8 +213,8 @@ class TransactionFormViewModel(
 
     /**
      * Creates the subcategory, of the kind the form records (with the emoji picked, if any), and selects it in the form. A blank or
-     * already-used name leaves the dialog open and says why; on success the lists refresh so the
-     * new subcategory shows up in every dropdown.
+     * already-used name leaves the dialog open and says why; on success the new subcategory shows
+     * up in every dropdown, which observes the list.
      */
     fun confirmNewSubcategory()
     {
@@ -248,7 +246,6 @@ class TransactionFormViewModel(
             return
         }
 
-        dataRevision.bump()
         _uiState.update { it.copy(form = it.form?.copy(subcategory = created), newSubcategory = null) }
     }
 
@@ -268,8 +265,8 @@ class TransactionFormViewModel(
     }
 
     /**
-     * Deletes the edited transaction, once the user has confirmed. On success everything closes and
-     * the lists refresh; if the domain refuses, the form stays open and says so.
+     * Deletes the edited transaction, once the user has confirmed. On success everything closes;
+     * if the domain refuses, the form stays open and says so.
      */
     fun confirmDelete()
     {
@@ -293,7 +290,6 @@ class TransactionFormViewModel(
             _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
             return
         }
-        dataRevision.bump()
         close()
     }
 
@@ -349,8 +345,7 @@ class TransactionFormViewModel(
             return
         }
 
-        // Bump only after the write went through, then close: the lists re-read as the sheet leaves.
-        dataRevision.bump()
+        // Close only once the write went through.
         close()
     }
 }

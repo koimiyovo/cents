@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
-import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteAccountWithTransactionsException
@@ -94,7 +93,6 @@ fun HomeScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
-    dataRevision: DataRevision,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
@@ -104,8 +102,6 @@ fun HomeScreen(
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
-    // Bumped after every write: re-reading on change is how the lists notice a new transaction.
-    val revision by dataRevision.value.collectAsStateWithLifecycle()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
     val initialDepositFormState by initialDepositFormViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
@@ -143,7 +139,6 @@ fun HomeScreen(
             {
                 // already archived: nothing to do
             }
-            dataRevision.bump()
         }
     }
     val reorder: (List<AccountId>) -> Unit = { ids ->
@@ -153,9 +148,8 @@ fun HomeScreen(
                 reorderAccounts.reorder(ids)
             } catch (e: AccountNotFoundException)
             {
-                // An account vanished since the list was read: nothing to reorder, just refresh.
+                // An account vanished since the list was read: nothing to reorder.
             }
-            dataRevision.bump()
         }
     }
     val delete: (AccountId, Boolean) -> Unit = { id, deleteTransactions ->
@@ -167,10 +161,9 @@ fun HomeScreen(
             } catch (e: CannotDeleteAccountWithTransactionsException)
             {
                 // Transactions appeared after the dialog was built (it said there were none): refuse
-                // rather than erase what the user was never told about. The refreshed screens show
+                // rather than erase what the user was never told about. The screens show
                 // the account as it is now.
             }
-            dataRevision.bump()
         }
     }
     // The name of the account whose unarchiving was refused, while its dialog is up. Refusals
@@ -189,7 +182,6 @@ fun HomeScreen(
             {
                 unarchiveBlockedName = getAccount.get(id)?.name?.value
             }
-            dataRevision.bump()
         }
     }
 
@@ -224,7 +216,6 @@ fun HomeScreen(
                     getAccountBalance = getAccountBalance,
                     listTransactions = listTransactions,
                     listSubcategories = listSubcategories,
-                    revision = revision,
                     onBack = { openedAccountUuid = null },
                     // Back to the list afterwards: that is where the account has just moved
                     // (into "Comptes archivés"), and an archived account gets no "+" button.
@@ -265,7 +256,6 @@ fun HomeScreen(
             SubcategoriesScreen(
                 listSubcategories = listSubcategories,
                 listTransactions = listTransactions,
-                revision = revision,
                 onBack = { destination = HomeDestination.Settings },
                 onCreate = subcategoriesViewModel::openCreate,
                 onEdit = subcategoriesViewModel::openForEdit,
@@ -292,7 +282,6 @@ fun HomeScreen(
                             onReorderAccounts = reorder,
                             onDeleteAccount = delete,
                             onOpenSettings = { destination = HomeDestination.Settings },
-                            revision = revision,
                         )
                         HomeTab.Transactions ->
                             TransactionsScreen(
@@ -302,7 +291,6 @@ fun HomeScreen(
                                 listSubcategories,
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
-                                revision = revision,
                             )
                     }
                 }
