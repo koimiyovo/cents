@@ -2,12 +2,17 @@ package com.kyovo.cents.infrastructure.persistence.room
 
 import android.content.Context
 import androidx.room3.Room
+import androidx.room3.RoomDatabase
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import com.kyovo.cents.domain.port.output.UnitOfWork
+import java.nio.ByteBuffer
+import java.util.UUID
 
 /**
  * The app's storage, built once: one Room database, and the three repositories and the unit of work
@@ -44,6 +49,7 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
             val database = Room.databaseBuilder(context.applicationContext, CentsDatabase::class.java, name)
                 .setDriver(AndroidSQLiteDriver())
                 .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                .addCallback(DefaultSubcategoriesCallback())
                 .build()
             return RoomPersistence(database)
         }
@@ -58,17 +64,54 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
             val database = Room.databaseBuilder<CentsDatabase>(path)
                 .setDriver(driver)
                 .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                .addCallback(DefaultSubcategoriesCallback())
                 .build()
             return RoomPersistence(database)
         }
 
-        /** A database that lives in memory only, for the tests. */
+        /** A database that lives in memory only, for the tests (it starts with the common subcategories, like a new file). */
         fun inMemory(driver: SQLiteDriver): RoomPersistence
         {
             val database = Room.inMemoryDatabaseBuilder<CentsDatabase>()
                 .setDriver(driver)
+                .addCallback(DefaultSubcategoriesCallback())
                 .build()
             return RoomPersistence(database)
         }
+    }
+}
+
+/**
+ * Puts the common subcategories (see [DefaultSubcategories]) into the database when it is created, and
+ * only then: [onCreate] runs once, right after the tables are made, when the file is new. From then on
+ * they are the user's, who may rename or delete them, and none comes back at a later launch. (Seeding at
+ * every start "if the table is empty" would bring back the ones a user deleted on purpose.)
+ *
+ * Room does not let this callback use the DAOs, so it writes the rows with plain SQL, from the same
+ * entity conversion the repository uses. The tests read them back through the repository, which is what
+ * keeps this SQL and the table in step.
+ */
+private class DefaultSubcategoriesCallback : RoomDatabase.Callback()
+{
+    override suspend fun onCreate(connection: SQLiteConnection)
+    {
+        connection.prepare("INSERT INTO subcategories (id, kind, name, emoji) VALUES (?, ?, ?, ?)").use { statement ->
+            for (subcategory in DefaultSubcategories.ALL)
+            {
+                val row = subcategory.toEntity()
+                statement.reset()
+                statement.bindBlob(1, row.id.toBytes())
+                statement.bindText(2, row.kind)
+                statement.bindText(3, row.name)
+                if (row.emoji == null) statement.bindNull(4) else statement.bindText(4, row.emoji)
+                statement.step()
+            }
+        }
+    }
+
+    /** A UUID as Room stores it: 16 bytes, the most significant half first. */
+    private fun UUID.toBytes(): ByteArray
+    {
+        return ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits).array()
     }
 }

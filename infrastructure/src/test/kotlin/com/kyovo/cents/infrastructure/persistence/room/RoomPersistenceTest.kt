@@ -3,6 +3,13 @@ package com.kyovo.cents.infrastructure.persistence.room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.TransactionTitle
+import com.kyovo.cents.domain.model.TransactionId
+import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.SubcategoryName
+import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
@@ -44,10 +51,10 @@ class RoomPersistenceTest
     )
 
     @Test
-    fun `starts empty`() = realTime()
+    fun `starts with the common subcategories, and nothing else`() = realTime()
     {
+        assertThat(persistence.subcategories.findAll()).containsExactlyInAnyOrderElementsOf(DefaultSubcategories.ALL)
         assertThat(persistence.accounts.findAll()).isEmpty()
-        assertThat(persistence.subcategories.findAll()).isEmpty()
         assertThat(persistence.transactions.findAll()).isEmpty()
     }
 
@@ -128,5 +135,61 @@ class RoomPersistenceTest
         val found = restored.accounts.findAll()
         restored.close()
         assertThat(found).containsExactly(anAccount(1))
+    }
+
+    // ------------------------------------------------------------------ the subcategories the app is delivered with
+
+    @Test
+    fun `a new database file starts with the common subcategories`() = realTime()
+    {
+        // GIVEN / WHEN
+        val created = RoomPersistence.openFile(File(folder, "cents.db").absolutePath, BundledSQLiteDriver())
+        val found = created.subcategories.findAll()
+        created.close()
+
+        // THEN
+        assertThat(found).containsExactlyInAnyOrderElementsOf(DefaultSubcategories.ALL)
+    }
+
+    // They are put in when the database is created, once: after that they are the user's, who may rename
+    // or delete them, and a deleted one must not come back at the next launch.
+    @Test
+    fun `a subcategory deleted by the user does not come back when the database is opened again`() = realTime()
+    {
+        // GIVEN a file where the user deleted "Alimentation" and renamed another one
+        val path = File(folder, "cents.db").absolutePath
+        val first = RoomPersistence.openFile(path, BundledSQLiteDriver())
+        val groceries = DefaultSubcategories.ALL.single { it.name.value == "Alimentation" }
+        val transport = DefaultSubcategories.ALL.single { it.name.value == "Transport" }
+        first.subcategories.deleteById(groceries.id)
+        first.subcategories.save(transport.copy(name = SubcategoryName("Déplacements")))
+        first.close()
+
+        // WHEN the file is opened by a new database
+        val reopened = RoomPersistence.openFile(path, BundledSQLiteDriver())
+        val found = reopened.subcategories.findAll()
+        reopened.close()
+
+        // THEN nothing was put back, and nothing added twice
+        assertThat(found).hasSize(DefaultSubcategories.ALL.size - 1)
+        assertThat(found.map { it.name.value }).doesNotContain("Alimentation", "Transport").contains("Déplacements")
+    }
+
+    @Test
+    fun `a transaction can be recorded under a common subcategory`() = realTime()
+    {
+        // GIVEN an account, and a subcategory that came with the database
+        persistence.accounts.save(anAccount(1))
+        val groceries = DefaultSubcategories.ALL.single { it.name.value == "Alimentation" }
+
+        // WHEN
+        val expense = Transaction.recorded(
+            TransactionId(UUID.fromString("33333333-3333-3333-3333-333333333333")), anAccount(1).id, Money(1_250),
+            TransactionTitle("Courses"), RecordableTransactionCategory.EXPENSE, groceries, null, Instant.parse("2026-09-22T10:00:00Z"),
+        )
+        persistence.transactions.save(expense)
+
+        // THEN the link to the subcategory holds (the database checks it exists)
+        assertThat(persistence.transactions.findAll()).containsExactly(expense)
     }
 }
