@@ -128,9 +128,8 @@ fun TransactionsScreen(
             .sumOf { it.amount.value }
     }
     val netCents = totalIncomeCents - totalExpenseCents
-    val availableSubcategories = remember(transactionsInPeriod, subcategories) {
-        val usedIds = transactionsInPeriod.mapNotNull { it.subcategoryId }.toSet()
-        subcategories.filter { it.id in usedIds }
+    val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
+        availableSubcategories(transactionsInPeriod, subcategories)
     }
 
     val filteredTransactions =
@@ -193,7 +192,7 @@ fun TransactionsScreen(
         )
         SubcategoryFilter(
             palette = palette,
-            subcategories = availableSubcategories,
+            subcategories = subcategoriesInPeriod,
             selected = selectedSubcategory,
             onSelect = { selectedSubcategory = it },
         )
