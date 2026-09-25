@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -24,7 +25,7 @@ class UpdateTransactionServiceTransferTest
     private val id = aTransactionId()
     private val accountRepository = InMemoryAccountRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = UpdateTransactionService(accountRepository, transactionRepository)
+    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository())
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])
