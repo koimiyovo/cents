@@ -25,12 +25,6 @@
     <!-- Onboarding — page 2 -->
     <string name="onboarding_page2_badge">Vos comptes</string>
     <string name="onboarding_page2_title">Chaque euro à sa place</string>
-    <!-- A miniature of the real accounts screen: the total, then rows of icon, name and balance. -->
-    <string name="onboarding_page2_total_amount">2 536,30 €</string>
-    <string name="onboarding_page2_account1_name">Compte Courant</string>
-    <string name="onboarding_page2_account1_amount">2 450,80 €</string>
-    <string name="onboarding_page2_account2_name">Espèces</string>
-    <string name="onboarding_page2_account2_amount">85,50 €</string>
     <string name="onboarding_page2_feature2_title">Aucune connexion bancaire</string>
     <string name="onboarding_page2_feature2_description">Vous saisissez vos opérations vous-même.</string>
     <string name="onboarding_page2_feature3_title">Vos données restent chez vous</string>
@@ -41,18 +35,8 @@
     <!-- Onboarding — page 3 -->
     <string name="onboarding_page3_badge">Saisie rapide</string>
     <string name="onboarding_page3_title">Une dépense en quelques secondes</string>
-    <!-- A miniature of the real "Nouvelle transaction" form: same fields, same order, same labels. -->
-    <string name="onboarding_page3_type_expense">Dépense</string>
-    <string name="onboarding_page3_type_income">Revenu</string>
-    <string name="onboarding_page3_type_transfer">Virement</string>
-    <string name="onboarding_page3_entry_amount">14,50</string>
-    <string name="onboarding_page3_entry_currency">€</string>
-    <string name="onboarding_page3_entry_title">Courses</string>
-    <string name="onboarding_page3_subcategory_label">Sous-catégorie</string>
-    <string name="onboarding_page3_subcategory_value">Alimentation</string>
-    <string name="onboarding_page3_account_label">Compte</string>
-    <string name="onboarding_page3_account_name">Compte Courant</string>
-    <string name="onboarding_page3_save">Enregistrer</string>
+    <string name="onboarding_page3_feature1_title">Sauvegardé immédiatement</string>
+    <string name="onboarding_page3_feature1_description">Sur votre appareil, sans attendre.</string>
     <string name="onboarding_page3_button">Commencer →</string>
     <string name="onboarding_page3_caption">⚡ Prêt en 30 secondes</string>
 

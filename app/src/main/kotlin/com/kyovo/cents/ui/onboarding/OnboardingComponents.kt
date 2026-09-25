@@ -137,6 +137,29 @@ fun FeatureRow(
     }
 }
 
+/**
+ * The one illustration of an onboarding page: an emoji in a big round badge. Deliberately not a mock of
+ * a screen of the app — a drawn copy of a screen goes out of date every time the design changes, and
+ * nothing would tell us.
+ */
+@Composable
+fun PageIcon(
+    icon: String,
+    tone: IconTone,
+    palette: OnboardingPalette,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(80.dp)
+            .clip(CircleShape)
+            .background(palette.toneBackground(tone)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = icon, fontSize = 38.sp)
+    }
+}
+
 @Composable
 fun PageIndicator(
     pageCount: Int,
