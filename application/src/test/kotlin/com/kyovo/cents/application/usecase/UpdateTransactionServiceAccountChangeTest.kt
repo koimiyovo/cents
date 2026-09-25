@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -164,5 +165,34 @@ class UpdateTransactionServiceAccountChangeTest
 
         // THEN
         assertThat(result.amount).isEqualTo(aMoney(2_500))
+    }
+
+    // The destination is checked before the subcategory: a move that can't happen is reported as such,
+    // whatever the rest of the command says.
+    @Test
+    fun `an archived destination is reported before an unknown subcategory`()
+    {
+        // GIVEN
+        accountRepository.save(from)
+        accountRepository.save(to.copy(archivedAt = anInstant("2026-01-01T00:00:00Z")))
+        transactionRepository.save(anExpenseOn(fromId))
+
+        // WHEN / THEN
+        assertThatThrownBy {
+            service.update(anUpdateTransactionCommand(id = id, accountId = toId, subcategoryId = aSubcategoryId()))
+        }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+    }
+
+    @Test
+    fun `an unknown destination is reported before an unknown subcategory`()
+    {
+        // GIVEN
+        accountRepository.save(from)
+        transactionRepository.save(anExpenseOn(fromId))
+
+        // WHEN / THEN
+        assertThatThrownBy {
+            service.update(anUpdateTransactionCommand(id = id, accountId = toId, subcategoryId = aSubcategoryId()))
+        }.isInstanceOf(AccountNotFoundException::class.java)
     }
 }

@@ -332,4 +332,70 @@ class RecordTransactionServiceTest
         // THEN
         assertThat(transactionRepository.saved).isEmpty()
     }
+
+    @Test
+    fun `an unknown account is reported before an unknown subcategory`()
+    {
+        // GIVEN neither the account nor the subcategory exists
+        val service = RecordTransactionService(
+            InMemoryAccountRepository(),
+            InMemoryTransactionRepository(),
+            FixedTransactionIdGenerator(aTransactionId()),
+            subcategoryRepository
+        )
+
+        // WHEN / THEN
+        assertThatThrownBy {
+            service.record(aRecordTransactionCommand(accountId = anAccountId(), subcategoryId = groceriesId))
+        }.isInstanceOf(AccountNotFoundException::class.java)
+    }
+
+    @Test
+    fun `an archived account is reported before an unknown subcategory`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId, archivedAt = anInstant()))
+        val service = RecordTransactionService(
+            accountRepository,
+            InMemoryTransactionRepository(),
+            FixedTransactionIdGenerator(aTransactionId()),
+            subcategoryRepository
+        )
+
+        // WHEN / THEN
+        assertThatThrownBy {
+            service.record(aRecordTransactionCommand(accountId = accountId, subcategoryId = groceriesId))
+        }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+    }
+
+    @Test
+    fun `throws when an income is given an expense subcategory, and saves nothing`()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = accountId))
+        subcategoryRepository.save(aSubcategory(id = groceriesId, kind = RecordableTransactionCategory.EXPENSE))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = RecordTransactionService(
+            accountRepository,
+            transactionRepository,
+            FixedTransactionIdGenerator(aTransactionId()),
+            subcategoryRepository
+        )
+        val command = aRecordTransactionCommand(
+            accountId = accountId,
+            category = RecordableTransactionCategory.INCOME,
+            subcategoryId = groceriesId
+        )
+
+        // WHEN
+        assertThatThrownBy { service.record(command) }
+            .isInstanceOf(InvalidTransactionSubcategoryException::class.java)
+
+        // THEN
+        assertThat(transactionRepository.saved).isEmpty()
+    }
 }

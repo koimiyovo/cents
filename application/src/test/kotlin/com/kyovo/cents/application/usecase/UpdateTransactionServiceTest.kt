@@ -191,4 +191,18 @@ class UpdateTransactionServiceTest
         // THEN
         assertThat(result.subcategoryId).isNull()
     }
+
+    @Test
+    fun `an initial deposit is refused before the subcategory is looked at`()
+    {
+        // GIVEN a command whose subcategory doesn't exist
+        val id = aTransactionId()
+        val repository = InMemoryTransactionRepository()
+        repository.save(aTransaction(id = id, category = TransactionCategory.INITIAL_DEPOSIT))
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+
+        // WHEN / THEN it is the deposit rule that answers
+        assertThatThrownBy { service.update(anUpdateTransactionCommand(id = id, subcategoryId = salaryId)) }
+            .isInstanceOf(CannotUpdateInitialDepositException::class.java)
+    }
 }
