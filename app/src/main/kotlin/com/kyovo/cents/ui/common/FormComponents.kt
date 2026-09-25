@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -132,6 +133,29 @@ internal fun SectionLabel(palette: AccountsPalette, text: String)
 internal fun ErrorText(palette: AccountsPalette, text: String)
 {
     Text(text = text, color = palette.error, fontSize = 12.sp)
+}
+
+/** The secondary action of a form: outlined, so it is not mistaken for the one main action ([SubmitButton]). */
+@Composable
+internal fun OutlinedFormButton(palette: AccountsPalette, label: String, onClick: () -> Unit)
+{
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(palette.primaryButtonBackground)
+            .border(1.dp, palette.primaryButtonBorder, RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = palette.primaryButtonContent,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
 }
 
 @Composable

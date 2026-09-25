@@ -251,6 +251,17 @@ data class TransactionFormState(
         return subcategories.filter { it.kind == category }
     }
 
+    /**
+     * When no account is chosen and exactly one can be, chooses it: there is nothing to decide. What
+     * makes it happen after the form is open — an account created from the form itself.
+     */
+    fun withSoleAccountSelected(accounts: List<Account>): TransactionFormState
+    {
+        if (accountId != null) return this
+        val sole = selectableAccounts(accounts).singleOrNull() ?: return this
+        return copy(accountId = sole.id)
+    }
+
     /** The accounts this form offers (see [accountChoicesFor]). */
     fun accountChoices(accounts: List<Account>): List<Account> =
         accountChoicesFor(accounts, originalAccountId)

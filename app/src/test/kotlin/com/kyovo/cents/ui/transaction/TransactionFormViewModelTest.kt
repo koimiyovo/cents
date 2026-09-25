@@ -750,4 +750,99 @@ class TransactionFormViewModelTest
         assertThat(form).isNotNull()
         assertThat(revision.value.value).isEqualTo(revisionBefore)
     }
+
+    // With no account, the form offers to create one; once it exists there is nothing left to choose.
+    @Test
+    fun `an account created while the form is open is chosen when it is the only one`()
+    {
+        // GIVEN a form opened when there was no account at all
+        viewModel.open(emptyList(), preselectedAccountId = null)
+        assertThat(form!!.accountId).isNull()
+
+        // WHEN an account appears
+        viewModel.accountsChanged(listOf(checking))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(checking.id)
+    }
+
+    @Test
+    fun `does not choose for the user when several accounts can be chosen`()
+    {
+        // GIVEN
+        viewModel.open(emptyList(), preselectedAccountId = null)
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking, savings))
+
+        // THEN
+        assertThat(form!!.accountId).isNull()
+    }
+
+    @Test
+    fun `an archived account is not chosen, it takes no transaction`()
+    {
+        // GIVEN
+        viewModel.open(emptyList(), preselectedAccountId = null)
+
+        // WHEN
+        viewModel.accountsChanged(listOf(archived))
+
+        // THEN
+        assertThat(form!!.accountId).isNull()
+    }
+
+    @Test
+    fun `an account already chosen is left alone`()
+    {
+        // GIVEN the user chose the second of two accounts
+        viewModel.open(listOf(checking, savings), preselectedAccountId = savings.id)
+
+        // WHEN the list changes to a single, other account
+        viewModel.accountsChanged(listOf(checking))
+
+        // THEN
+        assertThat(form!!.accountId).isEqualTo(savings.id)
+    }
+
+    @Test
+    fun `choosing the new account keeps what was typed`()
+    {
+        // GIVEN an amount and a title typed before the account was created
+        viewModel.open(emptyList(), preselectedAccountId = null)
+        viewModel.update(form!!.copy(amountText = "12,50", title = "Courses"))
+
+        // WHEN
+        viewModel.accountsChanged(listOf(checking))
+
+        // THEN
+        assertThat(form!!.amountText).isEqualTo("12,50")
+        assertThat(form!!.title).isEqualTo("Courses")
+    }
+
+    @Test
+    fun `an account appearing while no form is open opens nothing`()
+    {
+        // WHEN
+        viewModel.accountsChanged(listOf(checking))
+
+        // THEN
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `the form can then be saved on the new account`()
+    {
+        // GIVEN
+        viewModel.open(emptyList(), preselectedAccountId = null)
+        viewModel.update(form!!.copy(amountText = "12,50", title = "Courses"))
+        viewModel.accountsChanged(listOf(checking))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands.single().accountId).isEqualTo(checking.id)
+        assertThat(form).isNull()
+    }
 }
