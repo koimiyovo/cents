@@ -4,11 +4,15 @@ import androidx.lifecycle.ViewModel
 import com.kyovo.cents.data.DataRevision
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
+import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
+import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +25,9 @@ enum class SubmitFailure
     ACCOUNT_NOT_FOUND,
     ARCHIVED_ACCOUNT,
     SAME_ACCOUNT,
+
+    /** Editing: the transaction is gone, or is one the domain won't let be changed. */
+    TRANSACTION_UNAVAILABLE,
 }
 
 /** [form] is null while the sheet is closed, so "is the sheet open" and its content can't disagree. */
@@ -42,6 +49,7 @@ data class TransactionFormUiState(
 class TransactionFormViewModel(
     private val recordTransaction: RecordTransactionUseCase,
     private val recordTransfer: RecordTransferUseCase,
+    private val updateTransaction: UpdateTransactionUseCase,
     private val dataRevision: DataRevision,
     private val now: () -> Instant = { Instant.now() },
 ) : ViewModel()
@@ -61,6 +69,14 @@ class TransactionFormViewModel(
                 now = now(),
             ),
         )
+    }
+
+    /** Opens the form pre-filled with [transaction]'s values, to change them. */
+    fun openForEdit(transaction: Transaction)
+    {
+        // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
+        if (!canEditTransaction(transaction)) return
+        _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction))
     }
 
     fun update(form: TransactionFormState)
@@ -90,6 +106,7 @@ class TransactionFormViewModel(
 
                 is FormSubmission.Record   -> recordTransaction.record(submission.command)
                 is FormSubmission.Transfer -> recordTransfer.record(submission.command)
+                is FormSubmission.Update   -> updateTransaction.update(submission.command)
             }
         } catch (_: AccountNotFoundException)
         {
@@ -102,6 +119,14 @@ class TransactionFormViewModel(
         } catch (_: TransferToSameAccountException)
         {
             _uiState.update { it.copy(failure = SubmitFailure.SAME_ACCOUNT) }
+            return
+        } catch (_: TransactionNotFoundException)
+        {
+            _uiState.update { it.copy(failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
+            return
+        } catch (_: CannotUpdateInitialDepositException)
+        {
+            _uiState.update { it.copy(failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
             return
         }
 

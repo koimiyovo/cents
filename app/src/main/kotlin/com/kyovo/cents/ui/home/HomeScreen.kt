@@ -91,6 +91,7 @@ fun HomeScreen(
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val accounts = remember(revision) { listAccounts.list() }
+    val archivedAccounts = remember(revision) { listArchivedAccounts.list() }
     // The opened account is kept as its UUID string: AccountId (a value class over kotlin.uuid.Uuid)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -191,6 +192,7 @@ fun HomeScreen(
                         delete(openedAccountId, deleteTransactions)
                         openedAccountUuid = null
                     },
+                    onTransactionClick = formViewModel::openForEdit,
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (canAddTransaction)
@@ -226,7 +228,13 @@ fun HomeScreen(
                             revision = revision,
                         )
                         HomeTab.Transactions ->
-                            TransactionsScreen(listAccounts, listArchivedAccounts, listTransactions, revision = revision)
+                            TransactionsScreen(
+                                listAccounts,
+                                listArchivedAccounts,
+                                listTransactions,
+                                onTransactionClick = formViewModel::openForEdit,
+                                revision = revision,
+                            )
                     }
                 }
                 AddTransactionFab(
@@ -253,7 +261,8 @@ fun HomeScreen(
     // Outside the Column: the sheet floats over whichever screen (tabs or account details) is shown.
     formState.form?.let { form ->
         TransactionFormSheet(
-            accounts = accounts,
+            // Archived ones too: an edited transaction may sit on one (the form decides which are offered).
+            accounts = accounts + archivedAccounts,
             form = form,
             showErrors = formState.showErrors,
             failure = formState.failure,

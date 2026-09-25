@@ -99,9 +99,10 @@ fun TransactionFormSheet(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
-    val selectable = remember(accounts) { selectableAccounts(accounts) }
+    val selectable = remember(accounts, form.originalAccountId) { form.accountChoices(accounts) }
 
-    var showDetails by rememberSaveable { mutableStateOf(false) }
+    // Opens straight on the details when the edited transaction already has some.
+    var showDetails by rememberSaveable { mutableStateOf(form.subcategory != null || form.description.isNotBlank()) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val errors = if (showErrors)
     {
@@ -132,12 +133,24 @@ fun TransactionFormSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                text = stringResource(R.string.transaction_form_title),
+                text = stringResource(
+                    if (form.isEditing) R.string.transaction_form_title_edit else R.string.transaction_form_title,
+                ),
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
-            TypeSelector(palette, form.type) { onFormChange(form.withType(it)) }
+            val archivedOriginal = remember(accounts, form.originalAccountId) { form.archivedOriginalAccount(accounts) }
+            if (archivedOriginal != null)
+            {
+                ArchivedAccountNotice(palette, archivedOriginal.name.value)
+            }
+            TypeSelector(
+                palette = palette,
+                types = if (form.isEditing) listOf(TransactionFormType.EXPENSE, TransactionFormType.INCOME)
+                else TransactionFormType.entries,
+                selected = form.type,
+            ) { onFormChange(form.withType(it)) }
 
             AmountField(
                 palette = palette,
@@ -258,6 +271,7 @@ fun TransactionFormSheet(
                             SubmitFailure.ACCOUNT_NOT_FOUND -> R.string.transaction_form_failure_account_not_found
                             SubmitFailure.ARCHIVED_ACCOUNT  -> R.string.transaction_form_failure_archived
                             SubmitFailure.SAME_ACCOUNT      -> R.string.transaction_form_error_same_account
+                            SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
                         },
                     ),
                 )
@@ -291,12 +305,13 @@ private fun subcategoriesFor(type: TransactionFormType): List<TransactionSubcate
 @Composable
 private fun TypeSelector(
     palette: AccountsPalette,
+    types: List<TransactionFormType>,
     selected: TransactionFormType,
     onSelect: (TransactionFormType) -> Unit,
 )
 {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TransactionFormType.entries.forEach { type ->
+        types.forEach { type ->
             SubcategoryChip(
                 label = stringResource(
                     when (type)
@@ -312,6 +327,22 @@ private fun TypeSelector(
             )
         }
     }
+}
+
+/** Editing is allowed on an archived account, but it is a closed one: the user should know. */
+@Composable
+private fun ArchivedAccountNotice(palette: AccountsPalette, accountName: String)
+{
+    Text(
+        text = "🗄️ " + stringResource(R.string.transaction_form_archived_notice, accountName),
+        color = palette.kicker,
+        fontSize = 13.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(palette.surface)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    )
 }
 
 @Composable

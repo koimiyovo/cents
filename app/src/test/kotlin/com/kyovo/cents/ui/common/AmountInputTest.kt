@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.common
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 
 class AmountInputFilterTest
@@ -55,5 +56,30 @@ class ParseAmountTest
         assertThat(parseAmountToCents("1,234", allowZero = true)).isNull()
         assertThat(parseAmountToCents("abc", allowZero = true)).isNull()
         assertThat(parseAmountToCents("", allowZero = true)).isNull()
+    }
+}
+
+class FormatCentsForInputTest
+{
+    @ParameterizedTest
+    @CsvSource("1250, '12,50'", "1200, '12,00'", "5, '0,05'", "0, '0,00'", "100, '1,00'", "245000, '2450,00'")
+    fun `writes cents as an amount with two decimals`(cents: Long, expected: String)
+    {
+        assertThat(formatCentsForInput(cents)).isEqualTo(expected)
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = [1, 5, 99, 100, 1250, 100_000, 999_999_999])
+    fun `what it writes is read back as the same amount`(cents: Long)
+    {
+        assertThat(parseAmountToCents(formatCentsForInput(cents), allowZero = true)).isEqualTo(cents)
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = [0, 1, 5, 1250, 245_000, 99_999_999_999])
+    fun `what it writes is a shape the amount field accepts`(cents: Long)
+    {
+        // up to 9 integer digits, the field's own limit
+        assertThat(acceptsAmountInput(formatCentsForInput(cents))).isTrue()
     }
 }

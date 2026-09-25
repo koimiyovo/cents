@@ -41,3 +41,12 @@ private val AMOUNT_INPUT_PATTERN = Regex("""(\d{1,9}([.,]\d{0,2})?)?""")
  * all. Nine integer digits at most keeps the amount well inside a Long of cents.
  */
 internal fun acceptsAmountInput(text: String): Boolean = AMOUNT_INPUT_PATTERN.matches(text)
+
+/**
+ * Cents → the text the amount field would hold for them ("1250" → "12,50", "5" → "0,05"): what an
+ * existing transaction's amount is pre-filled with when it is edited. Always two decimals.
+ */
+internal fun formatCentsForInput(cents: Long): String
+{
+    return "${cents / 100},${(cents % 100).toString().padStart(2, '0')}"
+}
