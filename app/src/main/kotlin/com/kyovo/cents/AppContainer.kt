@@ -20,7 +20,6 @@ import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.application.usecase.UpdateInitialDepositService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
-import com.kyovo.cents.data.seedHardcodedData
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
@@ -44,24 +43,20 @@ import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
-import com.kyovo.cents.infrastructure.persistence.ListAccountRepository
-import com.kyovo.cents.infrastructure.persistence.ListSubcategoryRepository
-import com.kyovo.cents.infrastructure.persistence.ListTransactionRepository
-import com.kyovo.cents.infrastructure.persistence.ListUnitOfWork
+import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import java.time.Clock
-import kotlinx.coroutines.runBlocking
 
 /**
- * Manual wiring for the app's current single-Activity shell: builds the in-memory repositories,
- * seeds them with fixed demo data, and exposes the application services the UI reads from.
+ * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
+ * repositories and unit of work) and exposes the application services the UI reads from.
  * Held by [CentsApplication] so it survives Activity recreation; real DI can replace it later.
  */
-class AppContainer {
-    private val accountRepository = ListAccountRepository()
-    private val transactionRepository = ListTransactionRepository()
-    private val subcategoryRepository = ListSubcategoryRepository()
+class AppContainer(persistence: RoomPersistence) {
+    private val accountRepository = persistence.accounts
+    private val transactionRepository = persistence.transactions
+    private val subcategoryRepository = persistence.subcategories
     private val transactionIdGenerator = UuidTransactionIdGenerator()
-    private val unitOfWork = ListUnitOfWork(accountRepository, transactionRepository, subcategoryRepository)
+    private val unitOfWork = persistence.unitOfWork
 
     val listAccounts: ListAccountsUseCase = ListAccountsService(accountRepository)
     val listArchivedAccounts: ListArchivedAccountsUseCase = ListArchivedAccountsService(accountRepository)
@@ -102,9 +97,10 @@ class AppContainer {
     )
 
 
-    init {
-        // Temporary bridge: the seeding suspends now, but the container is built synchronously. It goes
-        // when the database replaces the in-memory repositories (seeding then runs once, off the main thread).
-        runBlocking { seedHardcodedData(accountRepository, transactionRepository, subcategoryRepository) }
-    }
+    /**
+     * Puts the demo data into an empty database (see [seedDemoDataIfEmpty]); a debug build asks for it
+     * once at startup, off the main thread.
+     */
+    suspend fun seedDemoDataIfEmpty(): Boolean =
+        com.kyovo.cents.data.seedDemoDataIfEmpty(accountRepository, transactionRepository, subcategoryRepository, unitOfWork)
 }
