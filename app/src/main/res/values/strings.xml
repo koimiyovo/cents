@@ -151,8 +151,7 @@
     <string name="new_subcategory_title_expense">Nouvelle sous-catégorie de dépense</string>
     <string name="new_subcategory_title_income">Nouvelle sous-catégorie de revenu</string>
     <string name="new_subcategory_name_placeholder">Nom (ex. Loisirs)</string>
-    <string name="new_subcategory_emoji_label">Emoji</string>
-    <string name="new_subcategory_emoji_none">Aucun</string>
+    <string name="new_subcategory_emoji_description">Choisir un emoji</string>
     <string name="new_subcategory_create">Créer</string>
     <string name="new_subcategory_error_name_required">Donnez un nom à la sous-catégorie.</string>
     <string name="new_subcategory_error_emoji_invalid">Cet emoji n\'est pas valide.</string>
@@ -201,4 +200,40 @@
     <string name="account_form_error_name">Le nom est obligatoire.</string>
     <string name="account_form_error_initial_amount">Saisissez un montant valide (2 décimales maximum).</string>
     <string name="account_form_failure_duplicate_name">Un compte porte déjà ce nom.</string>
+
+    <!-- Settings and subcategory management -->
+    <string name="settings_button_description">Réglages</string>
+    <string name="settings_title">Réglages</string>
+    <string name="settings_subcategories">Sous-catégories</string>
+    <string name="settings_subcategories_hint">Ajouter, renommer ou supprimer</string>
+    <string name="subcategories_title">Sous-catégories</string>
+    <string name="subcategories_intro">Les sous-catégories classent vos transactions. Touchez-en une pour la modifier ou la supprimer.</string>
+    <string name="subcategories_section_expenses">Dépenses</string>
+    <string name="subcategories_section_income">Revenus</string>
+    <string name="subcategories_empty_expenses">Aucune sous-catégorie de dépense.</string>
+    <string name="subcategories_empty_income">Aucune sous-catégorie de revenu.</string>
+    <string name="subcategories_section_toggle">Replier ou déplier la section</string>
+    <string name="subcategories_new">+</string>
+    <string name="subcategories_edit_action">Modifier</string>
+    <string name="subcategories_transactions_none">Aucune transaction</string>
+    <plurals name="subcategories_transactions">
+        <item quantity="one">%d transaction</item>
+        <item quantity="other">%d transactions</item>
+    </plurals>
+    <string name="subcategory_form_title_edit">Modifier la sous-catégorie</string>
+    <string name="subcategory_form_kind">Type : %1$s</string>
+    <plurals name="subcategory_form_rename_hint">
+        <item quantity="one">Renommer met à jour la transaction qui l\'utilise.</item>
+        <item quantity="other">Renommer met à jour les %d transactions qui l\'utilisent.</item>
+    </plurals>
+    <string name="subcategory_form_error_name_too_long">Ce nom est trop long (%1$d caractères au maximum).</string>
+    <string name="subcategory_form_error_gone">Cette sous-catégorie n\'existe plus.</string>
+    <string name="subcategory_form_delete">Supprimer la sous-catégorie</string>
+    <string name="subcategory_delete_title">Supprimer cette sous-catégorie ?</string>
+    <string name="subcategory_delete_body_unused">« %1$s » sera supprimée.</string>
+    <plurals name="subcategory_delete_body_used">
+        <item quantity="one">« %1$s » sera supprimée. La transaction qui l\'utilise est conservée, sans sous-catégorie.</item>
+        <item quantity="other">« %1$s » sera supprimée. Les %2$d transactions qui l\'utilisent sont conservées, sans sous-catégorie.</item>
+    </plurals>
+    <string name="subcategory_delete_confirm">Supprimer</string>
 </resources>
