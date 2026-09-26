@@ -4,6 +4,8 @@ import com.kyovo.cents.domain.exception.InvalidRestoredTransactionException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.time.Instant
 import java.util.UUID
 
@@ -30,7 +32,8 @@ class TransactionRestoredTest
         subcategoryId: SubcategoryId? = null,
         description: TransactionDescription? = null,
         title: TransactionTitle = this.title,
-    ) = Transaction.restored(id, accountId, Money(1_250), title, category, subcategoryId, description, date)
+        amount: Money = Money(1_250),
+    ) = Transaction.restored(id, accountId, amount, title, category, subcategoryId, description, date)
 
     @Test
     fun `an expense is restored as the one that was recorded`()
@@ -89,6 +92,21 @@ class TransactionRestoredTest
     {
         assertThat(restored(TransactionCategory.EXPENSE).signedAmount).isEqualTo(-1_250)
         assertThat(restored(TransactionCategory.TRANSFER_IN).signedAmount).isEqualTo(1_250)
+    }
+
+    // Recording a transaction of zero is refused (`recorded`, `transferOut`, `transferIn`), but reading one
+    // back is not: a row that is already stored must stay readable, whatever the rules were when it was
+    // written. Refusing it here would make a whole list fail to load because of a single old row.
+    @ParameterizedTest
+    @EnumSource(TransactionCategory::class)
+    fun `a transaction of zero already stored is still restored`(category: TransactionCategory)
+    {
+        // WHEN
+        val transaction = restored(category, amount = Money(0))
+
+        // THEN
+        assertThat(transaction.amount).isEqualTo(Money(0))
+        assertThat(transaction.signedAmount).isEqualTo(0)
     }
 
     // Only an income or an expense can have a subcategory or a description: no factory makes anything else.

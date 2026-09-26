@@ -32,7 +32,7 @@ class OpenAccountService(
             val now = clock.instant()
             val account = command.toAccount(accountIdGenerator.generate(), now)
             accountRepository.save(account)
-            if (command.initialAmount.value != 0L)
+            if (command.initialAmount.isNotZero())
             {
                 val transaction = Transaction.openingDeposit(
                     transactionIdGenerator.generate(),

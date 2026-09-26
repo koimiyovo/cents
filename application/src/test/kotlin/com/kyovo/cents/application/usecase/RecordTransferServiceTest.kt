@@ -16,6 +16,7 @@ import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.output.TransactionIdGenerator
@@ -161,6 +162,32 @@ class RecordTransferServiceTest
         // WHEN / THEN
         assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+    }
+
+    // Same rule as recording an income or an expense: a movement of nothing is refused, and since a
+    // transfer is two legs, neither of them may be left behind.
+    @Test
+    fun `refuses a transfer of zero and saves neither leg`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId))
+        accountRepository.save(anAccount(id = toAccountId))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = aRecordTransferService(
+            accountRepository = accountRepository,
+            transactionRepository = transactionRepository
+        )
+        val command = aRecordTransferCommand(
+            fromAccountId = fromAccountId,
+            toAccountId = toAccountId,
+            amount = aMoney(0)
+        )
+
+        // WHEN / THEN
+        assertThatThrownBySuspending { service.record(command) }
+            .isInstanceOf(InvalidTransactionAmountException::class.java)
+        assertThat(transactionRepository.saved).isEmpty()
     }
 
     @Test
