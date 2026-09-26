@@ -112,8 +112,9 @@ private fun statusColor(palette: AccountsPalette, status: BudgetStatus?): Color 
     BudgetStatus.ON_TRACK, null -> palette.statusActiveColor
 }
 
+/** `‹ Septembre 2026 ›`, with a way back to today when the screen is elsewhere. Shared by the tab and the limits. */
 @Composable
-private fun MonthSelectorRow(
+internal fun MonthSelectorRow(
     palette: AccountsPalette,
     label: String,
     isCurrentMonth: Boolean,

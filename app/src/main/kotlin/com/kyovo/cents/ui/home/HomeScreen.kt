@@ -55,6 +55,8 @@ import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
+import com.kyovo.cents.ui.budget.BudgetFormSheet
+import com.kyovo.cents.ui.budget.BudgetLimitsScreen
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
@@ -253,6 +255,18 @@ fun HomeScreen(
             SettingsScreen(
                 onBack = { destination = HomeDestination.Tabs },
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
+                onOpenBudgets = { destination = HomeDestination.Budgets },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (destination == HomeDestination.Budgets)
+        {
+            BudgetLimitsScreen(
+                state = budgetsState,
+                onBack = { destination = HomeDestination.Settings },
+                onPreviousMonth = budgetsViewModel::previousMonth,
+                onNextMonth = budgetsViewModel::nextMonth,
+                onToday = budgetsViewModel::goToCurrentMonth,
+                onEdit = budgetsViewModel::openForm,
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Subcategories)
@@ -377,6 +391,16 @@ fun HomeScreen(
             onFormChange = initialDepositFormViewModel::update,
             onSubmit = initialDepositFormViewModel::submit,
             onDismiss = initialDepositFormViewModel::close,
+        )
+    }
+    budgetsState.form?.let { form ->
+        BudgetFormSheet(
+            form = form,
+            error = budgetsState.error,
+            onLimitChange = budgetsViewModel::updateLimit,
+            onThresholdChange = budgetsViewModel::updateThreshold,
+            onSubmit = budgetsViewModel::submit,
+            onDismiss = budgetsViewModel::closeForm,
         )
     }
     subcategoriesState.form?.let { form ->

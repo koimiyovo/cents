@@ -183,6 +183,8 @@
     <string name="settings_title">Réglages</string>
     <string name="settings_subcategories">Sous-catégories</string>
     <string name="settings_subcategories_hint">Ajouter, renommer ou supprimer</string>
+    <string name="settings_budgets">Budgets</string>
+    <string name="settings_budgets_hint">Limites mensuelles et seuils d\'alerte</string>
     <string name="subcategories_title">Sous-catégories</string>
     <string name="subcategories_intro">Les sous-catégories classent vos transactions. Touchez-en une pour la modifier ou la supprimer.</string>
     <string name="subcategories_section_expenses">Dépenses</string>
@@ -235,5 +237,18 @@
     <string name="budget_row_over">Dépassé de %1$s</string>
     <string name="budget_row_status_close">Proche de la limite</string>
     <string name="budget_unbudgeted_title">Sans budget ce mois-ci</string>
-    <string name="budget_empty">Aucun budget pour ce mois. Vous pourrez en définir dans les Réglages.</string>
+    <string name="budget_empty">Aucun budget pour ce mois. Vous pouvez en définir dans les Réglages.</string>
+
+    <!-- Budget limits (settings) -->
+    <string name="budget_limits_title">Budgets</string>
+    <string name="budget_limits_intro">Une limite s\'applique à partir du mois choisi et aux mois suivants, jusqu\'à ce que vous la changiez. Touchez une sous-catégorie pour la régler.</string>
+    <string name="budget_limits_row_set">Limite %1$s · alerte à %2$d&#160;%%</string>
+    <string name="budget_limits_row_none">Aucune limite</string>
+    <string name="budget_form_title">Budget · %1$s</string>
+    <string name="budget_form_applies_from">S\'applique à partir de %1$s, et aux mois suivants tant que vous ne le changez pas.</string>
+    <string name="budget_form_limit_label">Limite mensuelle</string>
+    <string name="budget_form_threshold_label">Alerte à %1$d&#160;%%</string>
+    <string name="budget_form_threshold_hint">Le budget passe en « proche de la limite » à partir de %1$d&#160;%% de la limite.</string>
+    <string name="budget_form_error_limit">Saisissez une limite supérieure à 0 (2 décimales maximum).</string>
+    <string name="budget_form_error_unavailable">Cette sous-catégorie n\'existe plus ou n\'est plus une dépense.</string>
 </resources>
