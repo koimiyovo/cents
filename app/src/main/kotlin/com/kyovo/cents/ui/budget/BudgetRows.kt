@@ -5,6 +5,16 @@ import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 
+/** What is left of a budget's limit, or by how much it was passed: what a row says in words. */
+sealed interface BudgetRemaining
+{
+    /** [cents] are still left; zero when the limit was reached exactly (which is not over). */
+    data class Left(val cents: Long) : BudgetRemaining
+
+    /** The limit was passed by [cents], always above zero. */
+    data class Over(val cents: Long) : BudgetRemaining
+}
+
 /**
  * One line of the budgets screen: an expense subcategory and, when a budget is in force for the month
  * shown, its [progress]. Without a budget, [progress] is null and the screen offers to set one.
@@ -13,6 +23,11 @@ data class BudgetRow(val subcategory: Subcategory, val progress: BudgetProgress?
 {
     /** On track, close to the limit or over it; null when there is no budget. */
     val status: BudgetStatus? = progress?.let { budgetStatus(it) }
+
+    /** What is left of the limit, or by how much it was passed; null when there is no budget. */
+    val remaining: BudgetRemaining? = progress?.let {
+        if (it.isOverspent) BudgetRemaining.Over(-it.remaining) else BudgetRemaining.Left(it.remaining)
+    }
 
     /**
      * How much of the limit is used, for the progress bar: 0 when nothing is spent, 1 at the limit, and
