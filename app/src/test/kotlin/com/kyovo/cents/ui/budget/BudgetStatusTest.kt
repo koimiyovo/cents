@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.Money
 import org.assertj.core.api.Assertions.assertThat
@@ -43,6 +44,33 @@ class BudgetStatusTest
     {
         // WHEN
         val status = budgetStatus(BudgetProgress(Money(limit), Money(spent)))
+
+        // THEN
+        assertThat(status).isEqualTo(expected)
+    }
+
+    // The 80 % above is only the default: each budget has its own alert threshold, and "close" starts there.
+    @ParameterizedTest(name = "limit {0}, spent {1}, threshold {2} % -> {3}")
+    @CsvSource(
+        "30000, 14999, 50, ON_TRACK",
+        "30000, 15000, 50, CLOSE_TO_LIMIT",       // exactly 50 %
+        "30000, 3000,  10, CLOSE_TO_LIMIT",       // a low threshold warns early
+        "30000, 29999, 100, ON_TRACK",            // 100 %: close only once the limit is reached
+        "30000, 30000, 100, CLOSE_TO_LIMIT",
+        "30000, 30001, 100, OVER",                // the threshold never postpones "over"
+        "30000, 30001, 50, OVER",
+        "30000, 26999, 90, ON_TRACK",
+        "30000, 27000, 90, CLOSE_TO_LIMIT",
+    )
+    fun `close starts at the alert threshold of the budget, and over is always above the limit`(
+        limit: Long,
+        spent: Long,
+        threshold: Int,
+        expected: BudgetStatus
+    )
+    {
+        // WHEN
+        val status = budgetStatus(BudgetProgress(Money(limit), Money(spent), AlertThreshold(threshold)))
 
         // THEN
         assertThat(status).isEqualTo(expected)
