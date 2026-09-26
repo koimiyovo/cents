@@ -55,6 +55,8 @@ import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
+import com.kyovo.cents.ui.budget.BudgetScreen
+import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
 import com.kyovo.cents.ui.settings.SettingsScreen
@@ -72,7 +74,7 @@ import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-private enum class HomeTab { Accounts, Transactions }
+private enum class HomeTab { Accounts, Transactions, Budget }
 
 
 /**
@@ -97,6 +99,7 @@ fun HomeScreen(
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
+    budgetsViewModel: BudgetsViewModel,
     modifier: Modifier = Modifier,
 ) {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
@@ -106,6 +109,7 @@ fun HomeScreen(
     val initialDepositFormState by initialDepositFormViewModel.uiState.collectAsStateWithLifecycle()
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
+    val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -292,6 +296,14 @@ fun HomeScreen(
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
+                        HomeTab.Budget ->
+                            BudgetScreen(
+                                state = budgetsState,
+                                onPreviousMonth = budgetsViewModel::previousMonth,
+                                onNextMonth = budgetsViewModel::nextMonth,
+                                onToday = budgetsViewModel::goToCurrentMonth,
+                                onOpenSettings = { destination = HomeDestination.Settings },
+                            )
                     }
                 }
                 AddTransactionFab(
@@ -425,6 +437,14 @@ private fun BottomNavBar(
             selected = selected == HomeTab.Transactions,
             palette = palette,
             onClick = { onSelect(HomeTab.Transactions) },
+            modifier = Modifier.weight(1f),
+        )
+        BottomNavItem(
+            emoji = "🎯",
+            label = stringResource(R.string.nav_budget),
+            selected = selected == HomeTab.Budget,
+            palette = palette,
+            onClick = { onSelect(HomeTab.Budget) },
             modifier = Modifier.weight(1f),
         )
     }
