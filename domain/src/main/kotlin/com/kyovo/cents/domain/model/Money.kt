@@ -9,4 +9,14 @@ value class Money(val value: Long)
     {
         if (value < 0) throw InvalidMoneyAmountException()
     }
+
+    fun isZero(): Boolean
+    {
+        return value == 0L
+    }
+
+    fun isNotZero(): Boolean
+    {
+        return !isZero()
+    }
 }

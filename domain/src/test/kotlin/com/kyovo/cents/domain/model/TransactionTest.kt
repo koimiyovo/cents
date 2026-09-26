@@ -1,9 +1,12 @@
 package com.kyovo.cents.domain.model
 
+import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.time.Instant
 import java.util.UUID
 
@@ -246,6 +249,28 @@ class TransactionTest
         }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
     }
 
+    // Money accepts 0 (a balance can be 0), but recording an income or an expense of nothing is
+    // meaningless: it would only add a row that changes no balance. The form already refuses it;
+    // the domain must too, since it is the one that guarantees its own rules.
+    @ParameterizedTest
+    @EnumSource(RecordableTransactionCategory::class)
+    fun `refuses to record a transaction of zero`(category: RecordableTransactionCategory)
+    {
+        // WHEN / THEN
+        assertThatThrownBy {
+            Transaction.recorded(
+                id = id,
+                accountId = accountId,
+                amount = Money(0),
+                title = title,
+                category = category,
+                subcategory = null,
+                description = null,
+                date = date
+            )
+        }.isInstanceOf(InvalidTransactionAmountException::class.java)
+    }
+
     @Test
     fun `an opening deposit contributes its full amount to the balance`()
     {
@@ -346,6 +371,24 @@ class TransactionTest
         // THEN
         assertThat(outTransaction.title).isEqualTo(title)
         assertThat(inTransaction.title).isEqualTo(title)
+    }
+
+    // Same rule as `recorded`: a leg of nothing moves no money. Either factory refuses it, so a transfer
+    // of zero cannot be built one leg at a time either.
+    @Test
+    fun `refuses a transfer-out leg of zero`()
+    {
+        // WHEN / THEN
+        assertThatThrownBy { Transaction.transferOut(id, accountId, Money(0), title, date) }
+            .isInstanceOf(InvalidTransactionAmountException::class.java)
+    }
+
+    @Test
+    fun `refuses a transfer-in leg of zero`()
+    {
+        // WHEN / THEN
+        assertThatThrownBy { Transaction.transferIn(id, accountId, Money(0), title, date) }
+            .isInstanceOf(InvalidTransactionAmountException::class.java)
     }
 
     @Test
