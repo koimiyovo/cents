@@ -8,6 +8,7 @@ import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
@@ -234,6 +235,25 @@ class GetBudgetProgressServiceTest
 
         // WHEN / THEN
         assertThat(aServiceIn(ZoneId.of("UTC")).observeAll(YearMonth.of(2026, 8)).first()).isEmpty()
+    }
+
+    // "Close to the limit" is the budget's own call, so the progress carries the threshold of the budget in
+    // force — the inherited one when the month has none of its own.
+    @Test
+    fun `carries the alert threshold of the budget in force, an inherited one included`() = runTest()
+    {
+        // GIVEN groceries with its own threshold in September, fuel inheriting August's
+        budgetRepository.save(aBudget(subcategoryId = groceriesId, month = september, limit = aMoney(30_000), alertThreshold = AlertThreshold(60)))
+        budgetRepository.save(aBudget(subcategoryId = fuelId, month = YearMonth.of(2026, 8), limit = aMoney(10_000), alertThreshold = AlertThreshold(95)))
+
+        // WHEN
+        val all = aServiceIn(ZoneId.of("UTC")).observeAll(september).first()
+
+        // THEN
+        assertThat(all[groceriesId]?.alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(all[fuelId]?.alertThreshold).isEqualTo(AlertThreshold(95))
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(fuelId, september).first()?.alertThreshold)
+            .isEqualTo(AlertThreshold(95))
     }
 
     @Test

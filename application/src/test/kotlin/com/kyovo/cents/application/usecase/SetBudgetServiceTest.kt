@@ -10,6 +10,7 @@ import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryName
 import kotlinx.coroutines.test.runTest
@@ -56,6 +57,36 @@ class SetBudgetServiceTest
         val expected = aBudget(limit = aMoney(45_000))
         assertThat(result).isEqualTo(expected)
         assertThat(budgetRepository.saved).containsExactly(expected)
+    }
+
+    // The threshold is part of the budget a user sets: one for each budget, replaced with it like the limit.
+    @Test
+    fun `keeps the alert threshold that was set, and setting again replaces it with the limit`() = runTest()
+    {
+        // GIVEN
+        subcategoryRepository.save(aSubcategory())
+
+        // WHEN a budget is set with a threshold of its own, then set again with another
+        val first = service.set(aSetBudgetCommand(alertThreshold = AlertThreshold(60)))
+        service.set(aSetBudgetCommand(limit = aMoney(45_000), alertThreshold = AlertThreshold(90)))
+
+        // THEN
+        assertThat(first.alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(budgetRepository.saved)
+            .containsExactly(aBudget(limit = aMoney(45_000), alertThreshold = AlertThreshold(90)))
+    }
+
+    @Test
+    fun `uses the default alert threshold when none is given`() = runTest()
+    {
+        // GIVEN
+        subcategoryRepository.save(aSubcategory())
+
+        // WHEN
+        val budget = service.set(aSetBudgetCommand())
+
+        // THEN
+        assertThat(budget.alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
     }
 
     @Test
