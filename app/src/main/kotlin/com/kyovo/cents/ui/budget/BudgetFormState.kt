@@ -18,6 +18,10 @@ const val THRESHOLD_SLIDER_MIN_PERCENT = 50
 const val THRESHOLD_SLIDER_MAX_PERCENT = 100
 const val THRESHOLD_SLIDER_STEP_PERCENT = 5
 
+/** The stops *between* the two ends of the slider — what a Compose slider is told: 55, 60, ... 95 is nine. */
+const val THRESHOLD_SLIDER_STEPS =
+    (THRESHOLD_SLIDER_MAX_PERCENT - THRESHOLD_SLIDER_MIN_PERCENT) / THRESHOLD_SLIDER_STEP_PERCENT - 1
+
 /**
  * The form that sets one expense [subcategory]'s budget for one [month]: the limit, a single amount kept as
  * raw text (parsed in [submit], like the other amount forms, so a half-typed "12," is never an error while
