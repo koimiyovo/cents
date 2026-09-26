@@ -90,6 +90,37 @@ class BudgetRowsTest
         assertThat(rows.single().barFraction).isCloseTo(expected, within(0.0001f))
     }
 
+    // What is left of the limit, or by how much it was passed: the two things a row says in words.
+    @ParameterizedTest(name = "limit {0}, spent {1} -> {2} {3}")
+    @CsvSource(
+        "30000,      0, LEFT,  30000",
+        "30000,  12000, LEFT,  18000",
+        "30000,  29999, LEFT,      1",
+        "30000,  30000, LEFT,      0",   // exactly the limit: nothing left, but not over
+        "30000,  30001, OVER,      1",
+        "30000,  45050, OVER,  15050",
+    )
+    fun `a row says what is left of its limit, or by how much it was passed`(
+        limit: Long,
+        spent: Long,
+        kind: String,
+        cents: Long
+    )
+    {
+        // WHEN
+        val row = budgetRows(listOf(GROCERIES_SUBCATEGORY), mapOf(GROCERIES_SUBCATEGORY.id to progress(limit, spent))).single()
+
+        // THEN
+        val expected = if (kind == "LEFT") BudgetRemaining.Left(cents) else BudgetRemaining.Over(cents)
+        assertThat(row.remaining).isEqualTo(expected)
+    }
+
+    @Test
+    fun `a row without a budget has nothing left to say`()
+    {
+        assertThat(budgetRows(listOf(GROCERIES_SUBCATEGORY), emptyMap()).single().remaining).isNull()
+    }
+
     @Test
     fun `a row without a budget has no bar`()
     {
