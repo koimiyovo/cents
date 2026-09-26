@@ -44,7 +44,7 @@ import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
-import java.time.Clock
+import java.time.Clock
 
 /**
  * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
