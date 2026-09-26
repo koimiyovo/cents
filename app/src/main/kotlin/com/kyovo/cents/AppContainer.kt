@@ -7,6 +7,7 @@ import com.kyovo.cents.application.usecase.DeleteSubcategoryService
 import com.kyovo.cents.application.usecase.DeleteTransactionService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
+import com.kyovo.cents.application.usecase.GetBudgetProgressService
 import com.kyovo.cents.application.usecase.ListAccountsService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
 import com.kyovo.cents.application.usecase.ListSubcategoriesService
@@ -15,6 +16,7 @@ import com.kyovo.cents.application.usecase.OpenAccountService
 import com.kyovo.cents.application.usecase.RecordTransactionService
 import com.kyovo.cents.application.usecase.RecordTransferService
 import com.kyovo.cents.application.usecase.ReorderAccountsService
+import com.kyovo.cents.application.usecase.SetBudgetService
 import com.kyovo.cents.application.usecase.UnarchiveAccountService
 import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.application.usecase.UpdateInitialDepositService
@@ -27,6 +29,7 @@ import com.kyovo.cents.domain.port.input.DeleteSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
+import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
@@ -35,6 +38,7 @@ import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
+import com.kyovo.cents.domain.port.input.SetBudgetUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateInitialDepositUseCase
@@ -45,6 +49,7 @@ import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import java.time.Clock
+import java.time.ZoneId
 
 /**
  * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
@@ -55,6 +60,7 @@ class AppContainer(persistence: RoomPersistence) {
     private val accountRepository = persistence.accounts
     private val transactionRepository = persistence.transactions
     private val subcategoryRepository = persistence.subcategories
+    private val budgetRepository = persistence.budgets
     private val transactionIdGenerator = UuidTransactionIdGenerator()
     private val unitOfWork = persistence.unitOfWork
 
@@ -78,7 +84,13 @@ class AppContainer(persistence: RoomPersistence) {
         CreateSubcategoryService(subcategoryRepository, UuidSubcategoryIdGenerator())
     val updateSubcategory: UpdateSubcategoryUseCase = UpdateSubcategoryService(subcategoryRepository)
     val deleteSubcategory: DeleteSubcategoryUseCase =
-        DeleteSubcategoryService(subcategoryRepository, transactionRepository, unitOfWork)
+        DeleteSubcategoryService(subcategoryRepository, transactionRepository, budgetRepository, unitOfWork)
+    val setBudget: SetBudgetUseCase = SetBudgetService(budgetRepository, subcategoryRepository)
+
+    // A month runs from midnight to midnight in the zone the transaction form dates things in (the
+    // device's), so an expense lands in the same month for both.
+    val getBudgetProgress: GetBudgetProgressUseCase =
+        GetBudgetProgressService(budgetRepository, transactionRepository, ZoneId.systemDefault())
     val openAccount: OpenAccountUseCase = OpenAccountService(
         accountRepository,
         UuidAccountIdGenerator(),
