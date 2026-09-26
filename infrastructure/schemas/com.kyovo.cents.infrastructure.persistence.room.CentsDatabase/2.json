@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "a791644da2e68c3f9826839b3012dd59",
+    "identityHash": "b39c6710267aeae6490d8f0bb2e9d843",
     "entities": [
       {
         "tableName": "subcategories",
@@ -221,7 +221,7 @@
       },
       {
         "tableName": "budgets",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `limitCents` INTEGER NOT NULL, PRIMARY KEY(`subcategoryId`, `month`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `limitCents` INTEGER NOT NULL, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`subcategoryId`, `month`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "subcategoryId",
@@ -238,6 +238,12 @@
           {
             "fieldPath": "limitCents",
             "columnName": "limitCents",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alertPercent",
+            "columnName": "alertPercent",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -266,7 +272,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a791644da2e68c3f9826839b3012dd59')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b39c6710267aeae6490d8f0bb2e9d843')"
     ]
   }
 }

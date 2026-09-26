@@ -8,8 +8,10 @@ import androidx.room3.RoomDatabase
  * The subcategories, the accounts, the transactions and the budgets are in it.
  *
  * Version 1 (subcategories, accounts, transactions) is installed on phones with real data, so it is
- * frozen: version 2 adds the `budgets` table, with a migration in [CentsMigrations]. Any further change to
- * a table means a new version and a new migration, never an edit of the ones before.
+ * frozen: version 2 adds the `budgets` table (with the alert threshold of each budget), with a migration in
+ * [CentsMigrations]. Version 2 has not been released yet, so it may still change; once an app carrying
+ * it is installed anywhere, any further change to a table means a new version and a new migration, never an
+ * edit of the ones before.
  */
 @Database(
     entities = [SubcategoryEntity::class, AccountEntity::class, TransactionEntity::class, BudgetEntity::class],

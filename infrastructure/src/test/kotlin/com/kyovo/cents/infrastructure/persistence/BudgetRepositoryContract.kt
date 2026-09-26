@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -73,8 +74,12 @@ abstract class BudgetRepositoryContract
             null,
         )
 
-    private fun aBudget(subcategory: Subcategory, month: YearMonth, cents: Long) =
-        Budget(subcategory.id, month, Money(cents))
+    private fun aBudget(
+        subcategory: Subcategory,
+        month: YearMonth,
+        cents: Long,
+        threshold: Int = AlertThreshold.DEFAULT.percent,
+    ) = Budget(subcategory.id, month, Money(cents), AlertThreshold(threshold))
 
     private suspend fun stored() = repository.observeAll().first()
 
@@ -191,6 +196,36 @@ abstract class BudgetRepositoryContract
 
         // THEN
         assertThat(stored()).containsExactly(smallest, largest)
+    }
+
+    // Each budget has its own alert threshold, stored with it like its limit.
+    @Test
+    fun `gives back the alert threshold of each budget, whatever it is`() = realTime()
+    {
+        // GIVEN the smallest, an ordinary, the default and the largest threshold
+        val budgets = listOf(1, 60, 80, 100).mapIndexed { index, percent ->
+            aBudget(groceries, YearMonth.of(2026, 1 + index), 30_000, percent)
+        }
+
+        // WHEN
+        budgets.forEach { repository.save(it) }
+
+        // THEN
+        assertThat(stored()).containsExactlyElementsOf(budgets)
+        assertThat(stored().map { it.alertThreshold.percent }).containsExactly(1, 60, 80, 100)
+    }
+
+    @Test
+    fun `saving again replaces the alert threshold together with the limit`() = realTime()
+    {
+        // GIVEN
+        repository.save(aBudget(groceries, september, 30_000, threshold = 80))
+
+        // WHEN only the threshold changes
+        repository.save(aBudget(groceries, september, 30_000, threshold = 50))
+
+        // THEN
+        assertThat(stored()).containsExactly(aBudget(groceries, september, 30_000, threshold = 50))
     }
 
     // ------------------------------------------------------------------ deleting

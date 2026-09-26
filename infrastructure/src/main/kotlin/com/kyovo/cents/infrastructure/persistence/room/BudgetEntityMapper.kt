@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -11,6 +12,7 @@ fun Budget.toEntity(): BudgetEntity
         subcategoryId = subcategoryId.value,
         month = month.year * 100 + month.monthValue,
         limitCents = limit.value,
+        alertPercent = alertThreshold.percent,
     )
 }
 
@@ -26,9 +28,14 @@ fun BudgetEntity.toDomain(): Budget
     {
         throw IllegalStateException("Budget limit in the database must be above zero: $limitCents")
     }
+    if (alertPercent !in AlertThreshold.MIN..AlertThreshold.MAX)
+    {
+        throw IllegalStateException("Unknown budget alert threshold in the database: $alertPercent")
+    }
     return Budget(
         subcategoryId = SubcategoryId(subcategoryId),
         month = YearMonth.of(year, monthOfYear),
         limit = Money(limitCents),
+        alertThreshold = AlertThreshold(alertPercent),
     )
 }
