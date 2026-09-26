@@ -96,6 +96,14 @@ class RoomPersistenceTest
         BundledSQLiteDriver().open(path).use { it.execSQL("PRAGMA user_version = $version") }
     }
 
+    private fun userVersion(path: String): Int =
+        BundledSQLiteDriver().open(path).use { connection ->
+            connection.prepare("PRAGMA user_version").use { statement ->
+                statement.step()
+                statement.getLong(0).toInt()
+            }
+        }
+
     @Test
     fun `what was saved in a file is still there when it is opened again`() = realTime()
     {
@@ -121,6 +129,7 @@ class RoomPersistenceTest
         // GIVEN a file with an account, marked as written by a much newer version
         val path = File(folder, "cents.db").absolutePath
         RoomPersistence.openFile(path, BundledSQLiteDriver()).also { it.accounts.save(anAccount(1)); it.close() }
+        val version = userVersion(path)
         setUserVersion(path, 99)
 
         // WHEN / THEN opening it fails
@@ -130,7 +139,7 @@ class RoomPersistenceTest
         assertThat(failure).isInstanceOf(IllegalStateException::class.java)
 
         // AND nothing was lost: with the right version again, the account is there
-        setUserVersion(path, 1)
+        setUserVersion(path, version)
         val restored = RoomPersistence.openFile(path, BundledSQLiteDriver())
         val found = restored.accounts.findAll()
         restored.close()
