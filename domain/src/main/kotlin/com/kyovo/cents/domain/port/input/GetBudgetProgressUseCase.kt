@@ -8,4 +8,5 @@ import java.time.YearMonth
 interface GetBudgetProgressUseCase
 {
     fun observe(subcategoryId: SubcategoryId, month: YearMonth): Flow<BudgetProgress?>
+    fun observeAll(month: YearMonth): Flow<Map<SubcategoryId, BudgetProgress>>
 }
