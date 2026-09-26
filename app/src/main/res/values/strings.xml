@@ -59,6 +59,7 @@
     <!-- Bottom navigation -->
     <string name="nav_accounts">Comptes</string>
     <string name="nav_transactions">Transactions</string>
+    <string name="nav_budget">Budget</string>
 
     <!-- Transactions screen -->
     <string name="transactions_title">Transactions</string>
@@ -212,4 +213,27 @@
         <item quantity="other">« %1$s » sera supprimée. Les %2$d transactions qui l\'utilisent sont conservées, sans sous-catégorie.</item>
     </plurals>
     <string name="subcategory_delete_confirm">Supprimer</string>
+    <!-- Budget tab -->
+    <string name="budget_title">Budget</string>
+    <string name="budget_month_previous">Mois précédent</string>
+    <string name="budget_month_next">Mois suivant</string>
+    <string name="budget_month_today">Aujourd\'hui</string>
+    <string name="budget_summary_spent_of">%1$s dépensés sur %2$s</string>
+    <string name="budget_summary_left">Il reste %1$s</string>
+    <string name="budget_summary_over">Dépassé de %1$s</string>
+    <string name="budget_summary_all_good">Tout est dans les clous</string>
+    <plurals name="budget_summary_over_count">
+        <item quantity="one">%d budget dépassé</item>
+        <item quantity="other">%d budgets dépassés</item>
+    </plurals>
+    <plurals name="budget_summary_close_count">
+        <item quantity="one">%d proche de sa limite</item>
+        <item quantity="other">%d proches de leur limite</item>
+    </plurals>
+    <string name="budget_row_spent_of">%1$s sur %2$s</string>
+    <string name="budget_row_left">Reste %1$s</string>
+    <string name="budget_row_over">Dépassé de %1$s</string>
+    <string name="budget_row_status_close">Proche de la limite</string>
+    <string name="budget_unbudgeted_title">Sans budget ce mois-ci</string>
+    <string name="budget_empty">Aucun budget pour ce mois. Vous pourrez en définir dans les Réglages.</string>
 </resources>
