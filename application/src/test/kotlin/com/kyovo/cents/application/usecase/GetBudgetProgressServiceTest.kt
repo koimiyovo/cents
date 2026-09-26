@@ -199,6 +199,43 @@ class GetBudgetProgressServiceTest
         assertThat(emissions).containsExactly(BudgetProgress(aMoney(30_000), aMoney(0)))
     }
 
+    // What a screen with a month selector shows: every budget in force that month, at once. Which
+    // subcategories are listed is decided by the budgets alone, not by who spent something.
+    @Test
+    fun `observes the progress of every subcategory that has a budget in force in the month`() = runTest()
+    {
+        // GIVEN groceries with a budget of its own in September, fuel with one inherited from August,
+        // and transport whose first budget only starts in October
+        val transportId = aSubcategoryId("44444444-4444-4444-4444-444444444444")
+        budgetRepository.save(aBudget(subcategoryId = groceriesId, month = september, limit = aMoney(30_000)))
+        budgetRepository.save(aBudget(subcategoryId = fuelId, month = YearMonth.of(2026, 8), limit = aMoney(10_000)))
+        budgetRepository.save(aBudget(subcategoryId = transportId, month = YearMonth.of(2026, 10), limit = aMoney(5_000)))
+        transactionRepository.save(anExpense(1, 4_500, "2026-09-10T10:00:00Z"))
+        transactionRepository.save(anExpense(2, 2_000, "2026-09-12T10:00:00Z", subcategoryId = fuelId))
+        transactionRepository.save(anExpense(3, 9_999, "2026-09-12T10:00:00Z", subcategoryId = transportId))
+
+        // WHEN
+        val all = aServiceIn(ZoneId.of("UTC")).observeAll(september).first()
+
+        // THEN transport has no budget in force in September, however much it spent
+        assertThat(all).isEqualTo(
+            mapOf(
+                groceriesId to BudgetProgress(aMoney(30_000), aMoney(4_500)),
+                fuelId to BudgetProgress(aMoney(10_000), aMoney(2_000)),
+            )
+        )
+    }
+
+    @Test
+    fun `observes nothing for a month when no budget is in force`() = runTest()
+    {
+        // GIVEN a budget that only starts after the month asked for
+        budgetRepository.save(aBudget(subcategoryId = groceriesId, month = september))
+
+        // WHEN / THEN
+        assertThat(aServiceIn(ZoneId.of("UTC")).observeAll(YearMonth.of(2026, 8)).first()).isEmpty()
+    }
+
     @Test
     fun `an inherited limit is checked against the expenses of the month asked for`() = runTest()
     {

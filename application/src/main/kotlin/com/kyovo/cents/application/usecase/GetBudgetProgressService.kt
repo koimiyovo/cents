@@ -10,6 +10,7 @@ import com.kyovo.cents.domain.port.output.TransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.time.YearMonth
 import java.time.ZoneId
 
@@ -19,10 +20,19 @@ class GetBudgetProgressService(
     private val zone: ZoneId
 ) : GetBudgetProgressUseCase
 {
-    // Follows both the budgets and the transactions: the progress moves when a limit is set or changed,
-    // and when an expense is added, edited or deleted. `distinctUntilChanged` keeps a page from redrawing
-    // for a change that does not concern its subcategory.
+    // One subcategory's progress is read out of the month's: the rules (which budget is in force, what a
+    // month is, what counts as spent) are written once, in `observeAll`. `distinctUntilChanged` keeps a
+    // page from redrawing for a change that does not concern its subcategory.
     override fun observe(subcategoryId: SubcategoryId, month: YearMonth): Flow<BudgetProgress?>
+    {
+        return observeAll(month)
+            .map { progress -> progress[subcategoryId] }
+            .distinctUntilChanged()
+    }
+
+    // Follows both the budgets and the transactions: the progress moves when a limit is set or changed,
+    // and when an expense is added, edited or deleted.
+    override fun observeAll(month: YearMonth): Flow<Map<SubcategoryId, BudgetProgress>>
     {
         // A month runs from midnight on its 1st to midnight on the next month's 1st, where the user lives.
         val start = month.atDay(1).atStartOfDay(zone).toInstant()
@@ -30,22 +40,25 @@ class GetBudgetProgressService(
 
         return combine(budgetRepository.observeAll(), transactionRepository.observeAll())
         { budgets, transactions ->
-            // The budget in force: the month's own, else the most recent earlier one. Never a later one.
-            val budget = budgets
-                .filter { it.subcategoryId == subcategoryId && it.month <= month }
-                .maxByOrNull { it.month }
-                ?: return@combine null
-
-            val spent = transactions
+            val spentBySubcategory = transactions
                 .filter {
                     it.category == TransactionCategory.EXPENSE &&
-                            it.subcategoryId == subcategoryId &&
+                            it.subcategoryId != null &&
                             !it.date.isBefore(start) &&
                             it.date.isBefore(end)
                 }
-                .sumOf { it.amount.value }
+                .groupBy { it.subcategoryId!! }
+                .mapValues { (_, expenses) -> expenses.sumOf { it.amount.value } }
 
-            BudgetProgress(budget.limit, Money(spent))
+            // The budget in force of each subcategory: the month's own, else the most recent earlier one.
+            // Never a later one, so a subcategory whose first budget comes after the month is not listed.
+            budgets
+                .filter { it.month <= month }
+                .groupBy { it.subcategoryId }
+                .mapValues { (_, ofSubcategory) -> ofSubcategory.maxBy { it.month } }
+                .mapValues { (subcategoryId, budget) ->
+                    BudgetProgress(budget.limit, Money(spentBySubcategory[subcategoryId] ?: 0))
+                }
         }.distinctUntilChanged()
     }
 }
