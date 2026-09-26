@@ -75,6 +75,14 @@ class BudgetFormStateTest
         assertThat(THRESHOLD_SLIDER_STEP_PERCENT).isEqualTo(5)
     }
 
+    // A Compose slider counts the stops *between* its two ends: 55, 60, ... 95 is nine of them. Handing it
+    // the wrong count would let it rest on positions the form then has to move.
+    @Test
+    fun `the slider has nine stops between its ends, one for each step in between`()
+    {
+        assertThat(THRESHOLD_SLIDER_STEPS).isEqualTo(9)
+    }
+
     @Test
     fun `submits the alert threshold with the limit, and the default one when the slider was not touched`()
     {
