@@ -22,6 +22,15 @@ class BudgetProgressTest
         assertThat(progress.spent).isEqualTo(Money(12_000))
     }
 
+    // The screen needs the threshold of the budget in force to say "close", and a progress is what it gets.
+    @Test
+    fun `carries the alert threshold of its budget, 80 percent unless given`()
+    {
+        assertThat(BudgetProgress(Money(30_000), Money(0)).alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
+        assertThat(BudgetProgress(Money(30_000), Money(0), AlertThreshold(60)).alertThreshold)
+            .isEqualTo(AlertThreshold(60))
+    }
+
     @ParameterizedTest(name = "limit {0}, spent {1} -> remaining {2}")
     @CsvSource(
         "30000, 0,      30000",

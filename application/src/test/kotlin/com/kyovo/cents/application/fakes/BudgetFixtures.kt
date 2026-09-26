@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.fakes
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -12,19 +13,21 @@ import java.time.YearMonth
 fun aBudget(
     subcategoryId: SubcategoryId = aSubcategoryId(),
     month: YearMonth = YearMonth.of(2026, 9),
-    limit: Money = aMoney(30_000)
+    limit: Money = aMoney(30_000),
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
 ): Budget
 {
-    return Budget(subcategoryId, month, limit)
+    return Budget(subcategoryId, month, limit, alertThreshold)
 }
 
 fun aSetBudgetCommand(
     subcategoryId: SubcategoryId = aSubcategoryId(),
     month: YearMonth = YearMonth.of(2026, 9),
-    limit: Money = aMoney(30_000)
+    limit: Money = aMoney(30_000),
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
 ): SetBudgetCommand
 {
-    return SetBudgetCommand(subcategoryId, month, limit)
+    return SetBudgetCommand(subcategoryId, month, limit, alertThreshold)
 }
 
 class InMemoryBudgetRepository : BudgetRepository

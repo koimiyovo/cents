@@ -57,7 +57,7 @@ class GetBudgetProgressService(
                 .groupBy { it.subcategoryId }
                 .mapValues { (_, ofSubcategory) -> ofSubcategory.maxBy { it.month } }
                 .mapValues { (subcategoryId, budget) ->
-                    BudgetProgress(budget.limit, Money(spentBySubcategory[subcategoryId] ?: 0))
+                    BudgetProgress(budget.limit, Money(spentBySubcategory[subcategoryId] ?: 0), budget.alertThreshold)
                 }
         }.distinctUntilChanged()
     }
