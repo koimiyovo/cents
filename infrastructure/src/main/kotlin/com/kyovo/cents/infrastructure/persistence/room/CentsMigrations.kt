@@ -14,9 +14,10 @@ import androidx.sqlite.execSQL
 object CentsMigrations
 {
     /**
-     * Version 2 adds the budgets. Nothing existing is touched: only a new, empty table. The SQL is the
-     * one Room exported for version 2 (`schemas/.../2.json`), word for word — Room checks the table it
-     * finds against the schema when the database opens, and refuses one that differs.
+     * Version 2 adds the budgets, each with its own alert threshold. Nothing existing is touched: only a
+     * new, empty table. The SQL is the one Room exported for version 2 (`schemas/.../2.json`), word for
+     * word — Room checks the table it finds against the schema when the database opens, and refuses one
+     * that differs.
      */
     val MIGRATION_1_2 = Migration(1, 2)
     { connection ->
@@ -25,6 +26,7 @@ object CentsMigrations
                     "`subcategoryId` BLOB NOT NULL, " +
                     "`month` INTEGER NOT NULL, " +
                     "`limitCents` INTEGER NOT NULL, " +
+                    "`alertPercent` INTEGER NOT NULL, " +
                     "PRIMARY KEY(`subcategoryId`, `month`), " +
                     "FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) " +
                     "ON UPDATE NO ACTION ON DELETE CASCADE )"

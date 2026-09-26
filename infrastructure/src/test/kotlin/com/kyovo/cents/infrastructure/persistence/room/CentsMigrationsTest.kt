@@ -4,6 +4,7 @@ import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -230,12 +231,12 @@ class CentsMigrationsTest
         }
 
     @Test
-    fun `a migrated file is at version 2, and what is saved afterwards survives reopening it`() =
+    fun `a migrated file is at version 2, and what is saved afterwards, threshold included, survives reopening it`() =
         realTime()
         {
             // GIVEN a version 1 file, migrated, with a budget set
             createVersion1File()
-            val budget = Budget(groceries.id, september, Money(30_000))
+            val budget = Budget(groceries.id, september, Money(30_000), AlertThreshold(60))
             val first = openMigrated()
             try
             {

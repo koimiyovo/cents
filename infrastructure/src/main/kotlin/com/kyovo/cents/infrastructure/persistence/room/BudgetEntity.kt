@@ -18,6 +18,9 @@ import java.util.UUID
  * subcategory it caps. The primary key starts with `subcategoryId`, so it also serves that lookup.
  *
  * The column is `limitCents`, not `limit`: `LIMIT` is an SQL keyword.
+ *
+ * `alertPercent` is the budget's own alert threshold, a whole percentage: the share of the limit from which the
+ * budget counts as "close".
  */
 @Entity(
     tableName = "budgets",
@@ -34,5 +37,6 @@ import java.util.UUID
 data class BudgetEntity(
     val subcategoryId: UUID,
     val month: Int,
-    val limitCents: Long
+    val limitCents: Long,
+    val alertPercent: Int,
 )
