@@ -12,6 +12,7 @@ import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.SetBudgetCommand
 import com.kyovo.cents.domain.port.input.SetBudgetUseCase
@@ -58,6 +59,15 @@ private class FakeProgress : GetBudgetProgressUseCase
         observeAll(month).map { it[subcategoryId] }
 }
 
+/** What was spent per subcategory in each month, which a test can change while the view model is watching. */
+private class FakeSpendingBreakdown : GetSpendingBreakdownUseCase
+{
+    val byMonth = MutableStateFlow<Map<YearMonth, Map<SubcategoryId?, Money>>>(emptyMap())
+
+    override fun observe(month: YearMonth): Flow<Map<SubcategoryId?, Money>> =
+        byMonth.map { it[month] ?: emptyMap() }.distinctUntilChanged()
+}
+
 /** Records what it is asked to set; can be told to refuse. */
 private class RecordingSet : SetBudgetUseCase
 {
@@ -88,6 +98,7 @@ class BudgetsViewModelTest
 
     private val subcategories = FakeSubcategories(listOf(GROCERIES_SUBCATEGORY, SALARY_SUBCATEGORY, FUEL_SUBCATEGORY))
     private val progress = FakeProgress()
+    private val spendingBreakdown = FakeSpendingBreakdown()
     private val set = RecordingSet()
 
     // Built once the main dispatcher is in place (the extension installs it before each test): this view
@@ -97,7 +108,13 @@ class BudgetsViewModelTest
     @BeforeEach
     fun createTheViewModel()
     {
-        viewModel = BudgetsViewModel(subcategories, progress, set, clock)
+        viewModel = BudgetsViewModel(
+            listSubcategories = subcategories,
+            getBudgetProgress = progress,
+            getSpendingBreakdown = spendingBreakdown,
+            setBudget = set,
+            clock = clock,
+        )
     }
 
     private val state get() = viewModel.uiState.value
@@ -110,13 +127,65 @@ class BudgetsViewModelTest
         progress.byMonth.value = progress.byMonth.value + (month to entries.associate { it.first.id to it.second })
     }
 
+    private fun givenSpending(month: YearMonth, vararg entries: Pair<Subcategory?, Long>)
+    {
+        spendingBreakdown.byMonth.value = spendingBreakdown.byMonth.value +
+                (month to entries.associate { it.first?.id to Money(it.second) })
+    }
+
     @Test
-    fun `starts on the current month, with nothing open`()
+    fun `starts on the current month, on the overview tab, with nothing open`()
     {
         assertThat(state.selector).isEqualTo(MonthSelector(september))
         assertThat(state.isCurrentMonth).isTrue()
+        assertThat(state.tab).isEqualTo(BudgetTab.OVERVIEW)
         assertThat(state.form).isNull()
         assertThat(state.error).isNull()
+    }
+
+    @Test
+    fun `selecting a tab switches it, and it survives moving to another month`()
+    {
+        // WHEN
+        viewModel.selectTab(BudgetTab.BUDGETS)
+
+        // THEN
+        assertThat(state.tab).isEqualTo(BudgetTab.BUDGETS)
+
+        // AND a change of month closes the form but leaves the tab as it was
+        viewModel.nextMonth()
+        assertThat(state.tab).isEqualTo(BudgetTab.BUDGETS)
+    }
+
+    @Test
+    fun `the overview shows the spending breakdown of the month shown, budget or no budget`()
+    {
+        // GIVEN groceries and fuel both spent this month, though only groceries has a budget
+        givenSpending(september, GROCERIES_SUBCATEGORY to 4_500L, FUEL_SUBCATEGORY to 2_000L)
+
+        // THEN
+        assertThat(state.breakdown).isEqualTo(
+            spendingBreakdown(
+                subcategories.all.value,
+                mapOf(GROCERIES_SUBCATEGORY.id to Money(4_500), FUEL_SUBCATEGORY.id to Money(2_000)),
+            )
+        )
+    }
+
+    @Test
+    fun `moving to another month shows the breakdown of that month`()
+    {
+        // GIVEN
+        givenSpending(august, GROCERIES_SUBCATEGORY to 1_000L)
+        givenSpending(september, GROCERIES_SUBCATEGORY to 5_000L)
+
+        // WHEN
+        viewModel.previousMonth()
+
+        // THEN
+        assertThat(state.breakdown.total).isEqualTo(Money(1_000))
+        viewModel.nextMonth()
+        assertThat(state.breakdown.total).isEqualTo(Money(5_000))
     }
 
     @Test

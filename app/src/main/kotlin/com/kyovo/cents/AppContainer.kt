@@ -8,6 +8,7 @@ import com.kyovo.cents.application.usecase.DeleteTransactionService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
+import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.ListAccountsService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
 import com.kyovo.cents.application.usecase.ListSubcategoriesService
@@ -30,6 +31,7 @@ import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
@@ -91,6 +93,8 @@ class AppContainer(persistence: RoomPersistence) {
     // device's), so an expense lands in the same month for both.
     val getBudgetProgress: GetBudgetProgressUseCase =
         GetBudgetProgressService(budgetRepository, transactionRepository, ZoneId.systemDefault())
+    val getSpendingBreakdown: GetSpendingBreakdownUseCase =
+        GetSpendingBreakdownService(transactionRepository, ZoneId.systemDefault())
     val openAccount: OpenAccountUseCase = OpenAccountService(
         accountRepository,
         UuidAccountIdGenerator(),

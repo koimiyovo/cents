@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
                 BudgetsViewModel(
                     listSubcategories = appContainer.listSubcategories,
                     getBudgetProgress = appContainer.getBudgetProgress,
+                    getSpendingBreakdown = appContainer.getSpendingBreakdown,
                     setBudget = appContainer.setBudget,
                 )
             }

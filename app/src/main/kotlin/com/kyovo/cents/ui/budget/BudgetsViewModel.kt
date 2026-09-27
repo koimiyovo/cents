@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.SetBudgetUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,18 +37,30 @@ enum class BudgetFormError
     SUBCATEGORY_UNAVAILABLE,
 }
 
+/** Which of the budgets screen's two tabs is shown: where the money went, or the budgets themselves.
+ * [OVERVIEW] comes first — it is the one that answers "where do things stand" at a glance, with no
+ * budget required to say something. */
+enum class BudgetTab
+{
+    OVERVIEW,
+    BUDGETS,
+}
+
 /**
  * Everything the budgets screens show: the month ([selector]), one [rows] entry per expense subcategory
- * with its progress for that month, and the [form] that sets a limit and an alert threshold — null while
- * it is closed, so "is it open" and its content can't disagree. [isCurrentMonth] tells the screen whether
- * to offer a way back to today. The rows are always those of the month in [selector].
+ * with its progress for that month, the month's spending [breakdown] (the overview tab's pie), and the
+ * [form] that sets a limit and an alert threshold — null while it is closed, so "is it open" and its content
+ * can't disagree. [isCurrentMonth] tells the screen whether to offer a way back to today. [rows] and
+ * [breakdown] are always those of the month in [selector].
  */
 data class BudgetsUiState(
     val selector: MonthSelector,
     val rows: List<BudgetRow> = emptyList(),
+    val breakdown: SpendingBreakdown = SpendingBreakdown(Money(0), emptyList()),
     val form: BudgetFormState? = null,
     val error: BudgetFormError? = null,
     val isCurrentMonth: Boolean = true,
+    val tab: BudgetTab = BudgetTab.OVERVIEW,
 )
 
 /**
@@ -59,15 +73,17 @@ data class BudgetsUiState(
 class BudgetsViewModel(
     listSubcategories: ListSubcategoriesUseCase,
     getBudgetProgress: GetBudgetProgressUseCase,
+    getSpendingBreakdown: GetSpendingBreakdownUseCase,
     private val setBudget: SetBudgetUseCase,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel()
 {
-    /** What the user chose: the month and the form. Not what is read from the storage. */
+    /** What the user chose: the month, the tab and the form. Not what is read from the storage. */
     private data class Chosen(
         val selector: MonthSelector,
         val form: BudgetFormState? = null,
         val error: BudgetFormError? = null,
+        val tab: BudgetTab = BudgetTab.OVERVIEW,
     )
 
     private val chosen = MutableStateFlow(Chosen(MonthSelector(currentMonth())))
@@ -88,16 +104,31 @@ class BudgetsViewModel(
             }
         }
 
-    // A state is only built once the rows are those of the month chosen: right after a change of month, the
-    // rows of the month left are still there for an instant, and must not appear under the new month's name.
-    val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth) { chosen, (month, rows) ->
-        if (month != chosen.selector.month) null
+    /** The overview tab's pie: where the month's money went, budget or no budget. */
+    private val breakdownOfTheMonth: Flow<Pair<YearMonth, SpendingBreakdown>> = chosen
+        .map { it.selector.month }
+        .distinctUntilChanged()
+        .flatMapLatest { month ->
+            combine(
+                listSubcategories.observe(RecordableTransactionCategory.EXPENSE),
+                getSpendingBreakdown.observe(month),
+            ) { subcategories, spent -> month to spendingBreakdown(subcategories, spent) }
+        }
+
+    // A state is only built once the rows and the breakdown are those of the month chosen: right after a
+    // change of month, the previous month's data is still there for an instant, and must not appear under
+    // the new month's name.
+    val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth, breakdownOfTheMonth)
+    { chosen, (rowsMonth, rows), (breakdownMonth, breakdown) ->
+        if (rowsMonth != chosen.selector.month || breakdownMonth != chosen.selector.month) null
         else BudgetsUiState(
             selector = chosen.selector,
             rows = rows,
+            breakdown = breakdown,
             form = chosen.form,
             error = chosen.error,
             isCurrentMonth = chosen.selector.isCurrent(currentMonth()),
+            tab = chosen.tab,
         )
     }
         .filterNotNull()
@@ -122,6 +153,11 @@ class BudgetsViewModel(
     fun goToCurrentMonth()
     {
         moveTo { MonthSelector(currentMonth()) }
+    }
+
+    fun selectTab(tab: BudgetTab)
+    {
+        chosen.update { it.copy(tab = tab) }
     }
 
     /** A form is for the month it was opened in, so leaving that month closes it. */
