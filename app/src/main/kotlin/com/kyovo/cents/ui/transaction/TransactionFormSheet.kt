@@ -471,15 +471,17 @@ private fun DateRow(
 
 /**
  * Single-day picker, themed with the same scoped color scheme as the transactions range picker.
- * Future days aren't selectable: a transaction is recorded once it has happened.
+ * Future days aren't selectable by default: a transaction is recorded once it has happened. Reused
+ * by the recurring-expense form with [allowFuture] set — a rule's start/end date is planned ahead.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SingleDatePickerDialog(
+internal fun SingleDatePickerDialog(
     palette: AccountsPalette,
     initialDay: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
+    allowFuture: Boolean = false,
 )
 {
     val state = rememberDatePickerState(
@@ -487,7 +489,7 @@ private fun SingleDatePickerDialog(
         selectableDates = object : SelectableDates
         {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                utcTimeMillis <= System.currentTimeMillis()
+                allowFuture || utcTimeMillis <= System.currentTimeMillis()
         },
     )
     val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }

@@ -22,6 +22,12 @@ class HomeDestinationTest
     }
 
     @Test
+    fun `back from the recurring expenses goes to the settings`()
+    {
+        assertThat(HomeDestination.RecurringExpenses.back()).isEqualTo(HomeDestination.Settings)
+    }
+
+    @Test
     fun `back from the settings goes to the tabs`()
     {
         assertThat(HomeDestination.Settings.back()).isEqualTo(HomeDestination.Tabs)
@@ -60,6 +66,7 @@ class HomeDestinationTest
             HomeDestination.Settings,
             HomeDestination.Subcategories,
             HomeDestination.Budgets,
+            HomeDestination.RecurringExpenses,
         )
     }
 }
