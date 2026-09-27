@@ -67,6 +67,7 @@
     <string name="transactions_expense_label">↘ Dépenses</string>
     <string name="transactions_income_label">↗ Revenus</string>
     <string name="transactions_net_label">🐷 Solde net</string>
+    <string name="transactions_top_expenses_title">Plus grosses dépenses</string>
     <string name="transactions_search_placeholder">Rechercher une transaction…</string>
     <string name="transactions_all_accounts">Tous les comptes</string>
     <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
