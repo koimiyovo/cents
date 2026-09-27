@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
                     listSubcategories = appContainer.listSubcategories,
                     getBudgetProgress = appContainer.getBudgetProgress,
                     getSpendingBreakdown = appContainer.getSpendingBreakdown,
+                    getSpendingTrend = appContainer.getSpendingTrend,
                     setBudget = appContainer.setBudget,
                 )
             }
