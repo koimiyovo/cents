@@ -8,6 +8,7 @@ import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
+import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.SetBudgetUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,26 +38,28 @@ enum class BudgetFormError
     SUBCATEGORY_UNAVAILABLE,
 }
 
-/** Which of the budgets screen's two tabs is shown: where the money went, or the budgets themselves.
- * [OVERVIEW] comes first — it is the one that answers "where do things stand" at a glance, with no
- * budget required to say something. */
+/** Which of the budgets screen's three tabs is shown. [OVERVIEW] comes first — it is the one that answers
+ * "where do things stand" at a glance, with no budget required to say something. */
 enum class BudgetTab
 {
     OVERVIEW,
     BUDGETS,
+    TRENDS,
 }
 
 /**
  * Everything the budgets screens show: the month ([selector]), one [rows] entry per expense subcategory
- * with its progress for that month, the month's spending [breakdown] (the overview tab's pie), and the
- * [form] that sets a limit and an alert threshold — null while it is closed, so "is it open" and its content
- * can't disagree. [isCurrentMonth] tells the screen whether to offer a way back to today. [rows] and
- * [breakdown] are always those of the month in [selector].
+ * with its progress for that month, the month's spending [breakdown] (the overview tab's pie), the last few
+ * months' totals ([trend], the trends tab's bars), and the [form] that sets a limit and an alert threshold —
+ * null while it is closed, so "is it open" and its content can't disagree. [isCurrentMonth] tells the screen
+ * whether to offer a way back to today. [rows], [breakdown] and [trend] are always those of the month in
+ * [selector] (the trend's window ends at it).
  */
 data class BudgetsUiState(
     val selector: MonthSelector,
     val rows: List<BudgetRow> = emptyList(),
     val breakdown: SpendingBreakdown = SpendingBreakdown(Money(0), emptyList()),
+    val trend: SpendingTrend = SpendingTrend(emptyList(), null, null),
     val form: BudgetFormState? = null,
     val error: BudgetFormError? = null,
     val isCurrentMonth: Boolean = true,
@@ -74,6 +77,7 @@ class BudgetsViewModel(
     listSubcategories: ListSubcategoriesUseCase,
     getBudgetProgress: GetBudgetProgressUseCase,
     getSpendingBreakdown: GetSpendingBreakdownUseCase,
+    getSpendingTrend: GetSpendingTrendUseCase,
     private val setBudget: SetBudgetUseCase,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel()
@@ -115,16 +119,23 @@ class BudgetsViewModel(
             ) { subcategories, spent -> month to spendingBreakdown(subcategories, spent) }
         }
 
-    // A state is only built once the rows and the breakdown are those of the month chosen: right after a
-    // change of month, the previous month's data is still there for an instant, and must not appear under
-    // the new month's name.
-    val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth, breakdownOfTheMonth)
-    { chosen, (rowsMonth, rows), (breakdownMonth, breakdown) ->
-        if (rowsMonth != chosen.selector.month || breakdownMonth != chosen.selector.month) null
+    /** The trends tab's bars: the last few months' totals, this one's window ending at the month shown. */
+    private val trendOfTheMonth: Flow<Pair<YearMonth, SpendingTrend>> = chosen
+        .map { it.selector.month }
+        .distinctUntilChanged()
+        .flatMapLatest { month -> getSpendingTrend.observe(month).map { monthly -> month to spendingTrend(monthly) } }
+
+    // A state is only built once the rows, the breakdown and the trend are those of the month chosen: right
+    // after a change of month, the previous month's data is still there for an instant, and must not appear
+    // under the new month's name.
+    val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth)
+    { chosen, (rowsMonth, rows), (breakdownMonth, breakdown), (trendMonth, trend) ->
+        if (rowsMonth != chosen.selector.month || breakdownMonth != chosen.selector.month || trendMonth != chosen.selector.month) null
         else BudgetsUiState(
             selector = chosen.selector,
             rows = rows,
             breakdown = breakdown,
+            trend = trend,
             form = chosen.form,
             error = chosen.error,
             isCurrentMonth = chosen.selector.isCurrent(currentMonth()),

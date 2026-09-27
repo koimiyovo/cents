@@ -8,11 +8,13 @@ import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.BudgetProjection
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.MonthlySpending
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
+import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.SetBudgetCommand
 import com.kyovo.cents.domain.port.input.SetBudgetUseCase
@@ -68,6 +70,15 @@ private class FakeSpendingBreakdown : GetSpendingBreakdownUseCase
         byMonth.map { it[month] ?: emptyMap() }.distinctUntilChanged()
 }
 
+/** The trend of each month asked about, which a test can change while the view model is watching. */
+private class FakeSpendingTrend : GetSpendingTrendUseCase
+{
+    val byMonth = MutableStateFlow<Map<YearMonth, List<MonthlySpending>>>(emptyMap())
+
+    override fun observe(month: YearMonth, months: Int): Flow<List<MonthlySpending>> =
+        byMonth.map { it[month] ?: emptyList() }.distinctUntilChanged()
+}
+
 /** Records what it is asked to set; can be told to refuse. */
 private class RecordingSet : SetBudgetUseCase
 {
@@ -99,6 +110,7 @@ class BudgetsViewModelTest
     private val subcategories = FakeSubcategories(listOf(GROCERIES_SUBCATEGORY, SALARY_SUBCATEGORY, FUEL_SUBCATEGORY))
     private val progress = FakeProgress()
     private val spendingBreakdown = FakeSpendingBreakdown()
+    private val spendingTrend = FakeSpendingTrend()
     private val set = RecordingSet()
 
     // Built once the main dispatcher is in place (the extension installs it before each test): this view
@@ -112,6 +124,7 @@ class BudgetsViewModelTest
             listSubcategories = subcategories,
             getBudgetProgress = progress,
             getSpendingBreakdown = spendingBreakdown,
+            getSpendingTrend = spendingTrend,
             setBudget = set,
             clock = clock,
         )
@@ -131,6 +144,11 @@ class BudgetsViewModelTest
     {
         spendingBreakdown.byMonth.value = spendingBreakdown.byMonth.value +
                 (month to entries.associate { it.first?.id to Money(it.second) })
+    }
+
+    private fun givenTrend(month: YearMonth, monthly: List<MonthlySpending>)
+    {
+        spendingTrend.byMonth.value = spendingTrend.byMonth.value + (month to monthly)
     }
 
     @Test
@@ -186,6 +204,33 @@ class BudgetsViewModelTest
         assertThat(state.breakdown.total).isEqualTo(Money(1_000))
         viewModel.nextMonth()
         assertThat(state.breakdown.total).isEqualTo(Money(5_000))
+    }
+
+    @Test
+    fun `the trends tab shows the trend of the month shown, as bars`()
+    {
+        // GIVEN
+        val monthly = listOf(MonthlySpending(august, Money(10_000)), MonthlySpending(september, Money(20_000)))
+        givenTrend(september, monthly)
+
+        // THEN
+        assertThat(state.trend).isEqualTo(spendingTrend(monthly))
+    }
+
+    @Test
+    fun `moving to another month shows the trend of that month`()
+    {
+        // GIVEN
+        givenTrend(august, listOf(MonthlySpending(august, Money(1_000))))
+        givenTrend(september, listOf(MonthlySpending(september, Money(5_000))))
+
+        // WHEN
+        viewModel.previousMonth()
+
+        // THEN
+        assertThat(state.trend.average).isEqualTo(Money(1_000))
+        viewModel.nextMonth()
+        assertThat(state.trend.average).isEqualTo(Money(5_000))
     }
 
     @Test
