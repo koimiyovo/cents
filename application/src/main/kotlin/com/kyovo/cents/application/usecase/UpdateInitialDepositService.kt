@@ -15,7 +15,7 @@ class UpdateInitialDepositService(private val transactionRepository: Transaction
 {
     override suspend fun update(id: TransactionId, amount: Money): Transaction
     {
-        if (amount.value == 0L)
+        if (amount.isZero())
         {
             throw InvalidInitialDepositAmountException()
         }

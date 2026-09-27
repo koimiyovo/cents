@@ -32,6 +32,8 @@ data class AccountsPalette(
     val statusActiveColor: Color,
     val divider: Color,
     val error: Color,
+    /** Categorical colors for a chart's slices/series, in fixed order — never cycled or reassigned by rank. */
+    val chartColors: List<Color>,
 )
 
 val LightAccountsPalette = AccountsPalette(
@@ -58,6 +60,14 @@ val LightAccountsPalette = AccountsPalette(
     statusActiveColor = Color(0xFF1D6F63),
     divider = Color(0xFFCBD9D0),
     error = Color(0xFFB3261E),
+    chartColors = listOf(
+        Color(0xFF2A78D6), // blue
+        Color(0xFFEB6834), // orange
+        Color(0xFF1BAF7A), // aqua
+        Color(0xFFEDA100), // yellow
+        Color(0xFFE87BA4), // magenta
+        Color(0xFF008300), // green
+    ),
 )
 
 val DarkAccountsPalette = AccountsPalette(
@@ -84,4 +94,12 @@ val DarkAccountsPalette = AccountsPalette(
     statusActiveColor = Color(0xFF6FE39A),
     divider = Color(0xFF23352C),
     error = Color(0xFFF2B8B5),
+    chartColors = listOf(
+        Color(0xFF3987E5), // blue
+        Color(0xFFD95926), // orange
+        Color(0xFF199E70), // aqua
+        Color(0xFFC98500), // yellow
+        Color(0xFFD55181), // magenta
+        Color(0xFF008300), // green
+    ),
 )

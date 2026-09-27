@@ -4,8 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 /**
- * The screens below the tabs: the settings, and under them the subcategory management. The Back
- * button goes up one level at a time, and on the tabs it is left to the system (which leaves the app).
+ * The screens below the tabs: the settings, and under them the subcategory management and the budget
+ * limits. The Back button goes up one level at a time, and on the tabs it is left to the system (which leaves the app).
  */
 class HomeDestinationTest
 {
@@ -13,6 +13,12 @@ class HomeDestinationTest
     fun `back from the subcategories goes to the settings`()
     {
         assertThat(HomeDestination.Subcategories.back()).isEqualTo(HomeDestination.Settings)
+    }
+
+    @Test
+    fun `back from the budget limits goes to the settings`()
+    {
+        assertThat(HomeDestination.Budgets.back()).isEqualTo(HomeDestination.Settings)
     }
 
     @Test
@@ -38,10 +44,22 @@ class HomeDestinationTest
     }
 
     @Test
+    fun `the budget limits are as deep as the subcategories, and just as easy to leave`()
+    {
+        val path = generateSequence(HomeDestination.Budgets) { it.back() }.toList()
+
+        assertThat(path).containsExactly(HomeDestination.Budgets, HomeDestination.Settings, HomeDestination.Tabs)
+    }
+
+    @Test
     fun `every destination but the tabs has somewhere to go back to`()
     {
         val withBack = HomeDestination.entries.filter { it.back() != null }
 
-        assertThat(withBack).containsExactlyInAnyOrder(HomeDestination.Settings, HomeDestination.Subcategories)
+        assertThat(withBack).containsExactlyInAnyOrder(
+            HomeDestination.Settings,
+            HomeDestination.Subcategories,
+            HomeDestination.Budgets,
+        )
     }
 }

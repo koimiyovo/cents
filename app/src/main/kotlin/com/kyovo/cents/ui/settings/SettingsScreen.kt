@@ -34,13 +34,14 @@ import com.kyovo.cents.ui.home.HomeTopBar
 import com.kyovo.cents.ui.home.LightAccountsPalette
 
 /**
- * The settings: a list of entries, each leading to its own screen. There is one so far (the
- * subcategories); the default currency, the reminders and the backup will join it.
+ * The settings: a list of entries, each leading to its own screen — the subcategories and the budget
+ * limits so far; the default currency, the reminders and the backup will join them.
  */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenSubcategories: () -> Unit,
+    onOpenBudgets: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -70,6 +71,13 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_subcategories),
                 subtitle = stringResource(R.string.settings_subcategories_hint),
                 onClick = onOpenSubcategories,
+            )
+            SettingsEntry(
+                palette = palette,
+                emoji = "🎯",
+                title = stringResource(R.string.settings_budgets),
+                subtitle = stringResource(R.string.settings_budgets_hint),
+                onClick = onOpenBudgets,
             )
         }
     }
