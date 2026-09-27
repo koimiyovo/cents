@@ -68,6 +68,7 @@ import com.kyovo.cents.ui.common.SectionLabel
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectableOptionRow
+import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import com.kyovo.cents.ui.transaction.reactsToTap
 import java.time.DayOfWeek
@@ -242,8 +243,8 @@ fun TransactionsScreen(
                 } else
                 {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                        TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
                         SpendingByWeekdaySection(palette, weekdaySpendingInPeriod)
+                        TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
                     }
                 }
             }
@@ -802,7 +803,7 @@ internal fun SpendingByWeekdaySection(palette: AccountsPalette, weekdays: List<W
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp),
+                .height(130.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             weekdays.forEach { day -> WeekdayBar(palette, day, Modifier.weight(1f).fillMaxHeight()) }
@@ -815,6 +816,14 @@ private fun WeekdayBar(palette: AccountsPalette, day: WeekdaySpending, modifier:
 {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
     {
+        Text(
+            text = formatEuroCents(day.total.value),
+            color = if (day.isHighest) palette.textPrimary else palette.textMuted,
+            fontSize = 10.sp,
+            fontWeight = if (day.isHighest) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+        )
+        Spacer(Modifier.height(4.dp))
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter)
         {
             val fraction = day.barFraction.coerceIn(0f, 1f)
