@@ -140,7 +140,16 @@ fun TransactionsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
     val topExpensesInPeriod = remember(transactionsInPeriod) { topExpenses(transactionsInPeriod) }
-    val weekdaySpendingInPeriod = remember(transactionsInPeriod) { spendingByWeekday(transactionsInPeriod) }
+    // Always the current week, whatever the Historique period filter is set to: a recurring expense can
+    // generate a transaction weeks or months ahead (see GenerateRecurringExpensesService's lookahead), and
+    // a habit chart must not let one of those stand in for a day that hasn't happened yet.
+    val (weekStart, weekEnd) = remember { currentWeekRange(LocalDate.now()) }
+    val weekdaySpendingThisWeek = remember(allTransactions, weekStart, weekEnd) {
+        val zone = ZoneId.systemDefault()
+        val from = weekStart.atStartOfDay(zone).toInstant()
+        val to = weekEnd.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
+        spendingByWeekday(transactionsWithinRange(allTransactions, from, to))
+    }
 
     val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
         listTransactions.observe(
@@ -232,7 +241,7 @@ fun TransactionsScreen(
 
             TransactionsTab.INSIGHTS ->
             {
-                if (topExpensesInPeriod.isEmpty() && weekdaySpendingInPeriod.all { it.total.isZero() })
+                if (topExpensesInPeriod.isEmpty() && weekdaySpendingThisWeek.all { it.total.isZero() })
                 {
                     Text(
                         text = stringResource(R.string.transactions_insights_empty),
@@ -243,7 +252,7 @@ fun TransactionsScreen(
                 } else
                 {
                     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                        SpendingByWeekdaySection(palette, weekdaySpendingInPeriod)
+                        SpendingByWeekdaySection(palette, weekdaySpendingThisWeek, weekRangeLabel(weekStart, weekEnd))
                         TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
                     }
                 }
@@ -285,8 +294,10 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
     CUSTOM(R.string.transactions_period_custom, null),
 }
 
-/** The screen's two tabs, both scoped to the same period: the raw history (filters and the day-by-day
- * list), and the insights that were crowding it (the biggest expenses, the weekday pattern). */
+/** The screen's two tabs: the raw history (filters and the day-by-day list, scoped to the selected
+ * period, future recurring expenses included), and the insights that were crowding it — the biggest
+ * expenses (scoped to that same period, but never a not-yet-due one; see [topExpenses]) and the weekday
+ * pattern (always the current week, regardless of the period; see [SpendingByWeekdaySection]). */
 private enum class TransactionsTab
 {
     HISTORY,
@@ -789,17 +800,19 @@ internal fun TopExpensesSection(
 }
 
 /**
- * Where the money went by day of the week, over the period shown — a habit a plain list doesn't reveal
- * (spending more on weekends, say). The busiest day is in the accent colour, the rest a muted context.
- * Nothing shown when the period has no expense at all.
+ * Where the money went by day of the week, over the current week (Monday to Sunday) — always that week,
+ * whatever the Historique period filter is set to: a recurring expense can generate a transaction weeks or
+ * months ahead, and a habit chart must not include a day that hasn't happened yet. The busiest day is in
+ * the accent colour, the rest a muted context. Nothing shown when the week has no expense at all.
  */
 @Composable
-internal fun SpendingByWeekdaySection(palette: AccountsPalette, weekdays: List<WeekdaySpending>)
+internal fun SpendingByWeekdaySection(palette: AccountsPalette, weekdays: List<WeekdaySpending>, weekLabel: String)
 {
     if (weekdays.all { it.total.isZero() }) return
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, stringResource(R.string.transactions_weekday_title))
+        Text(text = weekLabel, color = palette.textMuted, fontSize = 12.sp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -962,11 +975,16 @@ internal fun groupByDay(transactions: List<Transaction>): List<Pair<LocalDate, L
         .sortedByDescending { it.first }
 }
 
-/** The [limit] biggest expenses among [transactions], most expensive first — incomes, transfers and the
- * opening deposit don't count as an expense one could overspend on. */
-internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5): List<Transaction> =
+/**
+ * The [limit] biggest expenses among [transactions] that have already happened (up to [now]), most
+ * expensive first — incomes, transfers and the opening deposit don't count as an expense one could
+ * overspend on, and neither does one not yet due: a recurring expense's due date can be well ahead of
+ * today (see GenerateRecurringExpensesService's lookahead), and it isn't one of the period's biggest
+ * expenses until it actually happens.
+ */
+internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5, now: Instant = Instant.now()): List<Transaction> =
     transactions
-        .filter { it.category == TransactionCategory.EXPENSE }
+        .filter { it.category == TransactionCategory.EXPENSE && !it.date.isAfter(now) }
         .sortedByDescending { it.amount.value }
         .take(limit)
 
@@ -982,6 +1000,22 @@ data class WeekdaySpending(
     val barFraction: Float,
     val isHighest: Boolean,
 )
+
+/** The Monday-to-Sunday week containing [today]. */
+internal fun currentWeekRange(today: LocalDate): Pair<LocalDate, LocalDate>
+{
+    val monday = today.minusDays((today.dayOfWeek.value - 1).toLong())
+    return monday to monday.plusDays(6)
+}
+
+/** "22 – 28 sept." (or "28 sept. – 4 oct." across a month boundary), the same "d MMM" shorthand as
+ * [periodLabel]'s custom range. */
+internal fun weekRangeLabel(monday: LocalDate, sunday: LocalDate): String
+{
+    val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH)
+    val start = if (monday.month == sunday.month) monday.dayOfMonth.toString() else monday.format(formatter)
+    return "$start – ${sunday.format(formatter)}"
+}
 
 /**
  * Expenses grouped by day of the week (Monday first), always all seven — a day with nothing spent is a
