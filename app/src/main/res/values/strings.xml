@@ -236,6 +236,7 @@
     <string name="budget_row_left">Reste %1$s</string>
     <string name="budget_row_over">Dépassé de %1$s</string>
     <string name="budget_row_status_close">Proche de la limite</string>
+    <string name="budget_row_pacing_to_exceed">Au rythme actuel, dépassement prévu de %1$s</string>
     <string name="budget_unbudgeted_title">Sans budget ce mois-ci</string>
     <string name="budget_empty">Aucun budget pour ce mois. Vous pouvez en définir dans les Réglages.</string>
 

@@ -275,6 +275,18 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
                 fontWeight = FontWeight.Bold,
             )
         }
+        // A warning ahead of the limit itself: at the current pace, the month would end over it — worth
+        // saying only while it is not already over, which the figures above already say.
+        val projection = row.projection
+        if (projection != null && projection.isPacingToExceed && row.status != BudgetStatus.OVER)
+        {
+            Text(
+                text = stringResource(R.string.budget_row_pacing_to_exceed, formatEuroCents(projection.projectedSpend.value - projection.limit.value)),
+                color = palette.iconToneGold,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
     }
 }
 
