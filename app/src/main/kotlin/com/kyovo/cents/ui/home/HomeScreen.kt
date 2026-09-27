@@ -316,6 +316,7 @@ fun HomeScreen(
                                 onPreviousMonth = budgetsViewModel::previousMonth,
                                 onNextMonth = budgetsViewModel::nextMonth,
                                 onToday = budgetsViewModel::goToCurrentMonth,
+                                onSelectTab = budgetsViewModel::selectTab,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
                     }

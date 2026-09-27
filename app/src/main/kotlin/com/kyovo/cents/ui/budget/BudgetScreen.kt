@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,11 +27,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
@@ -39,12 +43,16 @@ import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.HomeTopBar
 import com.kyovo.cents.ui.home.LightAccountsPalette
+import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
+import kotlin.math.roundToInt
 
 /**
- * The budget tab: where the month's budgets stand, at a glance. A month selector on top, a summary of the
- * whole month, then a card per budget that is set — the most urgent first — and, apart, the subcategories
- * that have none. It only looks: the limits and their thresholds are set from the settings.
+ * The budget tab: where the month's budgets stand, at a glance, in two tabs sharing the same month —
+ * [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most urgent
+ * first — and, apart, the subcategories that have none) and [BudgetTab.OVERVIEW] (a pie of where the
+ * month's money actually went, budget or no budget). It only looks: the limits and their thresholds are set
+ * from the settings.
  */
 @Composable
 fun BudgetScreen(
@@ -52,6 +60,7 @@ fun BudgetScreen(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onToday: () -> Unit,
+    onSelectTab: (BudgetTab) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 )
@@ -76,30 +85,47 @@ fun BudgetScreen(
             onNext = onNextMonth,
             onToday = onToday,
         )
-
-        val summary = overview.summary
-        if (summary == null)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
         {
-            Text(
-                text = stringResource(R.string.budget_empty),
-                color = palette.textMuted,
-                fontSize = 14.sp,
-            )
-        } else
-        {
-            SummaryCard(palette, summary)
-            overview.budgeted.forEach { row -> BudgetCard(palette, row) }
+            SubcategoryChip(stringResource(R.string.budget_tab_overview), state.tab == BudgetTab.OVERVIEW, palette) {
+                onSelectTab(BudgetTab.OVERVIEW)
+            }
+            SubcategoryChip(stringResource(R.string.budget_tab_budgets), state.tab == BudgetTab.BUDGETS, palette) {
+                onSelectTab(BudgetTab.BUDGETS)
+            }
         }
 
-        if (overview.unbudgeted.isNotEmpty())
+        when (state.tab)
         {
-            Text(
-                text = stringResource(R.string.budget_unbudgeted_title),
-                color = palette.textSecondary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            overview.unbudgeted.forEach { row -> UnbudgetedRow(palette, row) }
+            BudgetTab.BUDGETS ->
+            {
+                val summary = overview.summary
+                if (summary == null)
+                {
+                    Text(
+                        text = stringResource(R.string.budget_empty),
+                        color = palette.textMuted,
+                        fontSize = 14.sp,
+                    )
+                } else
+                {
+                    SummaryCard(palette, summary)
+                    overview.budgeted.forEach { row -> BudgetCard(palette, row) }
+                }
+
+                if (overview.unbudgeted.isNotEmpty())
+                {
+                    Text(
+                        text = stringResource(R.string.budget_unbudgeted_title),
+                        color = palette.textSecondary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    overview.unbudgeted.forEach { row -> UnbudgetedRow(palette, row) }
+                }
+            }
+
+            BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
         }
     }
 }
@@ -331,3 +357,123 @@ private fun ProgressBar(fraction: Float, color: Color, track: Color)
 /** The icon of a row: the subcategory's own emoji, or the default of its kind — never blank. */
 private fun subcategoryEmoji(row: BudgetRow): String =
     row.subcategory.emoji?.value ?: defaultSubcategoryEmoji(row.subcategory.kind)
+
+/**
+ * The overview tab: a pie of where the month's money went — every expense counts, whether or not its
+ * subcategory has a budget — followed by a legend row per slice. Empty when nothing was spent.
+ */
+@Composable
+private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreakdown)
+{
+    if (breakdown.slices.isEmpty())
+    {
+        Text(
+            text = stringResource(R.string.budget_overview_empty),
+            color = palette.textMuted,
+            fontSize = 14.sp,
+        )
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp))
+    {
+        SpendingPie(palette, breakdown)
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp))
+        {
+            breakdown.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice) }
+        }
+    }
+}
+
+/** A donut, most spent slice first from the top, clockwise, with a small gap between slices — and the
+ * month's total in its centre. */
+@Composable
+private fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
+{
+    val gapDegrees = if (breakdown.slices.size > 1) 3f else 0f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size(180.dp))
+        {
+            val strokeWidth = size.minDimension * 0.16f
+            var startAngle = -90f
+            breakdown.slices.forEachIndexed { index, slice ->
+                val sweep = slice.fraction * 360f
+                drawArc(
+                    color = sliceColor(palette, index, slice.label),
+                    startAngle = startAngle + gapDegrees / 2,
+                    sweepAngle = (sweep - gapDegrees).coerceAtLeast(0f),
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Butt),
+                )
+                startAngle += sweep
+            }
+        }
+        Text(
+            text = stringResource(R.string.budget_overview_total_spent, formatEuroCents(breakdown.total.value)),
+            color = palette.textPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 46.dp),
+        )
+    }
+}
+
+@Composable
+private fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: SpendingSlice)
+{
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth())
+    {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(sliceColor(palette, index, slice.label)),
+        )
+        Spacer(Modifier.width(10.dp))
+        val label = slice.label
+        if (label is SpendingSliceLabel.Named)
+        {
+            Text(text = label.emoji, fontSize = 16.sp)
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            text = sliceLabelText(label),
+            color = palette.textPrimary,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Column(horizontalAlignment = Alignment.End)
+        {
+            Text(
+                text = formatEuroCents(slice.amount.value),
+                color = palette.textPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = stringResource(R.string.budget_overview_slice_percent, (slice.fraction * 100).roundToInt()),
+                color = palette.textMuted,
+                fontSize = 12.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun sliceLabelText(label: SpendingSliceLabel): String = when (label)
+{
+    is SpendingSliceLabel.Named -> label.name
+    SpendingSliceLabel.Uncategorized -> stringResource(R.string.budget_overview_uncategorized)
+    SpendingSliceLabel.Other -> stringResource(R.string.budget_overview_other)
+}
+
+/** A slice's colour: a fixed categorical hue by its rank among the named slices, kept distinct from — and
+ * never reused as — a status colour; the folded "other" slice is neutral, since it names no single thing. */
+private fun sliceColor(palette: AccountsPalette, index: Int, label: SpendingSliceLabel): Color =
+    if (label == SpendingSliceLabel.Other) palette.textMuted else palette.chartColors[index]
