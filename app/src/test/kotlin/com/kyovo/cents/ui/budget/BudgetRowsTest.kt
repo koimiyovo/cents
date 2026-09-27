@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.budget
 
 import com.kyovo.cents.domain.model.BudgetProgress
+import com.kyovo.cents.domain.model.BudgetProjection
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.ui.transaction.FUEL_SUBCATEGORY
 import com.kyovo.cents.ui.transaction.GROCERIES_SUBCATEGORY
@@ -10,6 +11,8 @@ import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * The budgets screen lists the **expense** subcategories — an income has nothing to be capped — one row
@@ -129,5 +132,61 @@ class BudgetRowsTest
 
         // THEN
         assertThat(rows.single().barFraction).isNull()
+    }
+
+    // ------------------------------------------------------------------ projection
+
+    private val september = YearMonth.of(2026, 9)
+    private val august = YearMonth.of(2026, 8)
+    private val midSeptember = LocalDate.of(2026, 9, 15)
+
+    @Test
+    fun `without a month and today, no row projects, even with a budget in force`()
+    {
+        // WHEN
+        val rows = budgetRows(listOf(GROCERIES_SUBCATEGORY), mapOf(GROCERIES_SUBCATEGORY.id to progress(30_000, 12_000)))
+
+        // THEN
+        assertThat(rows.single().projection).isNull()
+    }
+
+    @Test
+    fun `given the month shown and today, a row with a budget in force carries its projection`()
+    {
+        // WHEN
+        val rows = budgetRows(
+            listOf(GROCERIES_SUBCATEGORY),
+            mapOf(GROCERIES_SUBCATEGORY.id to progress(30_000, 12_000)),
+            month = september,
+            today = midSeptember,
+        )
+
+        // THEN 12_000 spent by day 15 of 30 projects to 24_000
+        assertThat(rows.single().projection).isEqualTo(BudgetProjection(Money(30_000), Money(12_000), Money(24_000)))
+    }
+
+    @Test
+    fun `a row without a budget has no projection either`()
+    {
+        // WHEN
+        val rows = budgetRows(listOf(GROCERIES_SUBCATEGORY), emptyMap(), month = september, today = midSeptember)
+
+        // THEN
+        assertThat(rows.single().projection).isNull()
+    }
+
+    @Test
+    fun `a row of a month other than the one today falls in has no projection`()
+    {
+        // WHEN looking at August's rows while today is in September
+        val rows = budgetRows(
+            listOf(GROCERIES_SUBCATEGORY),
+            mapOf(GROCERIES_SUBCATEGORY.id to progress(25_000, 5_000)),
+            month = august,
+            today = midSeptember,
+        )
+
+        // THEN
+        assertThat(rows.single().projection).isNull()
     }
 }
