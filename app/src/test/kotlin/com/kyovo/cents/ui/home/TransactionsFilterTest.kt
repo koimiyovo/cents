@@ -33,36 +33,36 @@ class PeriodRangeTest
     private val now = Instant.parse("2026-09-23T12:00:00Z")
 
     @Test
-    fun `7-day period starts 7 days before now and has no upper bound`()
+    fun `7-day period starts 7 days before now and stops at now`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_7_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(7, ChronoUnit.DAYS))
-        assertThat(to).isNull()
+        assertThat(to).isEqualTo(now)
     }
 
     @Test
-    fun `30-day period starts 30 days before now and has no upper bound`()
+    fun `30-day period starts 30 days before now and stops at now`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(30, ChronoUnit.DAYS))
-        assertThat(to).isNull()
+        assertThat(to).isEqualTo(now)
     }
 
     @Test
-    fun `all-time period has no lower or upper bound`()
+    fun `all-time period has no lower bound but still stops at now`()
     {
-        // WHEN
+        // WHEN a recurring expense generated well ahead of today (see the lookahead horizon) must not show
         val (from, to) = periodRange(TransactionsPeriod.ALL_TIME, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isNull()
-        assertThat(to).isNull()
+        assertThat(to).isEqualTo(now)
     }
 
     @Test
