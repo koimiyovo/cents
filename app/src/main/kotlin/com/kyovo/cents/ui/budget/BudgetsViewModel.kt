@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
+import java.time.LocalDate
 import java.time.YearMonth
 
 /** What went wrong with the last attempt to save a budget. */
@@ -82,7 +83,9 @@ class BudgetsViewModel(
             combine(
                 listSubcategories.observe(RecordableTransactionCategory.EXPENSE),
                 getBudgetProgress.observeAll(month),
-            ) { subcategories, progress -> month to budgetRows(subcategories, progress) }
+            ) { subcategories, progress ->
+                month to budgetRows(subcategories, progress, month, LocalDate.now(clock))
+            }
         }
 
     // A state is only built once the rows are those of the month chosen: right after a change of month, the

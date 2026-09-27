@@ -6,6 +6,7 @@ import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.BudgetProgress
+import com.kyovo.cents.domain.model.BudgetProjection
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
@@ -125,9 +126,12 @@ class BudgetsViewModelTest
         val groceries = progressOf(limit = 30_000, spent = 12_000)
         givenProgress(september, GROCERIES_SUBCATEGORY to groceries)
 
-        // THEN
+        // THEN "today" (the 15th) also gives groceries its projection to the month's end
         assertThat(state.rows).isEqualTo(
-            listOf(BudgetRow(GROCERIES_SUBCATEGORY, groceries), BudgetRow(FUEL_SUBCATEGORY, null))
+            listOf(
+                BudgetRow(GROCERIES_SUBCATEGORY, groceries, BudgetProjection(Money(30_000), Money(12_000), Money(24_000))),
+                BudgetRow(FUEL_SUBCATEGORY, null),
+            )
         )
     }
 
@@ -141,11 +145,18 @@ class BudgetsViewModelTest
         givenProgress(september, GROCERIES_SUBCATEGORY to progressOf(30_000, 27_000))
         subcategories.all.value = listOf(GROCERIES_SUBCATEGORY, SALARY_SUBCATEGORY)
 
-        // THEN the screen needs no refresh
+        // THEN the screen needs no refresh, and the projection follows the new amount spent
         assertThat(state.rows).isEqualTo(
-            listOf(BudgetRow(GROCERIES_SUBCATEGORY, progressOf(30_000, 27_000)))
+            listOf(
+                BudgetRow(
+                    GROCERIES_SUBCATEGORY,
+                    progressOf(30_000, 27_000),
+                    BudgetProjection(Money(30_000), Money(27_000), Money(54_000)),
+                )
+            )
         )
         assertThat(state.rows.single().status).isEqualTo(BudgetStatus.CLOSE_TO_LIMIT)
+        assertThat(state.rows.single().projection?.isPacingToExceed).isTrue()
     }
 
     @Test
@@ -158,10 +169,11 @@ class BudgetsViewModelTest
         // WHEN
         viewModel.previousMonth()
 
-        // THEN
+        // THEN a month other than the current one has no projection, whatever its progress
         assertThat(state.selector.month).isEqualTo(august)
         assertThat(state.isCurrentMonth).isFalse()
         assertThat(state.rows.first().progress).isEqualTo(progressOf(25_000, 5_000))
+        assertThat(state.rows.first().projection).isNull()
 
         // AND forward again, and beyond: there are no bounds
         viewModel.nextMonth()
