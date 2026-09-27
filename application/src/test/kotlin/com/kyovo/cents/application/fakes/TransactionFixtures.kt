@@ -33,7 +33,7 @@ fun aTransactionTitle(value: String = "Test transaction"): TransactionTitle
 fun aTransaction(
     id: TransactionId = aTransactionId(),
     accountId: AccountId = anAccountId(),
-    amount: Money = aMoney(),
+    amount: Money = aMoney(1_000),
     date: Instant = anInstant(),
     category: TransactionCategory = TransactionCategory.INITIAL_DEPOSIT,
     title: TransactionTitle = aTransactionTitle(),

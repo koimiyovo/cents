@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
+import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
@@ -65,6 +66,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Uses the device's time zone, like the budgets themselves (see AppContainer), so the month it shows
+    // is the month the budget progress is worked out for.
+    private val budgetsViewModel: BudgetsViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                BudgetsViewModel(
+                    listSubcategories = appContainer.listSubcategories,
+                    getBudgetProgress = appContainer.getBudgetProgress,
+                    getSpendingBreakdown = appContainer.getSpendingBreakdown,
+                    getSpendingTrend = appContainer.getSpendingTrend,
+                    setBudget = appContainer.setBudget,
+                )
+            }
+        }
+    }
+
     private val accountFormViewModel: AccountFormViewModel by viewModels {
         viewModelFactory {
             initializer {
@@ -102,6 +119,7 @@ class MainActivity : ComponentActivity() {
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
                     subcategoriesViewModel = subcategoriesViewModel,
+                    budgetsViewModel = budgetsViewModel,
                 )
             }
         }

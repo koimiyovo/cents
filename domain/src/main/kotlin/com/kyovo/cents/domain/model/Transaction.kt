@@ -1,6 +1,7 @@
 package com.kyovo.cents.domain.model
 
 import com.kyovo.cents.domain.exception.InvalidRestoredTransactionException
+import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import java.time.Instant
 
@@ -51,6 +52,8 @@ data class Transaction private constructor(
             date: Instant
         ): Transaction
         {
+            requireNonZero(amount)
+
             if (subcategory != null && subcategory.kind != category)
             {
                 throw InvalidTransactionSubcategoryException()
@@ -86,13 +89,23 @@ data class Transaction private constructor(
             date: Instant
         ): Transaction
         {
-            val canBeDescribed = category == TransactionCategory.INCOME || category == TransactionCategory.EXPENSE
+            val canBeDescribed =
+                category == TransactionCategory.INCOME || category == TransactionCategory.EXPENSE
             if (!canBeDescribed && (subcategoryId != null || description != null))
             {
                 throw InvalidRestoredTransactionException()
             }
 
-            return Transaction(id, accountId, amount, title, category, subcategoryId, description, date)
+            return Transaction(
+                id,
+                accountId,
+                amount,
+                title,
+                category,
+                subcategoryId,
+                description,
+                date
+            )
         }
 
         fun transferOut(
@@ -103,6 +116,8 @@ data class Transaction private constructor(
             date: Instant
         ): Transaction
         {
+            requireNonZero(amount)
+
             return Transaction(
                 id = id,
                 accountId = accountId,
@@ -123,6 +138,8 @@ data class Transaction private constructor(
             date: Instant
         ): Transaction
         {
+            requireNonZero(amount)
+
             return Transaction(
                 id = id,
                 accountId = accountId,
@@ -133,6 +150,14 @@ data class Transaction private constructor(
                 description = null,
                 date = date
             )
+        }
+
+        private fun requireNonZero(amount: Money)
+        {
+            if (amount.isZero())
+            {
+                throw InvalidTransactionAmountException()
+            }
         }
     }
 

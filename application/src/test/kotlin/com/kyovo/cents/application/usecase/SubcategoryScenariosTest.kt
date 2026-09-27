@@ -1,10 +1,7 @@
 package com.kyovo.cents.application.usecase
 
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
-import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
@@ -18,12 +15,15 @@ import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anUpdateSubcategoryCommand
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 /**
@@ -42,10 +42,18 @@ class SubcategoryScenariosTest
     private val subcategoryRepository = InMemorySubcategoryRepository()
 
     private val createSubcategory =
-        CreateSubcategoryService(subcategoryRepository, SequentialSubcategoryIdGenerator(listOf(first, second)))
+        CreateSubcategoryService(
+            subcategoryRepository,
+            SequentialSubcategoryIdGenerator(listOf(first, second))
+        )
     private val updateSubcategory = UpdateSubcategoryService(subcategoryRepository)
     private val deleteSubcategory =
-        DeleteSubcategoryService(subcategoryRepository, transactionRepository, InMemoryUnitOfWork())
+        DeleteSubcategoryService(
+            subcategoryRepository,
+            transactionRepository,
+            InMemoryBudgetRepository(),
+            InMemoryUnitOfWork()
+        )
     private val recordTransaction = RecordTransactionService(
         accountRepository,
         transactionRepository,
@@ -115,7 +123,12 @@ class SubcategoryScenariosTest
         spend(2_000, first)
 
         // WHEN
-        updateSubcategory.update(anUpdateSubcategoryCommand(id = first, name = SubcategoryName("Courses")))
+        updateSubcategory.update(
+            anUpdateSubcategoryCommand(
+                id = first,
+                name = SubcategoryName("Courses")
+            )
+        )
 
         // THEN they are found under the same subcategory, whatever it is called now
         assertThat(listTransactions.observe(subcategoryId = first).first()).hasSize(2)
@@ -130,7 +143,8 @@ class SubcategoryScenariosTest
         deleteSubcategory.delete(first)
 
         // WHEN the same name is created again
-        val again = createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
+        val again =
+            createSubcategory.create(aCreateSubcategoryCommand(name = SubcategoryName("Alimentation")))
 
         // THEN it is a new subcategory: the old transaction does not come back under it
         assertThat(again.id).isEqualTo(second)

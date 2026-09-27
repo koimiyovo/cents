@@ -1,10 +1,10 @@
 package com.kyovo.cents.application.usecase
 
-import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
-import kotlinx.coroutines.test.runTest
+import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
+import com.kyovo.cents.application.fakes.aBudget
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -18,11 +18,12 @@ import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import java.time.YearMonth
 
 /**
  * Deleting a subcategory is never refused: the transactions that used it are kept and are left
@@ -38,7 +39,14 @@ class DeleteSubcategoryServiceTest
     private val subcategoryRepository = InMemorySubcategoryRepository()
     private val transactionRepository = InMemoryTransactionRepository()
     private val unitOfWork = InMemoryUnitOfWork()
-    private val service = DeleteSubcategoryService(subcategoryRepository, transactionRepository, unitOfWork)
+    private val budgetRepository = InMemoryBudgetRepository()
+    private val service =
+        DeleteSubcategoryService(
+            subcategoryRepository,
+            transactionRepository,
+            budgetRepository,
+            unitOfWork
+        )
 
     private val groceries = aSubcategory(id = groceriesId, name = SubcategoryName("Alimentation"))
     private val fuel = aSubcategory(id = fuelId, name = SubcategoryName("Carburant"))
@@ -84,42 +92,50 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `keeps the transactions that used it, uncategorised, with everything else unchanged`() = runTest()
-    {
-        // GIVEN
-        subcategoryRepository.save(groceries)
-        transactionRepository.save(anExpenseIn(1, groceriesId))
-        transactionRepository.save(anExpenseIn(2, groceriesId))
+    fun `keeps the transactions that used it, uncategorised, with everything else unchanged`() =
+        runTest()
+        {
+            // GIVEN
+            subcategoryRepository.save(groceries)
+            transactionRepository.save(anExpenseIn(1, groceriesId))
+            transactionRepository.save(anExpenseIn(2, groceriesId))
 
-        // WHEN
-        service.delete(groceriesId)
+            // WHEN
+            service.delete(groceriesId)
 
-        // THEN
-        assertThat(transactionRepository.saved).containsExactlyInAnyOrder(
-            anExpenseIn(1, subcategoryId = null),
-            anExpenseIn(2, subcategoryId = null),
-        )
-    }
+            // THEN
+            assertThat(transactionRepository.saved).containsExactlyInAnyOrder(
+                anExpenseIn(1, subcategoryId = null),
+                anExpenseIn(2, subcategoryId = null),
+            )
+        }
 
     @ParameterizedTest
     @EnumSource(RecordableTransactionCategory::class)
-    fun `works the same for an income subcategory as for an expense one`(kind: RecordableTransactionCategory) = runTest()
-    {
-        // GIVEN
-        val subcategory = aSubcategory(id = groceriesId, kind = kind)
-        val category = if (kind == RecordableTransactionCategory.INCOME) TransactionCategory.INCOME
-        else TransactionCategory.EXPENSE
-        subcategoryRepository.save(subcategory)
-        transactionRepository.save(aTransaction(category = category, subcategoryId = groceriesId))
+    fun `works the same for an income subcategory as for an expense one`(kind: RecordableTransactionCategory) =
+        runTest()
+        {
+            // GIVEN
+            val subcategory = aSubcategory(id = groceriesId, kind = kind)
+            val category =
+                if (kind == RecordableTransactionCategory.INCOME) TransactionCategory.INCOME
+                else TransactionCategory.EXPENSE
+            subcategoryRepository.save(subcategory)
+            transactionRepository.save(
+                aTransaction(
+                    category = category,
+                    subcategoryId = groceriesId
+                )
+            )
 
-        // WHEN
-        service.delete(groceriesId)
+            // WHEN
+            service.delete(groceriesId)
 
-        // THEN
-        assertThat(transactionRepository.saved).containsExactly(
-            aTransaction(category = category, subcategoryId = null),
-        )
-    }
+            // THEN
+            assertThat(transactionRepository.saved).containsExactly(
+                aTransaction(category = category, subcategoryId = null),
+            )
+        }
 
     @Test
     fun `does not touch the transactions of other subcategories, nor those with none`() = runTest()
@@ -166,6 +182,37 @@ class DeleteSubcategoryServiceTest
         assertThat(transactionRepository.saved.sumOf { it.signedAmount }).isEqualTo(balanceBefore)
     }
 
+    // Unlike a transaction, a budget means nothing without its subcategory: there is no "uncategorised
+    // budget" to keep. So the budgets go with it, every month's, and only that subcategory's.
+    @Test
+    fun `deletes the budgets of the subcategory, for every month, and keeps the others`() =
+        runTest()
+        {
+            // GIVEN
+            subcategoryRepository.save(groceries)
+            subcategoryRepository.save(fuel)
+            budgetRepository.save(
+                aBudget(
+                    subcategoryId = groceriesId,
+                    month = YearMonth.of(2026, 8)
+                )
+            )
+            budgetRepository.save(
+                aBudget(
+                    subcategoryId = groceriesId,
+                    month = YearMonth.of(2026, 9)
+                )
+            )
+            val fuelBudget = aBudget(subcategoryId = fuelId, month = YearMonth.of(2026, 9))
+            budgetRepository.save(fuelBudget)
+
+            // WHEN
+            service.delete(groceriesId)
+
+            // THEN
+            assertThat(budgetRepository.saved).containsExactly(fuelBudget)
+        }
+
     @Test
     fun `does nothing when no subcategory matches the given id`() = runTest()
     {
@@ -181,17 +228,18 @@ class DeleteSubcategoryServiceTest
     }
 
     @Test
-    fun `deletes the subcategory and updates its transactions in a single unit of work`() = runTest()
-    {
-        // GIVEN
-        subcategoryRepository.save(groceries)
-        transactionRepository.save(anExpenseIn(1, groceriesId))
-        transactionRepository.save(anExpenseIn(2, groceriesId))
+    fun `deletes the subcategory and updates its transactions in a single unit of work`() =
+        runTest()
+        {
+            // GIVEN
+            subcategoryRepository.save(groceries)
+            transactionRepository.save(anExpenseIn(1, groceriesId))
+            transactionRepository.save(anExpenseIn(2, groceriesId))
 
-        // WHEN
-        service.delete(groceriesId)
+            // WHEN
+            service.delete(groceriesId)
 
-        // THEN
-        assertThat(unitOfWork.executionCount).isEqualTo(1)
-    }
+            // THEN
+            assertThat(unitOfWork.executionCount).isEqualTo(1)
+        }
 }
