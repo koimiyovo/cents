@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +53,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
@@ -68,6 +70,7 @@ import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectableOptionRow
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import com.kyovo.cents.ui.transaction.reactsToTap
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -113,6 +116,7 @@ fun TransactionsScreen(
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedTab by remember { mutableStateOf(TransactionsTab.HISTORY) }
 
     // The whole point of the use case's from/to range is to scope the screen to a period instead
     // of always loading every transaction ever recorded; 30 days is the default window.
@@ -135,6 +139,7 @@ fun TransactionsScreen(
         availableSubcategories(transactionsInPeriod, subcategories)
     }
     val topExpensesInPeriod = remember(transactionsInPeriod) { topExpenses(transactionsInPeriod) }
+    val weekdaySpendingInPeriod = remember(transactionsInPeriod) { spendingByWeekday(transactionsInPeriod) }
 
     val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
         listTransactions.observe(
@@ -170,42 +175,76 @@ fun TransactionsScreen(
             onSelectPreset = { periodMenuExpanded = false; selectedPeriod = it },
             onSelectCustom = { periodMenuExpanded = false; showCustomRangePicker = true },
         )
-        StatsRow(
-            palette,
-            expenseCents = totalExpenseCents,
-            incomeCents = totalIncomeCents,
-            netCents = netCents
-        )
-        TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
-        SearchField(palette, searchQuery) { searchQuery = it }
-        AccountFilterRow(
-            palette = palette,
-            accounts = accounts,
-            selectedAccountId = selectedAccountId,
-            expanded = accountMenuExpanded,
-            onToggleExpanded = { accountMenuExpanded = !accountMenuExpanded },
-            onSelect = { accountMenuExpanded = false; selectedAccountId = it },
-            movementsCount = filteredTransactions.size,
-        )
-        SubcategoryFilter(
-            palette = palette,
-            subcategories = subcategoriesInPeriod,
-            selected = selectedSubcategory,
-            onSelect = { chosenSubcategory = it },
-        )
-        if (groupedByDay.isEmpty())
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
         {
-            Text(
-                text = stringResource(R.string.transactions_empty),
-                color = palette.textMuted,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 24.dp),
-            )
-        } else
+            SubcategoryChip(stringResource(R.string.transactions_tab_history), selectedTab == TransactionsTab.HISTORY, palette) {
+                selectedTab = TransactionsTab.HISTORY
+            }
+            SubcategoryChip(stringResource(R.string.transactions_tab_insights), selectedTab == TransactionsTab.INSIGHTS, palette) {
+                selectedTab = TransactionsTab.INSIGHTS
+            }
+        }
+
+        when (selectedTab)
         {
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick)
+            TransactionsTab.HISTORY ->
+            {
+                StatsRow(
+                    palette,
+                    expenseCents = totalExpenseCents,
+                    incomeCents = totalIncomeCents,
+                    netCents = netCents
+                )
+                SearchField(palette, searchQuery) { searchQuery = it }
+                AccountFilterRow(
+                    palette = palette,
+                    accounts = accounts,
+                    selectedAccountId = selectedAccountId,
+                    expanded = accountMenuExpanded,
+                    onToggleExpanded = { accountMenuExpanded = !accountMenuExpanded },
+                    onSelect = { accountMenuExpanded = false; selectedAccountId = it },
+                    movementsCount = filteredTransactions.size,
+                )
+                SubcategoryFilter(
+                    palette = palette,
+                    subcategories = subcategoriesInPeriod,
+                    selected = selectedSubcategory,
+                    onSelect = { chosenSubcategory = it },
+                )
+                if (groupedByDay.isEmpty())
+                {
+                    Text(
+                        text = stringResource(R.string.transactions_empty),
+                        color = palette.textMuted,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 24.dp),
+                    )
+                } else
+                {
+                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        groupedByDay.forEach { (date, dayTransactions) ->
+                            DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick)
+                        }
+                    }
+                }
+            }
+
+            TransactionsTab.INSIGHTS ->
+            {
+                if (topExpensesInPeriod.isEmpty() && weekdaySpendingInPeriod.all { it.total.isZero() })
+                {
+                    Text(
+                        text = stringResource(R.string.transactions_insights_empty),
+                        color = palette.textMuted,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 24.dp),
+                    )
+                } else
+                {
+                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
+                        SpendingByWeekdaySection(palette, weekdaySpendingInPeriod)
+                    }
                 }
             }
         }
@@ -243,6 +282,14 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
     LAST_30_DAYS(R.string.transactions_period_30_days, 30),
     ALL_TIME(R.string.transactions_period_all_time, null),
     CUSTOM(R.string.transactions_period_custom, null),
+}
+
+/** The screen's two tabs, both scoped to the same period: the raw history (filters and the day-by-day
+ * list), and the insights that were crowding it (the biggest expenses, the weekday pattern). */
+private enum class TransactionsTab
+{
+    HISTORY,
+    INSIGHTS,
 }
 
 /**
@@ -740,6 +787,52 @@ internal fun TopExpensesSection(
     }
 }
 
+/**
+ * Where the money went by day of the week, over the period shown — a habit a plain list doesn't reveal
+ * (spending more on weekends, say). The busiest day is in the accent colour, the rest a muted context.
+ * Nothing shown when the period has no expense at all.
+ */
+@Composable
+internal fun SpendingByWeekdaySection(palette: AccountsPalette, weekdays: List<WeekdaySpending>)
+{
+    if (weekdays.all { it.total.isZero() }) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.transactions_weekday_title))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            weekdays.forEach { day -> WeekdayBar(palette, day, Modifier.weight(1f).fillMaxHeight()) }
+        }
+    }
+}
+
+@Composable
+private fun WeekdayBar(palette: AccountsPalette, day: WeekdaySpending, modifier: Modifier)
+{
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
+    {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter)
+        {
+            val fraction = day.barFraction.coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.55f)
+                    // A day with nothing spent gets a fixed, visible tick rather than a proportional
+                    // sliver: next to a much busier day, a couple of percent tall would vanish.
+                    .then(if (fraction <= 0f) Modifier.height(4.dp) else Modifier.fillMaxHeight(fraction))
+                    .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
+                    .background(if (day.isHighest) palette.iconToneGreen else palette.divider),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(text = day.label, color = palette.textMuted, fontSize = 11.sp)
+    }
+}
+
 /** A rounded card of [transactions], one [TransactionRow] each with a hairline divider between them —
  * shared by a day's group and [TopExpensesSection]. */
 @Composable
@@ -867,6 +960,49 @@ internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5): List<
         .filter { it.category == TransactionCategory.EXPENSE }
         .sortedByDescending { it.amount.value }
         .take(limit)
+
+/**
+ * One bar of the weekday chart: a day of the week's total expenses, sized as a fraction of the busiest
+ * day (1 for it, 0 when nothing was spent on any day). [isHighest] marks that busiest day — the one
+ * bar worth calling out; ties keep whichever day comes first, Monday to Sunday.
+ */
+data class WeekdaySpending(
+    val dayOfWeek: DayOfWeek,
+    val label: String,
+    val total: Money,
+    val barFraction: Float,
+    val isHighest: Boolean,
+)
+
+/**
+ * Expenses grouped by day of the week (Monday first), always all seven — a day with nothing spent is a
+ * zero, not an absence. Reveals a habit a plain list doesn't: spending more on weekends, say.
+ */
+internal fun spendingByWeekday(transactions: List<Transaction>): List<WeekdaySpending>
+{
+    val zone = ZoneId.systemDefault()
+    val totalsByDay = transactions
+        .filter { it.category == TransactionCategory.EXPENSE }
+        .groupBy { it.date.atZone(zone).dayOfWeek }
+        .mapValues { (_, expenses) -> expenses.sumOf { it.amount.value } }
+
+    val max = totalsByDay.values.maxOrNull() ?: 0L
+    var highestAlreadyMarked = false
+
+    return DayOfWeek.values().map { day ->
+        val cents = totalsByDay[day] ?: 0L
+        val isHighest = max > 0L && cents == max && !highestAlreadyMarked
+        if (isHighest) highestAlreadyMarked = true
+
+        WeekdaySpending(
+            dayOfWeek = day,
+            label = day.getDisplayName(java.time.format.TextStyle.SHORT, Locale.FRENCH),
+            total = Money(cents),
+            barFraction = if (max == 0L) 0f else (cents.toDouble() / max).toFloat(),
+            isHighest = isHighest,
+        )
+    }
+}
 
 @Composable
 private fun dayLabel(date: LocalDate): String
