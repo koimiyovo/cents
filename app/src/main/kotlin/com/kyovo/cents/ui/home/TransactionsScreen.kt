@@ -297,9 +297,9 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
 }
 
 /** The screen's two tabs: the raw history (filters and the day-by-day list, scoped to the selected
- * period, future recurring expenses included), and the insights that were crowding it — the biggest
- * expenses (scoped to that same period, but never a not-yet-due one; see [topExpenses]) and the weekday
- * pattern (always the current week, regardless of the period; see [SpendingByWeekdaySection]). */
+ * period, never beyond today), and the insights that were crowding it — the biggest expenses (scoped
+ * to that same period, but never a not-yet-due one; see [topExpenses]) and the weekday pattern (always
+ * the current week, regardless of the period; see [SpendingByWeekdaySection]). */
 private enum class TransactionsTab
 {
     HISTORY,
@@ -307,8 +307,11 @@ private enum class TransactionsTab
 }
 
 /**
- * The from/to bounds for a period: preset periods count back from [now], CUSTOM uses the picked
- * dates (start of day to end of day, in the local zone), and ALL_TIME has no bounds at all.
+ * The from/to bounds for a period: preset periods count back from [now] and never look beyond it —
+ * a recurring expense can generate a transaction weeks or months ahead (see
+ * GenerateRecurringExpensesService's lookahead), and the history must not show one that hasn't
+ * happened yet. CUSTOM uses the picked dates (start of day to end of day, in the local zone; its
+ * picker already can't select a future one), and ALL_TIME has no lower bound.
  */
 internal fun periodRange(
     period: TransactionsPeriod,
@@ -324,7 +327,7 @@ internal fun periodRange(
         val to = customTo?.plusDays(1)?.atStartOfDay(zone)?.toInstant()?.minusNanos(1)
         return from to to
     }
-    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to null
+    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to now
 }
 
 /** Same boundary semantics as [com.kyovo.cents.application.usecase.ListTransactionsService]: inclusive on both ends. */
