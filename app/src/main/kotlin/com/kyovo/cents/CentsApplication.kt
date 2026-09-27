@@ -2,6 +2,10 @@ package com.kyovo.cents
 
 import android.app.Application
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Owns the [AppContainer] for the whole process. An Activity is destroyed and recreated on every
@@ -14,4 +18,14 @@ import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
  */
 class CentsApplication : Application() {
     val appContainer: AppContainer by lazy { AppContainer(RoomPersistence.open(this)) }
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Catches every recurring expense up as soon as the app opens, off the main thread: safe to run
+        // every time, since an occurrence already generated is never redone.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            appContainer.generateRecurringExpenses.generate()
+        }
+    }
 }
