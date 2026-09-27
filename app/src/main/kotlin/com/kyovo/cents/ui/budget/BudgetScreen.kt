@@ -26,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
@@ -48,11 +50,12 @@ import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
 import kotlin.math.roundToInt
 
 /**
- * The budget tab: where the month's budgets stand, at a glance, in two tabs sharing the same month —
+ * The budget tab: where the month's budgets stand, at a glance, in three tabs sharing the same month —
+ * [BudgetTab.OVERVIEW] (a pie of where the month's money actually went, budget or no budget),
  * [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most urgent
- * first — and, apart, the subcategories that have none) and [BudgetTab.OVERVIEW] (a pie of where the
- * month's money actually went, budget or no budget). It only looks: the limits and their thresholds are set
- * from the settings.
+ * first — and, apart, the subcategories that have none), and [BudgetTab.TRENDS] (a bar per recent month, so
+ * a drift shows up before it becomes a habit). It only looks: the limits and their thresholds are set from
+ * the settings.
  */
 @Composable
 fun BudgetScreen(
@@ -93,6 +96,9 @@ fun BudgetScreen(
             SubcategoryChip(stringResource(R.string.budget_tab_budgets), state.tab == BudgetTab.BUDGETS, palette) {
                 onSelectTab(BudgetTab.BUDGETS)
             }
+            SubcategoryChip(stringResource(R.string.budget_tab_trends), state.tab == BudgetTab.TRENDS, palette) {
+                onSelectTab(BudgetTab.TRENDS)
+            }
         }
 
         when (state.tab)
@@ -126,6 +132,7 @@ fun BudgetScreen(
             }
 
             BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
+            BudgetTab.TRENDS -> BudgetTrendTab(palette, state.trend)
         }
     }
 }
@@ -477,3 +484,88 @@ private fun sliceLabelText(label: SpendingSliceLabel): String = when (label)
  * never reused as — a status colour; the folded "other" slice is neutral, since it names no single thing. */
 private fun sliceColor(palette: AccountsPalette, index: Int, label: SpendingSliceLabel): Color =
     if (label == SpendingSliceLabel.Other) palette.textMuted else palette.chartColors[index]
+
+/**
+ * The trends tab: one bar per recent month, most recent (the month shown) in the accent colour, the rest a
+ * muted context — the story is "is this month higher or lower than usual", not the exact figure of every
+ * month, so only the highlighted bar is labelled with its amount; the month names underneath carry the rest.
+ * Empty when nothing was spent anywhere in the window.
+ */
+@Composable
+private fun BudgetTrendTab(palette: AccountsPalette, trend: SpendingTrend)
+{
+    if (trend.average == null)
+    {
+        Text(
+            text = stringResource(R.string.budget_trend_empty),
+            color = palette.textMuted,
+            fontSize = 14.sp,
+        )
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp))
+    {
+        Text(
+            text = stringResource(R.string.budget_trend_average, formatEuroCents(trend.average.value)),
+            color = palette.textSecondary,
+            fontSize = 14.sp,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            trend.bars.forEach { bar ->
+                TrendBar(palette, bar, trend.averageFraction, Modifier.weight(1f).fillMaxHeight())
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFraction: Float?, modifier: Modifier)
+{
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
+    {
+        Text(
+            text = if (bar.isSelected) formatEuroCents(bar.total.value) else "",
+            color = palette.textPrimary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter)
+        {
+            // The average, as a dashed line level with the bars: every column draws its own segment at the
+            // same fraction of the same fixed-height box, so the segments line up into one continuous line.
+            if (averageFraction != null)
+            {
+                Canvas(modifier = Modifier.matchParentSize())
+                {
+                    val y = size.height * (1f - averageFraction.coerceIn(0f, 1f))
+                    drawLine(
+                        color = palette.textMuted,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 1.5.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f)),
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    // A month with nothing spent still gets a sliver, never nothing: an invisible bar would
+                    // read as a missing month rather than a zero one.
+                    .fillMaxHeight(bar.barFraction.coerceIn(0f, 1f).coerceAtLeast(0.02f))
+                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                    .background(if (bar.isSelected) palette.iconToneGreen else palette.divider),
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(text = bar.label, color = palette.textMuted, fontSize = 11.sp)
+    }
+}

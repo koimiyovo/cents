@@ -241,6 +241,9 @@
     <string name="budget_empty">Aucun budget pour ce mois. Vous pouvez en définir dans les Réglages.</string>
     <string name="budget_tab_budgets">Budgets</string>
     <string name="budget_tab_overview">Vue d\'ensemble</string>
+    <string name="budget_tab_trends">Tendances</string>
+    <string name="budget_trend_average">Moyenne sur les 6 derniers mois : %1$s</string>
+    <string name="budget_trend_empty">Aucune dépense sur cette période.</string>
     <string name="budget_overview_total_spent">%1$s dépensés</string>
     <string name="budget_overview_slice_percent">%1$d&#160;%%</string>
     <string name="budget_overview_uncategorized">Sans sous-catégorie</string>
