@@ -141,16 +141,21 @@ fun TransactionsScreen(
     val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
         availableSubcategories(transactionsInPeriod, subcategories)
     }
-    val topExpensesInPeriod = remember(transactionsInPeriod) { topExpenses(transactionsInPeriod) }
+    // The Analyse insights share the account/subcategory filters with Historique (moved above the tab
+    // switch), so they answer "of what I'm looking at", not always "of everything".
+    val topExpensesInPeriod = remember(transactionsInPeriod, selectedAccountId, selectedSubcategory) {
+        topExpenses(filterByAccountAndSubcategory(transactionsInPeriod, selectedAccountId, selectedSubcategory))
+    }
     // Always the current week, whatever the Historique period filter is set to: a recurring expense can
     // generate a transaction weeks or months ahead (see GenerateRecurringExpensesService's lookahead), and
     // a habit chart must not let one of those stand in for a day that hasn't happened yet.
     val (weekStart, weekEnd) = remember { currentWeekRange(LocalDate.now()) }
-    val weekdaySpendingThisWeek = remember(allTransactions, weekStart, weekEnd) {
+    val weekdaySpendingThisWeek = remember(allTransactions, weekStart, weekEnd, selectedAccountId, selectedSubcategory) {
         val zone = ZoneId.systemDefault()
         val from = weekStart.atStartOfDay(zone).toInstant()
         val to = weekEnd.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
-        spendingByWeekday(transactionsWithinRange(allTransactions, from, to))
+        val inWeek = transactionsWithinRange(allTransactions, from, to)
+        spendingByWeekday(filterByAccountAndSubcategory(inWeek, selectedAccountId, selectedSubcategory))
     }
 
     val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
@@ -197,6 +202,24 @@ fun TransactionsScreen(
             }
         }
 
+        // Shared by both tabs: Analyse answers "of what I'm looking at" too, not always "of everything"
+        // (see topExpensesInPeriod/weekdaySpendingThisWeek above).
+        AccountFilterRow(
+            palette = palette,
+            accounts = accounts,
+            selectedAccountId = selectedAccountId,
+            expanded = accountMenuExpanded,
+            onToggleExpanded = { accountMenuExpanded = !accountMenuExpanded },
+            onSelect = { accountMenuExpanded = false; selectedAccountId = it },
+            movementsCount = filteredTransactions.size,
+        )
+        SubcategoryFilter(
+            palette = palette,
+            subcategories = subcategoriesInPeriod,
+            selected = selectedSubcategory,
+            onSelect = { chosenSubcategory = it },
+        )
+
         when (selectedTab)
         {
             TransactionsTab.HISTORY ->
@@ -208,21 +231,6 @@ fun TransactionsScreen(
                     netCents = netCents
                 )
                 SearchField(palette, searchQuery) { searchQuery = it }
-                AccountFilterRow(
-                    palette = palette,
-                    accounts = accounts,
-                    selectedAccountId = selectedAccountId,
-                    expanded = accountMenuExpanded,
-                    onToggleExpanded = { accountMenuExpanded = !accountMenuExpanded },
-                    onSelect = { accountMenuExpanded = false; selectedAccountId = it },
-                    movementsCount = filteredTransactions.size,
-                )
-                SubcategoryFilter(
-                    palette = palette,
-                    subcategories = subcategoriesInPeriod,
-                    selected = selectedSubcategory,
-                    onSelect = { chosenSubcategory = it },
-                )
                 if (groupedByDay.isEmpty())
                 {
                     Text(
@@ -296,10 +304,14 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
     CUSTOM(R.string.transactions_period_custom, null),
 }
 
-/** The screen's two tabs: the raw history (filters and the day-by-day list, scoped to the selected
- * period, never beyond today), and the insights that were crowding it — the biggest expenses (scoped
- * to that same period, but never a not-yet-due one; see [topExpenses]) and the weekday pattern (always
- * the current week, regardless of the period; see [SpendingByWeekdaySection]). */
+/**
+ * The screen's two tabs, sharing the same period/account/subcategory filters (the period and the tabs
+ * above this switch, the account/subcategory filters below it): the raw history (the day-by-day list,
+ * scoped to the selected period, never beyond today, plus a search field of its own), and the insights
+ * that were crowding it — the biggest expenses (same scope as the history, but never a not-yet-due one;
+ * see [topExpenses]) and the weekday pattern (always the current week regardless of the period, but
+ * still narrowed by account/subcategory; see [SpendingByWeekdaySection]).
+ */
 private enum class TransactionsTab
 {
     HISTORY,
@@ -340,6 +352,18 @@ internal fun transactionsWithinRange(
         (from == null || !it.date.isBefore(from)) && (to == null || !it.date.isAfter(
             to
         ))
+    }
+
+/** [transactions] narrowed to [accountId] and [subcategoryId] when set (either or both) — the same
+ * account/subcategory filters Historique uses, shared with the Analyse tab's insights. */
+internal fun filterByAccountAndSubcategory(
+    transactions: List<Transaction>,
+    accountId: AccountId?,
+    subcategoryId: SubcategoryId?,
+): List<Transaction> =
+    transactions.filter {
+        (accountId == null || it.accountId == accountId) &&
+            (subcategoryId == null || it.subcategoryId == subcategoryId)
     }
 
 @Composable
@@ -782,10 +806,11 @@ internal fun DayGroup(
 }
 
 /**
- * The month's biggest expenses, most expensive first — often what explains a period's total at a glance.
- * Scoped to the period shown, not to the account/subcategory/search filters below it (the same scope as
- * [StatsRow]'s totals): it answers "where did the big spending go this period", regardless of which slice
- * of it is currently being browsed. Nothing shown when the period has no expense at all.
+ * The period's biggest expenses, most expensive first — often what explains a period's total at a
+ * glance. Scoped to the same account/subcategory filters as Historique, shared above the tab switch:
+ * it answers "where did the big spending go" for whatever slice is currently being browsed. Unlike a
+ * day's group, these can span many different days, so each row shows its day too, not only its time
+ * (see [TransactionListCard]'s `showDate`). Nothing shown when there is no expense at all.
  */
 @Composable
 internal fun TopExpensesSection(
@@ -800,7 +825,7 @@ internal fun TopExpensesSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, stringResource(R.string.transactions_top_expenses_title))
-        TransactionListCard(palette, transactions, accountsById, subcategoriesById, onTransactionClick)
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, onTransactionClick, showDate = true)
     }
 }
 
@@ -860,8 +885,11 @@ private fun WeekdayBar(palette: AccountsPalette, day: WeekdaySpending, modifier:
     }
 }
 
-/** A rounded card of [transactions], one [TransactionRow] each with a hairline divider between them —
- * shared by a day's group and [TopExpensesSection]. */
+/**
+ * A rounded card of [transactions], one [TransactionRow] each with a hairline divider between them —
+ * shared by a day's group (its own header already says which day, so [showDate] stays false there) and
+ * [TopExpensesSection] (whose rows can span many different days, so each needs its own, [showDate] true).
+ */
 @Composable
 private fun TransactionListCard(
     palette: AccountsPalette,
@@ -869,6 +897,7 @@ private fun TransactionListCard(
     accountsById: Map<AccountId, Account>,
     subcategoriesById: Map<SubcategoryId, Subcategory>,
     onTransactionClick: ((Transaction) -> Unit)?,
+    showDate: Boolean = false,
 )
 {
     Column(
@@ -888,6 +917,7 @@ private fun TransactionListCard(
                 onClick = onTransactionClick
                     ?.takeIf { transaction.reactsToTap() }
                     ?.let { open -> { open(transaction) } },
+                showDate = showDate,
             )
             if (index != transactions.lastIndex)
             {
@@ -909,6 +939,7 @@ private fun TransactionRow(
     account: Account?,
     subcategory: Subcategory?,
     onClick: (() -> Unit)?,
+    showDate: Boolean = false,
 )
 {
     val editLabel = stringResource(R.string.account_edit_action)
@@ -965,7 +996,12 @@ private fun TransactionRow(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
-            Text(text = timeLabel(transaction.date), color = palette.textMuted, fontSize = 11.sp)
+            Text(
+                text = if (showDate) dateTimeLabel(transaction.date) else timeLabel(transaction.date),
+                color = palette.textMuted,
+                fontSize = 11.sp,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -1072,6 +1108,15 @@ internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
 {
     val pattern = if (date.isAfter(today.minusYears(1))) "d MMMM" else "d MMMM yyyy"
     return date.format(DateTimeFormatter.ofPattern(pattern, Locale.FRENCH))
+}
+
+/** [dayLabel] and [timeLabel] together — for a row whose neighbours aren't necessarily the same day
+ * (the biggest-expenses list), unlike a day's own group where the header already says which day it is. */
+@Composable
+private fun dateTimeLabel(date: Instant): String
+{
+    val day = date.atZone(ZoneId.systemDefault()).toLocalDate()
+    return "${dayLabel(day)} · ${timeLabel(date)}"
 }
 
 private fun timeLabel(date: Instant): String =
