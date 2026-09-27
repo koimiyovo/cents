@@ -486,9 +486,8 @@ private fun sliceColor(palette: AccountsPalette, index: Int, label: SpendingSlic
     if (label == SpendingSliceLabel.Other) palette.textMuted else palette.chartColors[index]
 
 /**
- * The trends tab: one bar per recent month, most recent (the month shown) in the accent colour, the rest a
- * muted context — the story is "is this month higher or lower than usual", not the exact figure of every
- * month, so only the highlighted bar is labelled with its amount; the month names underneath carry the rest.
+ * The trends tab: one bar per recent month, each labelled with its amount, most recent (the month shown) in
+ * the accent colour and bold — the story is "is this month higher or lower than usual" — the rest muted.
  * Empty when nothing was spent anywhere in the window.
  */
 @Composable
@@ -530,10 +529,10 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
     {
         Text(
-            text = if (bar.isSelected) formatEuroCents(bar.total.value) else "",
-            color = palette.textPrimary,
+            text = formatEuroCents(bar.total.value),
+            color = if (bar.isSelected) palette.textPrimary else palette.textMuted,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = if (bar.isSelected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
         )
         Spacer(Modifier.height(4.dp))
