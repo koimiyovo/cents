@@ -62,6 +62,7 @@ import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
+import com.kyovo.cents.ui.common.SectionLabel
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectableOptionRow
@@ -133,6 +134,7 @@ fun TransactionsScreen(
     val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
         availableSubcategories(transactionsInPeriod, subcategories)
     }
+    val topExpensesInPeriod = remember(transactionsInPeriod) { topExpenses(transactionsInPeriod) }
 
     val filteredTransactions by remember(selectedAccountId, selectedSubcategory, searchQuery, periodFrom, periodTo) {
         listTransactions.observe(
@@ -174,6 +176,7 @@ fun TransactionsScreen(
             incomeCents = totalIncomeCents,
             netCents = netCents
         )
+        TopExpensesSection(palette, topExpensesInPeriod, accountsById, subcategoriesById, onTransactionClick)
         SearchField(palette, searchQuery) { searchQuery = it }
         AccountFilterRow(
             palette = palette,
@@ -710,33 +713,70 @@ internal fun DayGroup(
                 fontSize = 13.sp
             )
         }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(palette.surface),
-        ) {
-            transactions.forEachIndexed { index, transaction ->
-                TransactionRow(
-                    palette = palette,
-                    transaction = transaction,
-                    account = accountsById[transaction.accountId],
-                    subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
-                    // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
-                    // does, but only for its amount (it opens its own, one-field form).
-                    onClick = onTransactionClick
-                        ?.takeIf { transaction.reactsToTap() }
-                        ?.let { open -> { open(transaction) } },
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, onTransactionClick)
+    }
+}
+
+/**
+ * The month's biggest expenses, most expensive first — often what explains a period's total at a glance.
+ * Scoped to the period shown, not to the account/subcategory/search filters below it (the same scope as
+ * [StatsRow]'s totals): it answers "where did the big spending go this period", regardless of which slice
+ * of it is currently being browsed. Nothing shown when the period has no expense at all.
+ */
+@Composable
+internal fun TopExpensesSection(
+    palette: AccountsPalette,
+    transactions: List<Transaction>,
+    accountsById: Map<AccountId, Account>,
+    subcategoriesById: Map<SubcategoryId, Subcategory>,
+    onTransactionClick: ((Transaction) -> Unit)? = null,
+)
+{
+    if (transactions.isEmpty()) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.transactions_top_expenses_title))
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, onTransactionClick)
+    }
+}
+
+/** A rounded card of [transactions], one [TransactionRow] each with a hairline divider between them —
+ * shared by a day's group and [TopExpensesSection]. */
+@Composable
+private fun TransactionListCard(
+    palette: AccountsPalette,
+    transactions: List<Transaction>,
+    accountsById: Map<AccountId, Account>,
+    subcategoriesById: Map<SubcategoryId, Subcategory>,
+    onTransactionClick: ((Transaction) -> Unit)?,
+)
+{
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(palette.surface),
+    ) {
+        transactions.forEachIndexed { index, transaction ->
+            TransactionRow(
+                palette = palette,
+                transaction = transaction,
+                account = accountsById[transaction.accountId],
+                subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
+                // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
+                // does, but only for its amount (it opens its own, one-field form).
+                onClick = onTransactionClick
+                    ?.takeIf { transaction.reactsToTap() }
+                    ?.let { open -> { open(transaction) } },
+            )
+            if (index != transactions.lastIndex)
+            {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(palette.divider),
                 )
-                if (index != transactions.lastIndex)
-                {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(palette.divider),
-                    )
-                }
             }
         }
     }
@@ -819,6 +859,14 @@ internal fun groupByDay(transactions: List<Transaction>): List<Pair<LocalDate, L
         .toList()
         .sortedByDescending { it.first }
 }
+
+/** The [limit] biggest expenses among [transactions], most expensive first — incomes, transfers and the
+ * opening deposit don't count as an expense one could overspend on. */
+internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5): List<Transaction> =
+    transactions
+        .filter { it.category == TransactionCategory.EXPENSE }
+        .sortedByDescending { it.amount.value }
+        .take(limit)
 
 @Composable
 private fun dayLabel(date: LocalDate): String
