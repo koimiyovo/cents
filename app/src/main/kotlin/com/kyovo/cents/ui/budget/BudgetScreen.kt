@@ -555,12 +555,13 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
                     )
                 }
             }
+            val fraction = bar.barFraction.coerceIn(0f, 1f)
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    // A month with nothing spent still gets a sliver, never nothing: an invisible bar would
-                    // read as a missing month rather than a zero one.
-                    .fillMaxHeight(bar.barFraction.coerceIn(0f, 1f).coerceAtLeast(0.02f))
+                    // A month with nothing spent gets a fixed, visible tick rather than a proportional
+                    // sliver: next to a much busier month, a couple of percent tall would vanish.
+                    .then(if (fraction <= 0f) Modifier.height(4.dp) else Modifier.fillMaxHeight(fraction))
                     .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                     .background(if (bar.isSelected) palette.iconToneGreen else palette.divider),
             )
