@@ -117,7 +117,9 @@ fun TransactionsScreen(
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var selectedTab by remember { mutableStateOf(TransactionsTab.HISTORY) }
+    // Unlike the filters above, which page the user is on (Historique/Analyse) is worth keeping across
+    // a rotation: being bounced back to Historique while looking at Analyse is jarring, not a minor loss.
+    var selectedTab by rememberSaveable { mutableStateOf(TransactionsTab.HISTORY) }
 
     // The whole point of the use case's from/to range is to scope the screen to a period instead
     // of always loading every transaction ever recorded; 30 days is the default window.
