@@ -2,10 +2,12 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
+import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
@@ -35,9 +37,16 @@ class GetSpendingBreakdownServiceTest
 
     private fun aServiceIn(zone: ZoneId) = GetSpendingBreakdownService(transactionRepository, zone)
 
-    private fun anExpense(suffix: Int, cents: Long, date: String, subcategoryId: SubcategoryId? = groceriesId): Transaction =
+    private fun anExpense(
+        suffix: Int,
+        cents: Long,
+        date: String,
+        subcategoryId: SubcategoryId? = groceriesId,
+        accountId: AccountId = anAccountId(),
+    ): Transaction =
         aTransaction(
             id = aTransactionId("33333333-3333-3333-3333-33333333333$suffix"),
+            accountId = accountId,
             amount = aMoney(cents),
             date = anInstant(date),
             category = TransactionCategory.EXPENSE,
@@ -64,6 +73,22 @@ class GetSpendingBreakdownServiceTest
                 null to aMoney(7_000),
             )
         )
+    }
+
+    @Test
+    fun `an account given counts only that account's expenses`() = runTest()
+    {
+        // GIVEN
+        val checking = anAccountId("aaaaaaaa-0000-0000-0000-000000000001")
+        val cash = anAccountId("aaaaaaaa-0000-0000-0000-000000000002")
+        transactionRepository.save(anExpense(1, 4_500, "2026-09-03T10:00:00Z", accountId = checking))
+        transactionRepository.save(anExpense(2, 9_000, "2026-09-05T10:00:00Z", subcategoryId = fuelId, accountId = cash))
+
+        // WHEN / THEN
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(september, accountId = checking).first())
+            .isEqualTo(mapOf(groceriesId to aMoney(4_500)))
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(september).first())
+            .isEqualTo(mapOf(groceriesId to aMoney(4_500), fuelId to aMoney(9_000)))
     }
 
     @Test

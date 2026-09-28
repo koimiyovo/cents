@@ -4,10 +4,12 @@ import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aBudget
 import com.kyovo.cents.application.fakes.aMoney
+import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -41,9 +43,16 @@ class GetBudgetProgressServiceTest
     private fun aServiceIn(zone: ZoneId) =
         GetBudgetProgressService(budgetRepository, transactionRepository, zone)
 
-    private fun anExpense(suffix: Int, cents: Long, date: String, subcategoryId: SubcategoryId? = groceriesId): Transaction =
+    private fun anExpense(
+        suffix: Int,
+        cents: Long,
+        date: String,
+        subcategoryId: SubcategoryId? = groceriesId,
+        accountId: AccountId = anAccountId(),
+    ): Transaction =
         aTransaction(
             id = aTransactionId("33333333-3333-3333-3333-33333333333$suffix"),
+            accountId = accountId,
             amount = aMoney(cents),
             date = anInstant(date),
             category = TransactionCategory.EXPENSE,
@@ -65,6 +74,27 @@ class GetBudgetProgressServiceTest
         // THEN
         assertThat(progress?.limit).isEqualTo(aMoney(30_000))
         assertThat(progress?.spent).isEqualTo(aMoney(17_350))
+    }
+
+    // A screen scoped to one account (see the Budget tab's account filter) must not count another
+    // account's spending against the limit.
+    @Test
+    fun `an account given counts only that account's expenses`() = runTest()
+    {
+        // GIVEN
+        val checking = anAccountId("aaaaaaaa-0000-0000-0000-000000000001")
+        val cash = anAccountId("aaaaaaaa-0000-0000-0000-000000000002")
+        budgetRepository.save(aBudget(subcategoryId = groceriesId, month = september, limit = aMoney(30_000)))
+        transactionRepository.save(anExpense(1, 4_500, "2026-09-03T10:00:00Z", accountId = checking))
+        transactionRepository.save(anExpense(2, 12_050, "2026-09-15T18:30:00Z", accountId = cash))
+
+        // WHEN / THEN
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(groceriesId, september, accountId = checking).first()?.spent)
+            .isEqualTo(aMoney(4_500))
+        assertThat(aServiceIn(ZoneId.of("UTC")).observeAll(september, accountId = cash).first()[groceriesId]?.spent)
+            .isEqualTo(aMoney(12_050))
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(groceriesId, september).first()?.spent)
+            .isEqualTo(aMoney(16_550))
     }
 
     @Test
