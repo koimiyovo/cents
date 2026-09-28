@@ -8,4 +8,14 @@ data class BudgetProgress(
 {
     val remaining: Long = limit.value - spent.value
     val isOverspent: Boolean = spent.value > limit.value
+
+    fun alertLevel(): BudgetAlertLevel?
+    {
+        return when
+        {
+            isOverspent                                               -> BudgetAlertLevel.OVER
+            spent.value * 100 >= limit.value * alertThreshold.percent -> BudgetAlertLevel.CLOSE_TO_LIMIT
+            else                                                      -> null
+        }
+    }
 }
