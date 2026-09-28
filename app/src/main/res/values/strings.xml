@@ -55,6 +55,10 @@
     <string name="accounts_section_title">Mes Comptes</string>
     <string name="accounts_status_archived">Archivé</string>
     <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
+    <string name="budgets_notification_title">Autoriser la notification sur les budgets</string>
+    <string name="budgets_notification_body">Cents vous enverra des notifications à l\'approche et lors du dépassement de budget</string>
+    <string name="budgets_notification_confirm">Autoriser</string>
+    <string name="budgets_notification_delay">Plus tard</string>
 
     <!-- Bottom navigation -->
     <string name="nav_accounts">Comptes</string>
