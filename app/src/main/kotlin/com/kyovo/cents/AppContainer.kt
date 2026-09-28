@@ -1,6 +1,8 @@
 package com.kyovo.cents
 
+import android.content.Context
 import com.kyovo.cents.application.usecase.ArchiveAccountService
+import com.kyovo.cents.application.usecase.CheckBudgetAlertsService
 import com.kyovo.cents.application.usecase.CreateSubcategoryService
 import com.kyovo.cents.application.usecase.CreateRecurringExpenseService
 import com.kyovo.cents.application.usecase.DeleteAccountService
@@ -11,6 +13,7 @@ import com.kyovo.cents.application.usecase.GenerateRecurringExpensesService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
+import com.kyovo.cents.application.usecase.NotifyBudgetAlertsService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
@@ -30,6 +33,7 @@ import com.kyovo.cents.application.usecase.UpdateRecurringExpenseService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
+import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
 import com.kyovo.cents.domain.port.input.CreateRecurringExpenseUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
@@ -47,6 +51,7 @@ import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
+import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
@@ -63,6 +68,7 @@ import com.kyovo.cents.infrastructure.id.UuidRecurringExpenseIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import com.kyovo.cents.notification.SystemBudgetAlertNotifier
 import java.time.Clock
 import java.time.ZoneId
 
@@ -70,8 +76,10 @@ import java.time.ZoneId
  * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
  * repositories and unit of work) and exposes the application services the UI reads from.
  * Held by [CentsApplication] so it survives Activity recreation; real DI can replace it later.
+ * [context] is only for [SystemBudgetAlertNotifier] (a notification channel, posting) — kept last and
+ * unstored beyond that, everything else here works from the domain's ports alone.
  */
-class AppContainer(persistence: RoomPersistence) {
+class AppContainer(context: Context, persistence: RoomPersistence) {
     private val accountRepository = persistence.accounts
     private val transactionRepository = persistence.transactions
     private val subcategoryRepository = persistence.subcategories
@@ -114,6 +122,10 @@ class AppContainer(persistence: RoomPersistence) {
     // device's), so an expense lands in the same month for both.
     val getBudgetProgress: GetBudgetProgressUseCase =
         GetBudgetProgressService(budgetRepository, transactionRepository, ZoneId.systemDefault())
+    val checkBudgetAlerts: CheckBudgetAlertsUseCase =
+        CheckBudgetAlertsService(getBudgetProgress, budgetAlertRepository)
+    val notifyBudgetAlerts: NotifyBudgetAlertUseCase =
+        NotifyBudgetAlertsService(checkBudgetAlerts, SystemBudgetAlertNotifier(context, subcategoryRepository))
     val getSpendingBreakdown: GetSpendingBreakdownUseCase =
         GetSpendingBreakdownService(transactionRepository, ZoneId.systemDefault())
     val getSpendingTrend: GetSpendingTrendUseCase =

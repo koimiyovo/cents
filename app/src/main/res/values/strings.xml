@@ -59,6 +59,10 @@
     <string name="budgets_notification_body">Cents vous enverra des notifications à l\'approche et lors du dépassement de budget</string>
     <string name="budgets_notification_confirm">Autoriser</string>
     <string name="budgets_notification_delay">Plus tard</string>
+    <string name="budget_alert_channel_name">Alertes budgétaires</string>
+    <string name="budget_alert_title">Alerte budget</string>
+    <string name="budget_alert_close_body">%1$s %2$s approche de sa limite mensuelle.</string>
+    <string name="budget_alert_over_body">%1$s %2$s a dépassé sa limite mensuelle.</string>
 
     <!-- Bottom navigation -->
     <string name="nav_accounts">Comptes</string>
