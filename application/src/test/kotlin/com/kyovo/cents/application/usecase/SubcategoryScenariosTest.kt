@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryBudgetAlertRepository
 import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -52,6 +53,7 @@ class SubcategoryScenariosTest
             subcategoryRepository,
             transactionRepository,
             InMemoryBudgetRepository(),
+            InMemoryBudgetAlertRepository(),
             InMemoryUnitOfWork()
         )
     private val recordTransaction = RecordTransactionService(
