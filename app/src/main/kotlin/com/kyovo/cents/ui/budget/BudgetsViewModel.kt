@@ -68,6 +68,7 @@ data class BudgetsUiState(
     val error: BudgetFormError? = null,
     val isCurrentMonth: Boolean = true,
     val tab: BudgetTab = BudgetTab.OVERVIEW,
+    val askNotificationPermission: Boolean = false
 )
 
 /**
@@ -93,13 +94,15 @@ class BudgetsViewModel(
         val form: BudgetFormState? = null,
         val error: BudgetFormError? = null,
         val tab: BudgetTab = BudgetTab.OVERVIEW,
+        val askNotificationPermission: Boolean = false
     )
 
     /** What is being looked at: the month and the account filter together, since both restart every reading. */
     private data class Scope(val month: YearMonth, val accountId: AccountId?)
 
     private val chosen = MutableStateFlow(Chosen(MonthSelector(currentMonth())))
-    private val scope: Flow<Scope> = chosen.map { Scope(it.selector.month, it.accountId) }.distinctUntilChanged()
+    private val scope: Flow<Scope> =
+        chosen.map { Scope(it.selector.month, it.accountId) }.distinctUntilChanged()
 
     /**
      * The rows of each month/account asked for, tagged with that scope. Only the month or the account
@@ -134,28 +137,30 @@ class BudgetsViewModel(
     // A state is only built once the rows, the breakdown and the trend are those of the scope chosen: right
     // after a change of month or account, the previous scope's data is still there for an instant, and must
     // not appear under the new scope's name.
-    val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth)
-    { chosen, (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
-        val wanted = Scope(chosen.selector.month, chosen.accountId)
-        if (rowsScope != wanted || breakdownScope != wanted || trendScope != wanted) null
-        else BudgetsUiState(
-            selector = chosen.selector,
-            selectedAccountId = chosen.accountId,
-            rows = rows,
-            breakdown = breakdown,
-            trend = trend,
-            form = chosen.form,
-            error = chosen.error,
-            isCurrentMonth = chosen.selector.isCurrent(currentMonth()),
-            tab = chosen.tab,
-        )
-    }
-        .filterNotNull()
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            BudgetsUiState(chosen.value.selector, isCurrentMonth = true),
-        )
+    val uiState: StateFlow<BudgetsUiState> =
+        combine(chosen, rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth)
+        { chosen, (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
+            val wanted = Scope(chosen.selector.month, chosen.accountId)
+            if (rowsScope != wanted || breakdownScope != wanted || trendScope != wanted) null
+            else BudgetsUiState(
+                selector = chosen.selector,
+                selectedAccountId = chosen.accountId,
+                rows = rows,
+                breakdown = breakdown,
+                trend = trend,
+                form = chosen.form,
+                error = chosen.error,
+                isCurrentMonth = chosen.selector.isCurrent(currentMonth()),
+                tab = chosen.tab,
+                askNotificationPermission = chosen.askNotificationPermission
+            )
+        }
+            .filterNotNull()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.Eagerly,
+                BudgetsUiState(chosen.value.selector, isCurrentMonth = true),
+            )
 
     private fun currentMonth(): YearMonth = YearMonth.now(clock)
 
@@ -195,7 +200,12 @@ class BudgetsViewModel(
     /** Opens the form on [row], for the month shown, pre-filled with the budget in force if there is one. */
     fun openForm(row: BudgetRow)
     {
-        chosen.update { it.copy(form = BudgetFormState.setting(row, it.selector.month), error = null) }
+        chosen.update {
+            it.copy(
+                form = BudgetFormState.setting(row, it.selector.month),
+                error = null
+            )
+        }
     }
 
     /** An edit of the limit; what was reported about the last attempt is stale. */
@@ -237,11 +247,12 @@ class BudgetsViewModel(
                 return
             }
 
-            is BudgetSubmission.Set ->
+            is BudgetSubmission.Set     ->
             {
                 try
                 {
                     setBudget.set(submission.command)
+                    chosen.update { it.copy(askNotificationPermission = true) }
                 } catch (_: SubcategoryNotFoundException)
                 {
                     chosen.update { it.copy(error = BudgetFormError.SUBCATEGORY_UNAVAILABLE) }
@@ -257,5 +268,10 @@ class BudgetsViewModel(
         // Close only once the write went through, and only the form that was saved: the user may have
         // moved to another month, and opened another form, while it was being written.
         chosen.update { if (it.form == form) it.copy(form = null, error = null) else it }
+    }
+
+    fun dismissNotificationPermissionAsk()
+    {
+        chosen.update { it.copy(askNotificationPermission = false) }
     }
 }
