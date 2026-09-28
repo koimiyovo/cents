@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.MonthlySpending
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -16,7 +17,7 @@ class GetSpendingTrendService(
     private val zone: ZoneId
 ) : GetSpendingTrendUseCase
 {
-    override fun observe(month: YearMonth, months: Int): Flow<List<MonthlySpending>>
+    override fun observe(month: YearMonth, months: Int, accountId: AccountId?): Flow<List<MonthlySpending>>
     {
         // Oldest to newest, [month] itself last: the window the chart plots.
         val window = (months - 1 downTo 0).map { month.minusMonths(it.toLong()) }
@@ -28,6 +29,7 @@ class GetSpendingTrendService(
                 val spentByMonth = transactions
                     .filter {
                         it.category == TransactionCategory.EXPENSE &&
+                                (accountId == null || it.accountId == accountId) &&
                                 !it.date.isBefore(start) &&
                                 it.date.isBefore(end)
                     }

@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -17,7 +18,7 @@ class GetSpendingBreakdownService(
 ) : GetSpendingBreakdownUseCase
 {
     // Same month-boundary rule as a budget's progress: midnight to midnight where the user lives.
-    override fun observe(month: YearMonth): Flow<Map<SubcategoryId?, Money>>
+    override fun observe(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId?, Money>>
     {
         val start = month.atDay(1).atStartOfDay(zone).toInstant()
         val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
@@ -27,6 +28,7 @@ class GetSpendingBreakdownService(
                 transactions
                     .filter {
                         it.category == TransactionCategory.EXPENSE &&
+                                (accountId == null || it.accountId == accountId) &&
                                 !it.date.isBefore(start) &&
                                 it.date.isBefore(end)
                     }

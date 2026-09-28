@@ -9,6 +9,7 @@ import com.kyovo.cents.domain.model.TransactionTitle
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -18,7 +19,11 @@ import java.util.UUID
  */
 class TopExpensesTest
 {
-    private fun aTransaction(cents: Long, category: TransactionCategory = TransactionCategory.EXPENSE): Transaction =
+    private fun aTransaction(
+        cents: Long,
+        category: TransactionCategory = TransactionCategory.EXPENSE,
+        date: Instant = Instant.parse("2026-09-15T10:00:00Z"),
+    ): Transaction =
         Transaction.restored(
             id = TransactionId(UUID.randomUUID()),
             accountId = AccountId(UUID.randomUUID()),
@@ -27,7 +32,7 @@ class TopExpensesTest
             category = category,
             subcategoryId = null,
             description = null,
-            date = Instant.parse("2026-09-15T10:00:00Z"),
+            date = date,
         )
 
     @Test
@@ -112,5 +117,34 @@ class TopExpensesTest
 
         // THEN
         assertThat(top).isEmpty()
+    }
+
+    @Test
+    fun `a not-yet-due expense is excluded, however big`()
+    {
+        // GIVEN a recurring expense generated well ahead of today (see the lookahead horizon)
+        val now = Instant.parse("2026-09-27T12:00:00Z")
+        val due = aTransaction(1_000, date = now.minus(1, ChronoUnit.DAYS))
+        val notYetDue = aTransaction(999_999, date = now.plusSeconds(1))
+
+        // WHEN
+        val top = topExpenses(listOf(due, notYetDue), now = now)
+
+        // THEN
+        assertThat(top).containsExactly(due)
+    }
+
+    @Test
+    fun `an expense due at this very instant counts`()
+    {
+        // GIVEN
+        val now = Instant.parse("2026-09-27T12:00:00Z")
+        val dueNow = aTransaction(1_000, date = now)
+
+        // WHEN
+        val top = topExpenses(listOf(dueNow), now = now)
+
+        // THEN
+        assertThat(top).containsExactly(dueNow)
     }
 }

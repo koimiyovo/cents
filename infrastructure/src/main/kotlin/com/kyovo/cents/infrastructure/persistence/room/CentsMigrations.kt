@@ -33,5 +33,36 @@ object CentsMigrations
         )
     }
 
-    val ALL: List<Migration> = listOf(MIGRATION_1_2)
+    /**
+     * Version 3 adds the recurring expenses. Nothing existing is touched: only a new, empty table. The
+     * SQL is the one Room exported for version 3 (`schemas/.../3.json`), word for word.
+     */
+    val MIGRATION_2_3 = Migration(2, 3)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `recurring_expenses` (" +
+                    "`id` BLOB NOT NULL, " +
+                    "`accountId` BLOB NOT NULL, " +
+                    "`amount` INTEGER NOT NULL, " +
+                    "`title` TEXT NOT NULL, " +
+                    "`subcategoryId` BLOB, " +
+                    "`description` TEXT, " +
+                    "`frequency` TEXT NOT NULL, " +
+                    "`interval` INTEGER NOT NULL, " +
+                    "`startDate` INTEGER NOT NULL, " +
+                    "`endDate` INTEGER, " +
+                    "`lastGeneratedDate` INTEGER, " +
+                    "PRIMARY KEY(`id`), " +
+                    "FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE SET NULL )"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_recurring_expenses_accountId` ON `recurring_expenses` (`accountId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_recurring_expenses_subcategoryId` ON `recurring_expenses` (`subcategoryId`)"
+        )
+    }
+
+    val ALL: List<Migration> = listOf(MIGRATION_1_2, MIGRATION_2_3)
 }

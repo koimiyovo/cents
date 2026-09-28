@@ -16,6 +16,7 @@ import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
+import com.kyovo.cents.ui.recurring.RecurringExpensesViewModel
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
@@ -82,6 +83,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val recurringExpensesViewModel: RecurringExpensesViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                RecurringExpensesViewModel(
+                    createRecurringExpense = appContainer.createRecurringExpense,
+                    updateRecurringExpense = appContainer.updateRecurringExpense,
+                    deleteRecurringExpense = appContainer.deleteRecurringExpense,
+                )
+            }
+        }
+    }
+
     private val accountFormViewModel: AccountFormViewModel by viewModels {
         viewModelFactory {
             initializer {
@@ -115,11 +128,13 @@ class MainActivity : ComponentActivity() {
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
                     listSubcategories = appContainer.listSubcategories,
+                    listRecurringExpenses = appContainer.listRecurringExpenses,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
                     subcategoriesViewModel = subcategoriesViewModel,
                     budgetsViewModel = budgetsViewModel,
+                    recurringExpensesViewModel = recurringExpensesViewModel,
                 )
             }
         }

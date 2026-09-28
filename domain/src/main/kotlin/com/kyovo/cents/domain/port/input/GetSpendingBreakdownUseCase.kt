@@ -1,5 +1,6 @@
 package com.kyovo.cents.domain.port.input
 
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
 import kotlinx.coroutines.flow.Flow
@@ -12,5 +13,6 @@ import java.time.YearMonth
  */
 interface GetSpendingBreakdownUseCase
 {
-    fun observe(month: YearMonth): Flow<Map<SubcategoryId?, Money>>
+    /** [accountId], when given, counts only that account's expenses — null (the default) counts every account. */
+    fun observe(month: YearMonth, accountId: AccountId? = null): Flow<Map<SubcategoryId?, Money>>
 }

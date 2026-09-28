@@ -3,16 +3,21 @@ package com.kyovo.cents.infrastructure.persistence.room
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.RecurrenceFrequency
+import com.kyovo.cents.domain.model.RecurringExpense
+import com.kyovo.cents.domain.model.RecurringExpenseId
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.TransactionCategory
+import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.infrastructure.persistence.assertThatThrownBySuspending
 import com.kyovo.cents.infrastructure.persistence.realTime
 import kotlinx.coroutines.flow.first
@@ -21,6 +26,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
 
@@ -231,7 +237,7 @@ class CentsMigrationsTest
         }
 
     @Test
-    fun `a migrated file is at version 2, and what is saved afterwards, threshold included, survives reopening it`() =
+    fun `a migrated file is at version 3, and what is saved afterwards, threshold included, survives reopening it`() =
         realTime()
         {
             // GIVEN a version 1 file, migrated, with a budget set
@@ -245,9 +251,9 @@ class CentsMigrationsTest
             {
                 first.close()
             }
-            assertThat(userVersionOfTheFile()).isEqualTo(2)
+            assertThat(userVersionOfTheFile()).isEqualTo(3)
 
-            // WHEN it is opened again (the migration must not run a second time, nor fail)
+            // WHEN it is opened again (the migrations must not run a second time, nor fail)
             val second = openMigrated()
             try
             {
@@ -261,6 +267,65 @@ class CentsMigrationsTest
             } finally
             {
                 second.close()
+            }
+        }
+
+    @Test
+    fun `the migrated database has a recurring_expenses table that starts empty and works`() = realTime()
+    {
+        // GIVEN
+        createVersion1File()
+        val database = openMigrated()
+        try
+        {
+            val recurringExpenses = RoomRecurringExpenseRepository(database.recurringExpenseDao())
+
+            // WHEN / THEN nobody had a rule before, and one can now be set on an existing subcategory
+            assertThat(recurringExpenses.observeAll().first()).isEmpty()
+
+            val ruleId = RecurringExpenseId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
+            val rule = RecurringExpense(
+                ruleId, AccountId(accountId), Money(80_000), TransactionTitle("Loyer"), groceries.id, null,
+                RecurrenceFrequency.MONTHLY, 1, LocalDate.of(2026, 9, 5),
+            )
+            recurringExpenses.save(rule)
+            recurringExpenses.save(rule.copy(amount = Money(85_000)))
+
+            assertThat(recurringExpenses.observeAll().first()).containsExactly(rule.copy(amount = Money(85_000)))
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    // The foreign key is part of the migrated table: without it, deleting a subcategory would leave a
+    // recurring expense pointing at nothing, in a migrated database only — a difference no new database shows.
+    @Test
+    fun `a recurring expense of the migrated database loses its subcategory when that subcategory is deleted`() =
+        realTime()
+        {
+            // GIVEN
+            createVersion1File()
+            val database = openMigrated()
+            try
+            {
+                val recurringExpenses = RoomRecurringExpenseRepository(database.recurringExpenseDao())
+                val subcategories = RoomSubcategoryRepository(database.subcategoryDao())
+                val ruleId = RecurringExpenseId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
+                val rule = RecurringExpense(
+                    ruleId, AccountId(accountId), Money(80_000), TransactionTitle("Loyer"), groceries.id, null,
+                    RecurrenceFrequency.MONTHLY, 1, LocalDate.of(2026, 9, 5),
+                )
+                recurringExpenses.save(rule)
+
+                // WHEN
+                subcategories.deleteById(groceries.id)
+
+                // THEN
+                assertThat(recurringExpenses.findById(ruleId)?.subcategoryId).isNull()
+            } finally
+            {
+                database.close()
             }
         }
 }
