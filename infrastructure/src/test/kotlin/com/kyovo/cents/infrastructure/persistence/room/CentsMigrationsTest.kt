@@ -7,6 +7,8 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
+import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
@@ -328,4 +330,53 @@ class CentsMigrationsTest
                 database.close()
             }
         }
+
+    @Test
+    fun `the migrated database has a budget_alerts table that starts empty and works`() = realTime()
+    {
+        // GIVEN
+        createVersion1File()
+        val database = openMigrated()
+        try
+        {
+            val budgetAlerts = RoomBudgetAlertRepository(database.budgetAlertDao())
+
+            // WHEN / THEN nothing was reported before, and a crossing can now be recorded on an existing subcategory
+            assertThat(budgetAlerts.findByMonth(september)).isEmpty()
+
+            val alert = BudgetAlert(groceries.id, september, BudgetAlertLevel.CLOSE_TO_LIMIT)
+            budgetAlerts.record(alert)
+            budgetAlerts.record(alert)
+
+            assertThat(budgetAlerts.findByMonth(september)).containsExactly(alert)
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    // The foreign key is part of the migrated table: without it, deleting a subcategory would leave a
+    // budget alert pointing at nothing, in a migrated database only — a difference no new database shows.
+    @Test
+    fun `a budget alert of the migrated database is deleted along with its subcategory`() = realTime()
+    {
+        // GIVEN
+        createVersion1File()
+        val database = openMigrated()
+        try
+        {
+            val budgetAlerts = RoomBudgetAlertRepository(database.budgetAlertDao())
+            val subcategories = RoomSubcategoryRepository(database.subcategoryDao())
+            budgetAlerts.record(BudgetAlert(groceries.id, september, BudgetAlertLevel.OVER))
+
+            // WHEN
+            subcategories.deleteById(groceries.id)
+
+            // THEN
+            assertThat(budgetAlerts.findByMonth(september)).isEmpty()
+        } finally
+        {
+            database.close()
+        }
+    }
 }

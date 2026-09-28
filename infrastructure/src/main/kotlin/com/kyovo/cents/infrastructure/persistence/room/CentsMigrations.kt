@@ -34,8 +34,11 @@ object CentsMigrations
     }
 
     /**
-     * Version 3 adds the recurring expenses. Nothing existing is touched: only a new, empty table. The
-     * SQL is the one Room exported for version 3 (`schemas/.../3.json`), word for word.
+     * Version 3 adds the recurring expenses and the budget alerts already reported (the WorkManager
+     * check's memory, so it never notifies the same crossing twice). Nothing existing is touched: only two
+     * new, empty tables. The SQL is the one Room exported for version 3 (`schemas/.../3.json`), word for
+     * word. Neither table existed in a version 3 released anywhere yet, so both were added to this same
+     * migration rather than a 3-to-4 one — the same reasoning as folding the alert threshold into version 2.
      */
     val MIGRATION_2_3 = Migration(2, 3)
     { connection ->
@@ -61,6 +64,15 @@ object CentsMigrations
         )
         connection.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_recurring_expenses_subcategoryId` ON `recurring_expenses` (`subcategoryId`)"
+        )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `budget_alerts` (" +
+                    "`subcategoryId` BLOB NOT NULL, " +
+                    "`month` INTEGER NOT NULL, " +
+                    "`level` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`subcategoryId`, `month`, `level`), " +
+                    "FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE )"
         )
     }
 
