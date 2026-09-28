@@ -45,11 +45,13 @@ private val INTERVAL_INPUT_PATTERN = Regex("""\d{0,3}""")
  *
  * The account and the start date only matter while creating: [UpdateRecurringExpenseCommand] carries
  * neither (see its own doc, changing them would rewrite already-generated history in a confusing
- * way) — an edit keeps them here only for display, [submit] never sends them.
+ * way) — an edit keeps them here only for display (as [accountId] and, resolved once by whoever opens
+ * the edit, [accountName]), [submit] never sends them.
  */
 data class RecurringExpenseFormState(
     val editingId: RecurringExpenseId? = null,
     val accountId: AccountId?,
+    val accountName: String? = null,
     val amountText: String = "",
     val title: String = "",
     val subcategory: Subcategory? = null,
@@ -69,12 +71,22 @@ data class RecurringExpenseFormState(
             return RecurringExpenseFormState(accountId = accountId, startDate = today, endDate = today)
         }
 
-        /** [subcategory] is the one the rule points to (null when it has none), like the transaction form. */
-        fun editing(recurringExpense: RecurringExpense, subcategory: Subcategory?): RecurringExpenseFormState
+        /**
+         * [subcategory] is the one the rule points to (null when it has none), like the transaction
+         * form. [accountName] is resolved by the caller (which already has it, e.g. from a
+         * [RecurringExpenseRow]) rather than looked up here, since the account may be archived and no
+         * longer among the ones this form is shown with a picker for.
+         */
+        fun editing(
+            recurringExpense: RecurringExpense,
+            subcategory: Subcategory?,
+            accountName: String,
+        ): RecurringExpenseFormState
         {
             return RecurringExpenseFormState(
                 editingId = recurringExpense.id,
                 accountId = recurringExpense.accountId,
+                accountName = accountName,
                 amountText = formatCentsForInput(recurringExpense.amount.value),
                 title = recurringExpense.title.value,
                 subcategory = subcategory,

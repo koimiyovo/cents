@@ -122,7 +122,7 @@ class RecurringExpensesViewModelTest
         viewModel.openForEdit(row, null)
 
         // THEN
-        assertThat(form).isEqualTo(RecurringExpenseFormState.editing(row.recurringExpense, null))
+        assertThat(form).isEqualTo(RecurringExpenseFormState.editing(row.recurringExpense, null, row.accountName))
     }
 
     @Test

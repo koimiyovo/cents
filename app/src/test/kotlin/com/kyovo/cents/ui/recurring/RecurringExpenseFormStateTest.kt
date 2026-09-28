@@ -321,11 +321,12 @@ class RecurringExpenseFormEditingTest
         )
 
         // WHEN
-        val form = RecurringExpenseFormState.editing(rule, subcategory)
+        val form = RecurringExpenseFormState.editing(rule, subcategory, "Compte courant")
 
         // THEN
         assertThat(form.editingId).isEqualTo(rule.id)
         assertThat(form.accountId).isEqualTo(rule.accountId)
+        assertThat(form.accountName).isEqualTo("Compte courant")
         assertThat(form.amountText).isEqualTo("15,00")
         assertThat(form.title).isEqualTo("Loyer")
         assertThat(form.subcategory).isEqualTo(subcategory)
@@ -341,7 +342,7 @@ class RecurringExpenseFormEditingTest
     fun `a rule without an end date is edited with none`()
     {
         // WHEN
-        val form = RecurringExpenseFormState.editing(aRecurringExpense(endDate = null), null)
+        val form = RecurringExpenseFormState.editing(aRecurringExpense(endDate = null), null, "Compte courant")
 
         // THEN
         assertThat(form.hasEndDate).isFalse()
@@ -353,7 +354,9 @@ class RecurringExpenseFormEditingTest
     {
         // GIVEN
         val rule = aRecurringExpense()
-        val form = RecurringExpenseFormState.editing(rule, null).withTitle("Loyer révisé").withAmount("16,00")
+        val form = RecurringExpenseFormState.editing(rule, null, "Compte courant")
+            .withTitle("Loyer révisé")
+            .withAmount("16,00")
 
         // WHEN
         val submission = form.submit()
@@ -382,7 +385,8 @@ class RecurringExpenseFormEditingTest
         val rule = aRecurringExpense()
 
         // WHEN
-        val submission = RecurringExpenseFormState.editing(rule, null).submit() as RecurringExpenseSubmission.Update
+        val submission =
+            RecurringExpenseFormState.editing(rule, null, "Compte courant").submit() as RecurringExpenseSubmission.Update
 
         // THEN
         assertThat(submission.command.amount).isEqualTo(rule.amount)
@@ -396,7 +400,7 @@ class RecurringExpenseFormEditingTest
     {
         // GIVEN
         val subcategory = aSubcategory()
-        val form = RecurringExpenseFormState.editing(aRecurringExpense(subcategoryId = subcategory.id), subcategory)
+        val form = RecurringExpenseFormState.editing(aRecurringExpense(subcategoryId = subcategory.id), subcategory, "Compte courant")
             .withSubcategory(null)
 
         // WHEN
@@ -410,7 +414,7 @@ class RecurringExpenseFormEditingTest
     fun `a blank title on an edit is refused`()
     {
         // GIVEN
-        val form = RecurringExpenseFormState.editing(aRecurringExpense(), null).withTitle("")
+        val form = RecurringExpenseFormState.editing(aRecurringExpense(), null, "Compte courant").withTitle("")
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(

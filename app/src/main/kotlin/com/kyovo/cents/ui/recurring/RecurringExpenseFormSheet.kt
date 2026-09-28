@@ -113,7 +113,10 @@ fun RecurringExpenseFormSheet(
                 fontWeight = FontWeight.Bold,
             )
 
-            if (!form.isEditing)
+            if (form.isEditing)
+            {
+                AccountDisplayField(palette, form.accountName.orEmpty())
+            } else
             {
                 AccountPickerField(palette, accounts, form.accountId, onSelect = { onFormChange(form.withAccount(it)) })
                 if (RecurringExpenseFormError.ACCOUNT_REQUIRED in errors)
@@ -260,6 +263,24 @@ private fun AccountPickerField(
             fillWidth = true,
             placeholder = stringResource(R.string.recurring_form_account_placeholder),
         )
+    }
+}
+
+/** Read-only, unlike [AccountPickerField]: an existing rule's account can't change (see the class doc). */
+@Composable
+private fun AccountDisplayField(palette: AccountsPalette, accountName: String)
+{
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.recurring_form_account_label))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(palette.surface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        ) {
+            Text(text = accountName, color = palette.textPrimary, fontSize = 15.sp)
+        }
     }
 }
 

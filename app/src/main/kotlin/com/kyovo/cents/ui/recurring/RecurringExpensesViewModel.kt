@@ -57,7 +57,7 @@ class RecurringExpensesViewModel(
     fun openForEdit(row: RecurringExpenseRow, subcategory: Subcategory?)
     {
         _uiState.value = RecurringExpensesUiState(
-            form = RecurringExpenseFormState.editing(row.recurringExpense, subcategory),
+            form = RecurringExpenseFormState.editing(row.recurringExpense, subcategory, row.accountName),
         )
     }
 
