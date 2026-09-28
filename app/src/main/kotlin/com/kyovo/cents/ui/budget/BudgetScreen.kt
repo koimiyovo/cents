@@ -40,6 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.ui.common.SelectDropdown
+import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
@@ -50,20 +54,23 @@ import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
 import kotlin.math.roundToInt
 
 /**
- * The budget tab: where the month's budgets stand, at a glance, in three tabs sharing the same month —
- * [BudgetTab.OVERVIEW] (a pie of where the month's money actually went, budget or no budget),
- * [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most urgent
- * first — and, apart, the subcategories that have none), and [BudgetTab.TRENDS] (a bar per recent month, so
- * a drift shows up before it becomes a habit). It only looks: the limits and their thresholds are set from
- * the settings.
+ * The budget tab: where the month's budgets stand, at a glance, in three tabs sharing the same month and
+ * account filter — [BudgetTab.OVERVIEW] (a pie of where the month's money actually went, budget or no
+ * budget), [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most
+ * urgent first — and, apart, the subcategories that have none), and [BudgetTab.TRENDS] (a bar per recent
+ * month, so a drift shows up before it becomes a habit). The account filter (same "no filter" convention as
+ * Historique's own) narrows every one of them to a single account's spending. It only looks: the limits and
+ * their thresholds are set from the settings.
  */
 @Composable
 fun BudgetScreen(
     state: BudgetsUiState,
+    accounts: List<Account>,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onToday: () -> Unit,
     onSelectTab: (BudgetTab) -> Unit,
+    onSelectAccount: (AccountId?) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 )
@@ -88,6 +95,7 @@ fun BudgetScreen(
             onNext = onNextMonth,
             onToday = onToday,
         )
+        BudgetAccountFilter(palette, accounts, state.selectedAccountId, onSelectAccount)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
         {
             SubcategoryChip(stringResource(R.string.budget_tab_overview), state.tab == BudgetTab.OVERVIEW, palette) {
@@ -179,6 +187,27 @@ internal fun MonthSelectorRow(
         }
         RoundArrow(palette, "›", stringResource(R.string.budget_month_next), onNext)
     }
+}
+
+/** Narrows every tab to one account's spending, same "no filter" convention as Historique's own filter. */
+@Composable
+private fun BudgetAccountFilter(
+    palette: AccountsPalette,
+    accounts: List<Account>,
+    selected: AccountId?,
+    onSelect: (AccountId?) -> Unit,
+)
+{
+    val allLabel = stringResource(R.string.transactions_all_accounts)
+    val options = listOf(SelectOption<AccountId?>(null, allLabel)) +
+            accounts.map { SelectOption<AccountId?>(it.id, it.name.value) }
+    SelectDropdown(
+        palette = palette,
+        options = options,
+        selected = selected,
+        onSelect = onSelect,
+        labelPrefix = "💳 ",
+    )
 }
 
 @Composable

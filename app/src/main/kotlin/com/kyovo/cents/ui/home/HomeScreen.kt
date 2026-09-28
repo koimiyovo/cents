@@ -339,10 +339,12 @@ fun HomeScreen(
                         HomeTab.Budget ->
                             BudgetScreen(
                                 state = budgetsState,
+                                accounts = accounts,
                                 onPreviousMonth = budgetsViewModel::previousMonth,
                                 onNextMonth = budgetsViewModel::nextMonth,
                                 onToday = budgetsViewModel::goToCurrentMonth,
                                 onSelectTab = budgetsViewModel::selectTab,
+                                onSelectAccount = budgetsViewModel::selectAccount,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
                     }

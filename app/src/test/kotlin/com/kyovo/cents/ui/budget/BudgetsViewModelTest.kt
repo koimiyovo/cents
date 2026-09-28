@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.budget
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.BudgetProgress
@@ -33,6 +34,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneOffset
+import java.util.UUID
 
 /** The subcategories, which a test can change while the view model is watching. */
 private class FakeSubcategories(initial: List<Subcategory>) : ListSubcategoriesUseCase
@@ -43,40 +45,40 @@ private class FakeSubcategories(initial: List<Subcategory>) : ListSubcategoriesU
         all.map { list -> list.filter { kind == null || it.kind == kind } }
 }
 
-/** The progress of each month, which a test can change while the view model is watching. */
+/** The progress of each month/account asked for, which a test can change while the view model is watching. */
 private class FakeProgress : GetBudgetProgressUseCase
 {
-    val byMonth = MutableStateFlow<Map<YearMonth, Map<SubcategoryId, BudgetProgress>>>(emptyMap())
+    val byScope = MutableStateFlow<Map<Pair<YearMonth, AccountId?>, Map<SubcategoryId, BudgetProgress>>>(emptyMap())
 
-    /** The months the view model asked about, in order. */
-    val asked = mutableListOf<YearMonth>()
+    /** The scopes the view model asked about, in order. */
+    val asked = mutableListOf<Pair<YearMonth, AccountId?>>()
 
-    override fun observeAll(month: YearMonth): Flow<Map<SubcategoryId, BudgetProgress>>
+    override fun observeAll(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId, BudgetProgress>>
     {
-        asked += month
-        return byMonth.map { it[month] ?: emptyMap() }.distinctUntilChanged()
+        asked += month to accountId
+        return byScope.map { it[month to accountId] ?: emptyMap() }.distinctUntilChanged()
     }
 
-    override fun observe(subcategoryId: SubcategoryId, month: YearMonth): Flow<BudgetProgress?> =
-        observeAll(month).map { it[subcategoryId] }
+    override fun observe(subcategoryId: SubcategoryId, month: YearMonth, accountId: AccountId?): Flow<BudgetProgress?> =
+        observeAll(month, accountId).map { it[subcategoryId] }
 }
 
-/** What was spent per subcategory in each month, which a test can change while the view model is watching. */
+/** What was spent per subcategory in each month/account, which a test can change while the view model is watching. */
 private class FakeSpendingBreakdown : GetSpendingBreakdownUseCase
 {
-    val byMonth = MutableStateFlow<Map<YearMonth, Map<SubcategoryId?, Money>>>(emptyMap())
+    val byScope = MutableStateFlow<Map<Pair<YearMonth, AccountId?>, Map<SubcategoryId?, Money>>>(emptyMap())
 
-    override fun observe(month: YearMonth): Flow<Map<SubcategoryId?, Money>> =
-        byMonth.map { it[month] ?: emptyMap() }.distinctUntilChanged()
+    override fun observe(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId?, Money>> =
+        byScope.map { it[month to accountId] ?: emptyMap() }.distinctUntilChanged()
 }
 
-/** The trend of each month asked about, which a test can change while the view model is watching. */
+/** The trend of each month/account asked about, which a test can change while the view model is watching. */
 private class FakeSpendingTrend : GetSpendingTrendUseCase
 {
-    val byMonth = MutableStateFlow<Map<YearMonth, List<MonthlySpending>>>(emptyMap())
+    val byScope = MutableStateFlow<Map<Pair<YearMonth, AccountId?>, List<MonthlySpending>>>(emptyMap())
 
-    override fun observe(month: YearMonth, months: Int): Flow<List<MonthlySpending>> =
-        byMonth.map { it[month] ?: emptyList() }.distinctUntilChanged()
+    override fun observe(month: YearMonth, months: Int, accountId: AccountId?): Flow<List<MonthlySpending>> =
+        byScope.map { it[month to accountId] ?: emptyList() }.distinctUntilChanged()
 }
 
 /** Records what it is asked to set; can be told to refuse. */
@@ -135,20 +137,21 @@ class BudgetsViewModelTest
     private fun progressOf(limit: Long, spent: Long, threshold: Int = 80) =
         BudgetProgress(Money(limit), Money(spent), AlertThreshold(threshold))
 
-    private fun givenProgress(month: YearMonth, vararg entries: Pair<Subcategory, BudgetProgress>)
+    private fun givenProgress(month: YearMonth, vararg entries: Pair<Subcategory, BudgetProgress>, accountId: AccountId? = null)
     {
-        progress.byMonth.value = progress.byMonth.value + (month to entries.associate { it.first.id to it.second })
+        progress.byScope.value = progress.byScope.value +
+                ((month to accountId) to entries.associate { it.first.id to it.second })
     }
 
-    private fun givenSpending(month: YearMonth, vararg entries: Pair<Subcategory?, Long>)
+    private fun givenSpending(month: YearMonth, vararg entries: Pair<Subcategory?, Long>, accountId: AccountId? = null)
     {
-        spendingBreakdown.byMonth.value = spendingBreakdown.byMonth.value +
-                (month to entries.associate { it.first?.id to Money(it.second) })
+        spendingBreakdown.byScope.value = spendingBreakdown.byScope.value +
+                ((month to accountId) to entries.associate { it.first?.id to Money(it.second) })
     }
 
-    private fun givenTrend(month: YearMonth, monthly: List<MonthlySpending>)
+    private fun givenTrend(month: YearMonth, monthly: List<MonthlySpending>, accountId: AccountId? = null)
     {
-        spendingTrend.byMonth.value = spendingTrend.byMonth.value + (month to monthly)
+        spendingTrend.byScope.value = spendingTrend.byScope.value + ((month to accountId) to monthly)
     }
 
     @Test
@@ -295,6 +298,67 @@ class BudgetsViewModelTest
         viewModel.nextMonth()
         assertThat(state.selector.month).isEqualTo(YearMonth.of(2026, 10))
         assertThat(state.rows.map { it.progress }).containsOnlyNulls()
+    }
+
+    // ------------------------------------------------------------------ the account filter
+
+    @Test
+    fun `starts scoped to every account`()
+    {
+        assertThat(state.selectedAccountId).isNull()
+    }
+
+    @Test
+    fun `selecting an account scopes the rows, the breakdown and the trend to it`()
+    {
+        // GIVEN spending on two accounts, one selected
+        val checking = AccountId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001"))
+        givenProgress(september, GROCERIES_SUBCATEGORY to progressOf(30_000, 4_500), accountId = checking)
+        givenProgress(september, GROCERIES_SUBCATEGORY to progressOf(30_000, 16_500))
+        givenSpending(september, GROCERIES_SUBCATEGORY to 4_500L, accountId = checking)
+        givenSpending(september, GROCERIES_SUBCATEGORY to 16_500L)
+        givenTrend(september, listOf(MonthlySpending(september, Money(4_500))), accountId = checking)
+        givenTrend(september, listOf(MonthlySpending(september, Money(16_500))))
+
+        // WHEN
+        viewModel.selectAccount(checking)
+
+        // THEN
+        assertThat(state.selectedAccountId).isEqualTo(checking)
+        assertThat(state.rows.first().progress).isEqualTo(progressOf(30_000, 4_500))
+        assertThat(state.breakdown.total).isEqualTo(Money(4_500))
+        assertThat(state.trend.average).isEqualTo(Money(4_500))
+    }
+
+    @Test
+    fun `deselecting the account goes back to every account`()
+    {
+        // GIVEN
+        val checking = AccountId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001"))
+        givenProgress(september, GROCERIES_SUBCATEGORY to progressOf(30_000, 4_500), accountId = checking)
+        givenProgress(september, GROCERIES_SUBCATEGORY to progressOf(30_000, 16_500))
+        viewModel.selectAccount(checking)
+
+        // WHEN
+        viewModel.selectAccount(null)
+
+        // THEN
+        assertThat(state.selectedAccountId).isNull()
+        assertThat(state.rows.first().progress).isEqualTo(progressOf(30_000, 16_500))
+    }
+
+    @Test
+    fun `the account filter survives moving to another month`()
+    {
+        // GIVEN
+        val checking = AccountId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001"))
+        viewModel.selectAccount(checking)
+
+        // WHEN
+        viewModel.nextMonth()
+
+        // THEN
+        assertThat(state.selectedAccountId).isEqualTo(checking)
     }
 
     @Test
