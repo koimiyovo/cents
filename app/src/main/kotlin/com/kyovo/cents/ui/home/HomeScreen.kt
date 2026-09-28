@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.home
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,10 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
@@ -222,21 +225,34 @@ fun HomeScreen(
 
     if (budgetsState.askNotificationPermission)
     {
-        NotificationPermissionDialog(
-            title = stringResource(R.string.budgets_notification_title),
-            body = stringResource(R.string.budgets_notification_body),
-            palette = palette,
-            onConfirm = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else
-                {
-                    budgetsViewModel.dismissNotificationPermissionAsk()
-                }
-            },
-            onDismiss = budgetsViewModel::dismissNotificationPermissionAsk
-        )
+        // The system dialog never re-asks once granted, but this rationale dialog is ours: without
+        // this check it would reappear on every budget save even after the user already said yes.
+        val notificationContext = LocalContext.current
+        val notificationsAlreadyGranted = ContextCompat.checkSelfPermission(
+            notificationContext, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (notificationsAlreadyGranted)
+        {
+            LaunchedEffect(Unit) { budgetsViewModel.dismissNotificationPermissionAsk() }
+        } else
+        {
+            NotificationPermissionDialog(
+                title = stringResource(R.string.budgets_notification_title),
+                body = stringResource(R.string.budgets_notification_body),
+                palette = palette,
+                onConfirm = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else
+                    {
+                        budgetsViewModel.dismissNotificationPermissionAsk()
+                    }
+                },
+                onDismiss = budgetsViewModel::dismissNotificationPermissionAsk
+            )
+        }
     }
 
     // An account created from the transaction form (when there was none) is chosen in it at once.
