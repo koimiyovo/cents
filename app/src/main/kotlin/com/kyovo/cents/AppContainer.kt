@@ -76,6 +76,7 @@ class AppContainer(persistence: RoomPersistence) {
     private val transactionRepository = persistence.transactions
     private val subcategoryRepository = persistence.subcategories
     private val budgetRepository = persistence.budgets
+    private val budgetAlertRepository = persistence.budgetAlerts
     private val recurringExpenseRepository = persistence.recurringExpenses
     private val transactionIdGenerator = UuidTransactionIdGenerator()
     private val unitOfWork = persistence.unitOfWork
@@ -100,7 +101,13 @@ class AppContainer(persistence: RoomPersistence) {
         CreateSubcategoryService(subcategoryRepository, UuidSubcategoryIdGenerator())
     val updateSubcategory: UpdateSubcategoryUseCase = UpdateSubcategoryService(subcategoryRepository)
     val deleteSubcategory: DeleteSubcategoryUseCase =
-        DeleteSubcategoryService(subcategoryRepository, transactionRepository, budgetRepository, unitOfWork)
+        DeleteSubcategoryService(
+            subcategoryRepository,
+            transactionRepository,
+            budgetRepository,
+            budgetAlertRepository,
+            unitOfWork,
+        )
     val setBudget: SetBudgetUseCase = SetBudgetService(budgetRepository, subcategoryRepository)
 
     // A month runs from midnight to midnight in the zone the transaction form dates things in (the
