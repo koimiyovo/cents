@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -23,16 +24,16 @@ class GetBudgetProgressService(
     // One subcategory's progress is read out of the month's: the rules (which budget is in force, what a
     // month is, what counts as spent) are written once, in `observeAll`. `distinctUntilChanged` keeps a
     // page from redrawing for a change that does not concern its subcategory.
-    override fun observe(subcategoryId: SubcategoryId, month: YearMonth): Flow<BudgetProgress?>
+    override fun observe(subcategoryId: SubcategoryId, month: YearMonth, accountId: AccountId?): Flow<BudgetProgress?>
     {
-        return observeAll(month)
+        return observeAll(month, accountId)
             .map { progress -> progress[subcategoryId] }
             .distinctUntilChanged()
     }
 
     // Follows both the budgets and the transactions: the progress moves when a limit is set or changed,
     // and when an expense is added, edited or deleted.
-    override fun observeAll(month: YearMonth): Flow<Map<SubcategoryId, BudgetProgress>>
+    override fun observeAll(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId, BudgetProgress>>
     {
         // A month runs from midnight on its 1st to midnight on the next month's 1st, where the user lives.
         val start = month.atDay(1).atStartOfDay(zone).toInstant()
@@ -44,6 +45,7 @@ class GetBudgetProgressService(
                 .filter {
                     it.category == TransactionCategory.EXPENSE &&
                             it.subcategoryId != null &&
+                            (accountId == null || it.accountId == accountId) &&
                             !it.date.isBefore(start) &&
                             it.date.isBefore(end)
                 }

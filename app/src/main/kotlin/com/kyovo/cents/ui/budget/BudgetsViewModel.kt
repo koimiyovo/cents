@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
@@ -48,15 +49,18 @@ enum class BudgetTab
 }
 
 /**
- * Everything the budgets screens show: the month ([selector]), one [rows] entry per expense subcategory
- * with its progress for that month, the month's spending [breakdown] (the overview tab's pie), the last few
- * months' totals ([trend], the trends tab's bars), and the [form] that sets a limit and an alert threshold —
- * null while it is closed, so "is it open" and its content can't disagree. [isCurrentMonth] tells the screen
- * whether to offer a way back to today. [rows], [breakdown] and [trend] are always those of the month in
- * [selector] (the trend's window ends at it).
+ * Everything the budgets screens show: the month ([selector]), the account the tab is scoped to
+ * ([selectedAccountId], null meaning every account — the same "no filter" convention as Historique's own
+ * account filter), one [rows] entry per expense subcategory with its progress for that month and account,
+ * the month's spending [breakdown] (the overview tab's pie), the last few months' totals ([trend], the
+ * trends tab's bars), and the [form] that sets a limit and an alert threshold — null while it is closed, so
+ * "is it open" and its content can't disagree. [isCurrentMonth] tells the screen whether to offer a way
+ * back to today. [rows], [breakdown] and [trend] are always those of the month and account in [selector] /
+ * [selectedAccountId] (the trend's window ends at the month).
  */
 data class BudgetsUiState(
     val selector: MonthSelector,
+    val selectedAccountId: AccountId? = null,
     val rows: List<BudgetRow> = emptyList(),
     val breakdown: SpendingBreakdown = SpendingBreakdown(Money(0), emptyList()),
     val trend: SpendingTrend = SpendingTrend(emptyList(), null, null),
@@ -82,57 +86,61 @@ class BudgetsViewModel(
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel()
 {
-    /** What the user chose: the month, the tab and the form. Not what is read from the storage. */
+    /** What the user chose: the month, the account filter, the tab and the form. Not what is read from storage. */
     private data class Chosen(
         val selector: MonthSelector,
+        val accountId: AccountId? = null,
         val form: BudgetFormState? = null,
         val error: BudgetFormError? = null,
         val tab: BudgetTab = BudgetTab.OVERVIEW,
     )
 
+    /** What is being looked at: the month and the account filter together, since both restart every reading. */
+    private data class Scope(val month: YearMonth, val accountId: AccountId?)
+
     private val chosen = MutableStateFlow(Chosen(MonthSelector(currentMonth())))
+    private val scope: Flow<Scope> = chosen.map { Scope(it.selector.month, it.accountId) }.distinctUntilChanged()
 
     /**
-     * The rows of each month asked for, tagged with that month. Only the month restarts the reading: typing
-     * in the form must not query the storage again at each keystroke.
+     * The rows of each month/account asked for, tagged with that scope. Only the month or the account
+     * filter restarts the reading: typing in the form must not query the storage again at each keystroke.
      */
-    private val rowsOfTheMonth: Flow<Pair<YearMonth, List<BudgetRow>>> = chosen
-        .map { it.selector.month }
-        .distinctUntilChanged()
-        .flatMapLatest { month ->
+    private val rowsOfTheMonth: Flow<Pair<Scope, List<BudgetRow>>> = scope
+        .flatMapLatest { scope ->
             combine(
                 listSubcategories.observe(RecordableTransactionCategory.EXPENSE),
-                getBudgetProgress.observeAll(month),
+                getBudgetProgress.observeAll(scope.month, scope.accountId),
             ) { subcategories, progress ->
-                month to budgetRows(subcategories, progress, month, LocalDate.now(clock))
+                scope to budgetRows(subcategories, progress, scope.month, LocalDate.now(clock))
             }
         }
 
     /** The overview tab's pie: where the month's money went, budget or no budget. */
-    private val breakdownOfTheMonth: Flow<Pair<YearMonth, SpendingBreakdown>> = chosen
-        .map { it.selector.month }
-        .distinctUntilChanged()
-        .flatMapLatest { month ->
+    private val breakdownOfTheMonth: Flow<Pair<Scope, SpendingBreakdown>> = scope
+        .flatMapLatest { scope ->
             combine(
                 listSubcategories.observe(RecordableTransactionCategory.EXPENSE),
-                getSpendingBreakdown.observe(month),
-            ) { subcategories, spent -> month to spendingBreakdown(subcategories, spent) }
+                getSpendingBreakdown.observe(scope.month, scope.accountId),
+            ) { subcategories, spent -> scope to spendingBreakdown(subcategories, spent) }
         }
 
     /** The trends tab's bars: the last few months' totals, this one's window ending at the month shown. */
-    private val trendOfTheMonth: Flow<Pair<YearMonth, SpendingTrend>> = chosen
-        .map { it.selector.month }
-        .distinctUntilChanged()
-        .flatMapLatest { month -> getSpendingTrend.observe(month).map { monthly -> month to spendingTrend(monthly) } }
+    private val trendOfTheMonth: Flow<Pair<Scope, SpendingTrend>> = scope
+        .flatMapLatest { scope ->
+            getSpendingTrend.observe(scope.month, accountId = scope.accountId)
+                .map { monthly -> scope to spendingTrend(monthly) }
+        }
 
-    // A state is only built once the rows, the breakdown and the trend are those of the month chosen: right
-    // after a change of month, the previous month's data is still there for an instant, and must not appear
-    // under the new month's name.
+    // A state is only built once the rows, the breakdown and the trend are those of the scope chosen: right
+    // after a change of month or account, the previous scope's data is still there for an instant, and must
+    // not appear under the new scope's name.
     val uiState: StateFlow<BudgetsUiState> = combine(chosen, rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth)
-    { chosen, (rowsMonth, rows), (breakdownMonth, breakdown), (trendMonth, trend) ->
-        if (rowsMonth != chosen.selector.month || breakdownMonth != chosen.selector.month || trendMonth != chosen.selector.month) null
+    { chosen, (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
+        val wanted = Scope(chosen.selector.month, chosen.accountId)
+        if (rowsScope != wanted || breakdownScope != wanted || trendScope != wanted) null
         else BudgetsUiState(
             selector = chosen.selector,
+            selectedAccountId = chosen.accountId,
             rows = rows,
             breakdown = breakdown,
             trend = trend,
@@ -169,6 +177,13 @@ class BudgetsViewModel(
     fun selectTab(tab: BudgetTab)
     {
         chosen.update { it.copy(tab = tab) }
+    }
+
+    /** Narrows the tab to one account's spending (null: every account). The form is left as it is — a
+     * budget's limit is not scoped to an account, unlike its progress. */
+    fun selectAccount(accountId: AccountId?)
+    {
+        chosen.update { it.copy(accountId = accountId) }
     }
 
     /** A form is for the month it was opened in, so leaving that month closes it. */

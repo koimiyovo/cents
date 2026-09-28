@@ -82,7 +82,10 @@ val DarkAccountsPalette = AccountsPalette(
     heroOnCardSecondary = Color(0xFF9FB3AB),
     heroPillBackground = Color(0x331D6F63),
     heroIncomeAccent = Color(0xFF6FE39A),
-    heroExpenseAccent = Color(0xFFE3A83E),
+    // A brighter, lighter orange than the gold used for icons/badges elsewhere: at this weight (bold,
+    // 14sp) that darker gold read as a dull, low-contrast brown next to heroIncomeAccent's vivid green —
+    // confirmed illegible on a physical dark-mode screen, not just by the numbers (see the palette's doc).
+    heroExpenseAccent = Color(0xFFFFB74D),
     badgeBackground = Color(0xFF1D3B30),
     badgeContent = Color(0xFFE3A83E),
     iconToneGreen = Color(0xFF1D6F63),

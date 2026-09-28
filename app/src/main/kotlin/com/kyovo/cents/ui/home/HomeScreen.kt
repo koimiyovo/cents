@@ -49,6 +49,7 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
@@ -59,6 +60,10 @@ import com.kyovo.cents.ui.budget.BudgetFormSheet
 import com.kyovo.cents.ui.budget.BudgetLimitsScreen
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
+import com.kyovo.cents.ui.recurring.DeleteRecurringExpenseDialog
+import com.kyovo.cents.ui.recurring.RecurringExpenseFormSheet
+import com.kyovo.cents.ui.recurring.RecurringExpensesScreen
+import com.kyovo.cents.ui.recurring.RecurringExpensesViewModel
 import com.kyovo.cents.ui.transaction.AddTransactionFab
 import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
 import com.kyovo.cents.ui.settings.SettingsScreen
@@ -97,11 +102,13 @@ fun HomeScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
+    listRecurringExpenses: ListRecurringExpensesUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
+    recurringExpensesViewModel: RecurringExpensesViewModel,
     modifier: Modifier = Modifier,
 ) {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
@@ -112,6 +119,7 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
+    val recurringExpensesState by recurringExpensesViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -256,6 +264,24 @@ fun HomeScreen(
                 onBack = { destination = HomeDestination.Tabs },
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
+                onOpenRecurringExpenses = { destination = HomeDestination.RecurringExpenses },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (destination == HomeDestination.RecurringExpenses)
+        {
+            RecurringExpensesScreen(
+                listRecurringExpenses = listRecurringExpenses,
+                listAccounts = listAccounts,
+                listArchivedAccounts = listArchivedAccounts,
+                listSubcategories = listSubcategories,
+                onBack = { destination = HomeDestination.Settings },
+                onCreate = { recurringExpensesViewModel.openCreate(accounts.singleOrNull()?.id) },
+                onEdit = { row ->
+                    recurringExpensesViewModel.openForEdit(
+                        row,
+                        subcategories.find { it.id == row.recurringExpense.subcategoryId },
+                    )
+                },
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Budgets)
@@ -313,10 +339,12 @@ fun HomeScreen(
                         HomeTab.Budget ->
                             BudgetScreen(
                                 state = budgetsState,
+                                accounts = accounts,
                                 onPreviousMonth = budgetsViewModel::previousMonth,
                                 onNextMonth = budgetsViewModel::nextMonth,
                                 onToday = budgetsViewModel::goToCurrentMonth,
                                 onSelectTab = budgetsViewModel::selectTab,
+                                onSelectAccount = budgetsViewModel::selectAccount,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
                     }
@@ -421,6 +449,26 @@ fun HomeScreen(
             subcategory = subcategory,
             onConfirm = subcategoriesViewModel::confirmDelete,
             onDismiss = subcategoriesViewModel::dismissDelete,
+        )
+    }
+    recurringExpensesState.form?.let { form ->
+        RecurringExpenseFormSheet(
+            accounts = accounts,
+            subcategories = subcategories,
+            form = form,
+            errors = recurringExpensesState.errors,
+            onFormChange = recurringExpensesViewModel::update,
+            onSubmit = recurringExpensesViewModel::submit,
+            onDelete = recurringExpensesViewModel::askToDelete,
+            onDismiss = recurringExpensesViewModel::close,
+        )
+    }
+    recurringExpensesState.confirmingDelete?.let { rule ->
+        DeleteRecurringExpenseDialog(
+            palette = palette,
+            rule = rule,
+            onConfirm = recurringExpensesViewModel::confirmDelete,
+            onDismiss = recurringExpensesViewModel::dismissDelete,
         )
     }
     accountFormState.form?.let { form ->
