@@ -319,11 +319,15 @@ private enum class TransactionsTab
 }
 
 /**
- * The from/to bounds for a period: preset periods count back from [now] and never look beyond it —
- * a recurring expense can generate a transaction weeks or months ahead (see
+ * The from/to bounds for a period: preset periods count back from [now] and never look beyond the
+ * end of [now]'s day — a recurring expense can generate a transaction weeks or months ahead (see
  * GenerateRecurringExpensesService's lookahead), and the history must not show one that hasn't
- * happened yet. CUSTOM uses the picked dates (start of day to end of day, in the local zone; its
- * picker already can't select a future one), and ALL_TIME has no lower bound.
+ * happened yet. The cap is the end of the day, not the exact instant of [now]: this screen only
+ * recomputes [now] when the filters themselves change (see the `remember` around this call), not on
+ * every recomposition, so a transaction recorded moments later — still today — must not be treated
+ * as "in the future" just because it is after that stale captured instant. CUSTOM uses the picked
+ * dates (start of day to end of day, in the local zone; its picker already can't select a future
+ * one), and ALL_TIME has no lower bound.
  */
 internal fun periodRange(
     period: TransactionsPeriod,
@@ -332,14 +336,15 @@ internal fun periodRange(
     now: Instant,
 ): Pair<Instant?, Instant?>
 {
+    val zone = ZoneId.systemDefault()
     if (period == TransactionsPeriod.CUSTOM)
     {
-        val zone = ZoneId.systemDefault()
         val from = customFrom?.atStartOfDay(zone)?.toInstant()
         val to = customTo?.plusDays(1)?.atStartOfDay(zone)?.toInstant()?.minusNanos(1)
         return from to to
     }
-    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to now
+    val endOfToday = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
+    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to endOfToday
 }
 
 /** Same boundary semantics as [com.kyovo.cents.application.usecase.ListTransactionsService]: inclusive on both ends. */

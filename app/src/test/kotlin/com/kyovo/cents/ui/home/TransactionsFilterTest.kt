@@ -46,39 +46,58 @@ private fun aTransactionOn(accountId: AccountId, subcategoryId: SubcategoryId?):
 
 class PeriodRangeTest
 {
+    private val zone = ZoneId.systemDefault()
+
+    // Well before midnight, so end-of-day is a different, later instant than `now` itself: a
+    // transaction recorded a moment after the screen computed this range (still today) must not
+    // be treated as "in the future" just because it is after the captured `now`.
     private val now = Instant.parse("2026-09-23T12:00:00Z")
+    private val endOfToday = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
 
     @Test
-    fun `7-day period starts 7 days before now and stops at now`()
+    fun `7-day period starts 7 days before now and stops at the end of today`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_7_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(7, ChronoUnit.DAYS))
-        assertThat(to).isEqualTo(now)
+        assertThat(to).isEqualTo(endOfToday)
     }
 
     @Test
-    fun `30-day period starts 30 days before now and stops at now`()
+    fun `30-day period starts 30 days before now and stops at the end of today`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(30, ChronoUnit.DAYS))
-        assertThat(to).isEqualTo(now)
+        assertThat(to).isEqualTo(endOfToday)
     }
 
     @Test
-    fun `all-time period has no lower bound but still stops at now`()
+    fun `all-time period has no lower bound but still stops at the end of today`()
     {
         // WHEN a recurring expense generated well ahead of today (see the lookahead horizon) must not show
         val (from, to) = periodRange(TransactionsPeriod.ALL_TIME, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isNull()
-        assertThat(to).isEqualTo(now)
+        assertThat(to).isEqualTo(endOfToday)
+    }
+
+    @Test
+    fun `a transaction recorded moments after now was captured still counts as today`()
+    {
+        // WHEN a transaction is recorded a second after the screen last computed its period range
+        val (_, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)
+        val recordedJustAfter = now.plusSeconds(1)
+
+        // THEN it is still within the period, because the cap is the end of the day, not the exact
+        // captured instant (the ViewModel-less screen state only recomputes `now` when the filters
+        // themselves change, not on every recomposition)
+        assertThat(recordedJustAfter.isAfter(to)).isFalse()
     }
 
     @Test
