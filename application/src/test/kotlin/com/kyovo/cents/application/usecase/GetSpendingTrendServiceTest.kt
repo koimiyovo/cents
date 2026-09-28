@@ -2,10 +2,12 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
+import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.MonthlySpending
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -33,9 +35,10 @@ class GetSpendingTrendServiceTest
 
     private fun aServiceIn(zone: ZoneId) = GetSpendingTrendService(transactionRepository, zone)
 
-    private fun anExpense(suffix: Int, cents: Long, date: String): Transaction =
+    private fun anExpense(suffix: Int, cents: Long, date: String, accountId: AccountId = anAccountId()): Transaction =
         aTransaction(
             id = aTransactionId("33333333-3333-3333-3333-33333333333$suffix"),
+            accountId = accountId,
             amount = aMoney(cents),
             date = anInstant(date),
             category = TransactionCategory.EXPENSE,
@@ -54,6 +57,22 @@ class GetSpendingTrendServiceTest
             YearMonth.of(2026, 8),
             september,
         )
+    }
+
+    @Test
+    fun `an account given counts only that account's expenses`() = runTest()
+    {
+        // GIVEN
+        val checking = anAccountId("aaaaaaaa-0000-0000-0000-000000000001")
+        val cash = anAccountId("aaaaaaaa-0000-0000-0000-000000000002")
+        transactionRepository.save(anExpense(1, 4_500, "2026-09-03T10:00:00Z", accountId = checking))
+        transactionRepository.save(anExpense(2, 9_000, "2026-09-05T10:00:00Z", accountId = cash))
+
+        // WHEN / THEN
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(september, months = 1, accountId = checking).first())
+            .isEqualTo(listOf(MonthlySpending(september, aMoney(4_500))))
+        assertThat(aServiceIn(ZoneId.of("UTC")).observe(september, months = 1).first())
+            .isEqualTo(listOf(MonthlySpending(september, aMoney(13_500))))
     }
 
     @Test
