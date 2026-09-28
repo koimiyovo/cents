@@ -8,6 +8,7 @@ import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.BudgetAlertRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
 import com.kyovo.cents.domain.port.output.RecurringExpenseRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
@@ -17,9 +18,10 @@ import java.nio.ByteBuffer
 import java.util.UUID
 
 /**
- * The app's storage, built once: one Room database, and the five repositories (accounts, subcategories,
- * transactions, budgets, recurring expenses) and the unit of work that all work on it. What it shows to the
- * outside are the domain's ports only, never a Room type, so the app module needs to know nothing about Room.
+ * The app's storage, built once: one Room database, and the six repositories (accounts, subcategories,
+ * transactions, budgets, budget alerts already reported, recurring expenses) and the unit of work that all
+ * work on it. What it shows to the outside are the domain's ports only, never a Room type, so the app
+ * module needs to know nothing about Room.
  */
 class RoomPersistence private constructor(private val database: CentsDatabase)
 {
@@ -27,6 +29,7 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
     val subcategories: SubcategoryRepository = RoomSubcategoryRepository(database.subcategoryDao())
     val transactions: TransactionRepository = RoomTransactionRepository(database.transactionDao())
     val budgets: BudgetRepository = RoomBudgetRepository(database.budgetDao())
+    val budgetAlerts: BudgetAlertRepository = RoomBudgetAlertRepository(database.budgetAlertDao())
     val recurringExpenses: RecurringExpenseRepository = RoomRecurringExpenseRepository(database.recurringExpenseDao())
     val unitOfWork: UnitOfWork = RoomUnitOfWork(database)
 
