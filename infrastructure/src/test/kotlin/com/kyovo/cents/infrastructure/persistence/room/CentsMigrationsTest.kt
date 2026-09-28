@@ -239,7 +239,7 @@ class CentsMigrationsTest
         }
 
     @Test
-    fun `a migrated file is at version 3, and what is saved afterwards, threshold included, survives reopening it`() =
+    fun `a migrated file is at version 4, and what is saved afterwards, threshold included, survives reopening it`() =
         realTime()
         {
             // GIVEN a version 1 file, migrated, with a budget set
@@ -253,7 +253,7 @@ class CentsMigrationsTest
             {
                 first.close()
             }
-            assertThat(userVersionOfTheFile()).isEqualTo(3)
+            assertThat(userVersionOfTheFile()).isEqualTo(4)
 
             // WHEN it is opened again (the migrations must not run a second time, nor fail)
             val second = openMigrated()
