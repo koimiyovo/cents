@@ -1,5 +1,6 @@
 package com.kyovo.cents.domain.port.input
 
+import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.MonthlySpending
 import kotlinx.coroutines.flow.Flow
 import java.time.YearMonth
@@ -10,5 +11,6 @@ import java.time.YearMonth
  */
 interface GetSpendingTrendUseCase
 {
-    fun observe(month: YearMonth, months: Int = 6): Flow<List<MonthlySpending>>
+    /** [accountId], when given, counts only that account's expenses — null (the default) counts every account. */
+    fun observe(month: YearMonth, months: Int = 6, accountId: AccountId? = null): Flow<List<MonthlySpending>>
 }
