@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.port.output.RecurringTransactionNotifier
 import com.kyovo.cents.ui.common.formatEuroCents
@@ -17,11 +18,11 @@ import java.time.LocalDate
 private const val CHANNEL_ID = "recurring_expenses"
 
 /**
- * Posts a real Android notification for a recurring expense that falls today — the Android-bound half of
+ * Posts a real Android notification for a recurring transaction (an expense or an income) that falls today — the Android-bound half of
  * the daily check (which rules are due is [com.kyovo.cents.application.usecase.NotifyDueRecurringTransactionsService],
  * tested without any of this). Same shape as [SystemBudgetAlertNotifier]: the channel is created up front,
  * and without the `POST_NOTIFICATIONS` permission (a runtime permission from Android 13 on, answered as
- * granted before that) nothing is posted — the expense itself is recorded either way.
+ * granted before that) nothing is posted — the transaction itself is recorded either way.
  *
  * One notification per rule and day ([recurringTransactionNotificationId]), `setOnlyAlertOnce`: asking twice
  * on the same day replaces the notification silently, and that is all the deduplication there is.
@@ -35,7 +36,7 @@ class SystemRecurringTransactionNotifier(
     {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            context.getString(R.string.recurring_expense_channel_name),
+            context.getString(R.string.recurring_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT,
         )
         NotificationManagerCompat.from(context).createNotificationChannel(channel)
@@ -49,12 +50,13 @@ class SystemRecurringTransactionNotifier(
         }
 
         val day = today()
+        val income = recurringTransaction.category == RecordableTransactionCategory.INCOME
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.recurring_expense_title))
+            .setContentTitle(context.getString(if (income) R.string.recurring_income_title else R.string.recurring_expense_title))
             .setContentText(
                 context.getString(
-                    R.string.recurring_expense_body,
+                    if (income) R.string.recurring_income_body else R.string.recurring_expense_body,
                     recurringTransaction.title.value,
                     formatEuroCents(recurringTransaction.amount.value),
                 ),

@@ -39,19 +39,21 @@ sealed interface RecurringTransactionSubmission
 private val INTERVAL_INPUT_PATTERN = Regex("""\d{0,3}""")
 
 /**
- * What the user has typed so far for a recurring-expense rule: an account, an amount, a title, an
- * optional expense subcategory, a pace (frequency + interval, "every N weeks/months/years") and a
- * start date, with an optional end date. No description field in this first version.
+ * What the user has typed so far for a recurring rule: whether it is an expense or an income ([category]), an
+ * account, an amount, a title, an optional subcategory of that kind, a pace (frequency + interval, "every N
+ * weeks/months/years") and a start date, with an optional end date. No description field in this first version.
  *
- * The account and the start date only matter while creating: [UpdateRecurringTransactionCommand] carries
+ * The account, the category and the start date only matter while creating: [UpdateRecurringTransactionCommand] carries
  * neither (see its own doc, changing them would rewrite already-generated history in a confusing
- * way) — an edit keeps them here only for display (as [accountId] and, resolved once by whoever opens
+ * way, and an income turned into an expense would contradict what was already generated) — an edit keeps
+ * them here only for display (as [accountId] and, resolved once by whoever opens
  * the edit, [accountName]), [submit] never sends them.
  */
 data class RecurringTransactionFormState(
     val editingId: RecurringTransactionId? = null,
     val accountId: AccountId?,
     val accountName: String? = null,
+    val category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     val amountText: String = "",
     val title: String = "",
     val subcategory: Subcategory? = null,
@@ -87,6 +89,7 @@ data class RecurringTransactionFormState(
                 editingId = recurringTransaction.id,
                 accountId = recurringTransaction.accountId,
                 accountName = accountName,
+                category = recurringTransaction.category,
                 amountText = formatCentsForInput(recurringTransaction.amount.value),
                 title = recurringTransaction.title.value,
                 subcategory = subcategory,
@@ -106,6 +109,16 @@ data class RecurringTransactionFormState(
     fun withSubcategory(subcategory: Subcategory?): RecurringTransactionFormState = copy(subcategory = subcategory)
 
     fun withAccount(id: AccountId): RecurringTransactionFormState = copy(accountId = id)
+
+    /**
+     * Switches between expense and income, keeping everything typed except a subcategory of the other kind.
+     * Only while creating: an existing rule keeps its category (see the class doc).
+     */
+    fun withCategory(category: RecordableTransactionCategory): RecurringTransactionFormState
+    {
+        if (isEditing) return this
+        return copy(category = category, subcategory = subcategory?.takeIf { it.kind == category })
+    }
 
     /** Changing the pace's unit does not reset the count: "every 2" stays "every 2" under the new unit. */
     fun withFrequency(frequency: RecurrenceFrequency): RecurringTransactionFormState = copy(frequency = frequency)
@@ -132,9 +145,9 @@ data class RecurringTransactionFormState(
 
     fun withEndDate(date: LocalDate): RecurringTransactionFormState = copy(endDate = date)
 
-    /** A recurring expense is always an expense (see [RecurringTransaction]'s own doc): only those subcategories. */
+    /** Only the subcategories of the rule's own kind: an income is not filed under "Loyer". */
     fun subcategoryChoices(subcategories: List<Subcategory>): List<Subcategory> =
-        subcategories.filter { it.kind == RecordableTransactionCategory.EXPENSE }
+        subcategories.filter { it.kind == category }
 
     fun submit(): RecurringTransactionSubmission
     {
@@ -178,6 +191,7 @@ data class RecurringTransactionFormState(
         return RecurringTransactionSubmission.Create(
             CreateRecurringTransactionCommand(
                 accountId = accountId,
+                category = category,
                 amount = amount,
                 title = cleanTitle,
                 subcategoryId = subcategory?.id,

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.ui.common.AmountField
@@ -57,12 +58,14 @@ import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.LightAccountsPalette
 import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.transaction.SingleDatePickerDialog
+import com.kyovo.cents.ui.transaction.TransactionFormType
+import com.kyovo.cents.ui.transaction.TypeSelector
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Bottom sheet to create or edit a recurring-expense rule: which account it pays out of (fixed
+ * Bottom sheet to create or edit a recurring-transaction rule: which account it pays out of (fixed
  * once created), an amount, a title, an optional expense subcategory, its pace (frequency +
  * interval) and a start date, with an optional end date. An edit also offers deletion — the rule
  * only, its already-generated transactions stay (see [RecurringTransactionsViewModel]).
@@ -111,6 +114,14 @@ fun RecurringTransactionFormSheet(
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+            )
+
+            // Expense or income, chosen once: while editing, the one it is stays shown but cannot be switched.
+            TypeSelector(
+                palette = palette,
+                types = if (form.isEditing) listOf(form.category.toFormType()) else listOf(TransactionFormType.EXPENSE, TransactionFormType.INCOME),
+                selected = form.category.toFormType(),
+                onSelect = { onFormChange(form.withCategory(it.toCategory())) },
             )
 
             if (form.isEditing)
@@ -429,4 +440,16 @@ private fun EndDateField(
             )
         }
     }
+}
+
+private fun RecordableTransactionCategory.toFormType(): TransactionFormType = when (this)
+{
+    RecordableTransactionCategory.EXPENSE -> TransactionFormType.EXPENSE
+    RecordableTransactionCategory.INCOME  -> TransactionFormType.INCOME
+}
+
+private fun TransactionFormType.toCategory(): RecordableTransactionCategory = when (this)
+{
+    TransactionFormType.INCOME -> RecordableTransactionCategory.INCOME
+    else                       -> RecordableTransactionCategory.EXPENSE
 }

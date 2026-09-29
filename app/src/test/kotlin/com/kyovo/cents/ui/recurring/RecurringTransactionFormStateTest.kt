@@ -31,6 +31,7 @@ private fun aSubcategory(kind: RecordableTransactionCategory = RecordableTransac
 private fun aRecurringTransaction(
     id: RecurringTransactionId = RecurringTransactionId(UUID.randomUUID()),
     accountId: AccountId = ACCOUNT_ID,
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     frequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
     interval: Int = 1,
     startDate: LocalDate = TODAY,
@@ -39,6 +40,7 @@ private fun aRecurringTransaction(
 ) = RecurringTransaction(
     id = id,
     accountId = accountId,
+    category = category,
     amount = Money(1_500),
     title = TransactionTitle("Loyer"),
     subcategoryId = subcategoryId,
@@ -89,6 +91,7 @@ class RecurringTransactionFormCreatingTest
             RecurringTransactionSubmission.Create(
                 CreateRecurringTransactionCommand(
                     accountId = ACCOUNT_ID,
+                    category = RecordableTransactionCategory.EXPENSE,
                     amount = Money(1_450),
                     title = TransactionTitle("Abonnement"),
                     subcategoryId = subcategory.id,
@@ -293,7 +296,7 @@ class RecurringTransactionFormMutatorsTest
     }
 
     @Test
-    fun `only expense subcategories are offered`()
+    fun `only expense subcategories are offered to an expense`()
     {
         // GIVEN
         val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
@@ -303,10 +306,120 @@ class RecurringTransactionFormMutatorsTest
         // WHEN / THEN
         assertThat(form.subcategoryChoices(listOf(expense, income))).containsExactly(expense)
     }
+
+    // ------------------------------------------------------------------ income or expense
+
+    @Test
+    fun `a new form is an expense until the user says otherwise`()
+    {
+        assertThat(RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).category)
+            .isEqualTo(RecordableTransactionCategory.EXPENSE)
+    }
+
+    @Test
+    fun `only income subcategories are offered to an income`()
+    {
+        // GIVEN
+        val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
+        val income = aSubcategory(RecordableTransactionCategory.INCOME)
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withCategory(RecordableTransactionCategory.INCOME)
+
+        // WHEN / THEN
+        assertThat(form.subcategoryChoices(listOf(expense, income))).containsExactly(income)
+    }
+
+    @Test
+    fun `switching the category keeps what was typed, but drops a subcategory of the other kind`()
+    {
+        // GIVEN an expense form, filled, with an expense subcategory
+        val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY)
+            .withAmount("15,00").withTitle("Loyer").withSubcategory(expense)
+
+        // WHEN
+        val income = form.withCategory(RecordableTransactionCategory.INCOME)
+
+        // THEN
+        assertThat(income.category).isEqualTo(RecordableTransactionCategory.INCOME)
+        assertThat(income.subcategory).isNull()
+        assertThat(income.amountText).isEqualTo("15,00")
+        assertThat(income.title).isEqualTo("Loyer")
+    }
+
+    @Test
+    fun `switching to the category it already has keeps its subcategory`()
+    {
+        // GIVEN
+        val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withSubcategory(expense)
+
+        // WHEN / THEN
+        assertThat(form.withCategory(RecordableTransactionCategory.EXPENSE).subcategory).isEqualTo(expense)
+    }
+
+    @Test
+    fun `an income form creates an income rule`()
+    {
+        // GIVEN
+        val salary = aSubcategory(RecordableTransactionCategory.INCOME)
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY)
+            .withCategory(RecordableTransactionCategory.INCOME)
+            .withAmount("2000").withTitle("Salaire").withSubcategory(salary)
+
+        // WHEN
+        val submission = form.submit()
+
+        // THEN
+        val command = (submission as RecurringTransactionSubmission.Create).command
+        assertThat(command.category).isEqualTo(RecordableTransactionCategory.INCOME)
+        assertThat(command.amount).isEqualTo(Money(200_000))
+        assertThat(command.subcategoryId).isEqualTo(salary.id)
+    }
+
+    @Test
+    fun `an expense form creates an expense rule`()
+    {
+        val submission = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY)
+            .withAmount("15").withTitle("Loyer").submit()
+
+        assertThat((submission as RecurringTransactionSubmission.Create).command.category)
+            .isEqualTo(RecordableTransactionCategory.EXPENSE)
+    }
 }
 
 class RecurringTransactionFormEditingTest
 {
+    // The category is chosen when the rule is created and never changes (what was generated so far would
+    // contradict it), so an edit shows it and cannot switch it.
+    @Test
+    fun `editing an income rule keeps it an income, and switching it is ignored`()
+    {
+        // GIVEN
+        val rule = aRecurringTransaction(category = RecordableTransactionCategory.INCOME)
+        val form = RecurringTransactionFormState.editing(rule, null, "Compte courant")
+
+        // WHEN
+        val switched = form.withCategory(RecordableTransactionCategory.EXPENSE)
+
+        // THEN
+        assertThat(form.category).isEqualTo(RecordableTransactionCategory.INCOME)
+        assertThat(switched).isEqualTo(form)
+    }
+
+    @Test
+    fun `the subcategories offered to an edit are those of the rule's category`()
+    {
+        // GIVEN
+        val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
+        val income = aSubcategory(RecordableTransactionCategory.INCOME)
+        val form = RecurringTransactionFormState.editing(
+            aRecurringTransaction(category = RecordableTransactionCategory.INCOME), null, "Compte courant",
+        )
+
+        // WHEN / THEN
+        assertThat(form.subcategoryChoices(listOf(expense, income))).containsExactly(income)
+    }
+
     @Test
     fun `editing pre-fills every field, keeping the account and start date for display`()
     {

@@ -33,9 +33,14 @@ private fun anAccount(id: AccountId, name: String) = Account(
     createdAt = NOW,
 )
 
-private fun aRecurringTransaction(accountId: AccountId, subcategoryId: SubcategoryId? = null) = RecurringTransaction(
+private fun aRecurringTransaction(
+    accountId: AccountId,
+    subcategoryId: SubcategoryId? = null,
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
+) = RecurringTransaction(
     id = RecurringTransactionId(UUID.randomUUID()),
     accountId = accountId,
+    category = category,
     amount = Money(1_500),
     title = TransactionTitle("Loyer"),
     subcategoryId = subcategoryId,
@@ -47,6 +52,22 @@ private fun aRecurringTransaction(accountId: AccountId, subcategoryId: Subcatego
 
 class RecurringTransactionRowsTest
 {
+    // The list says which way the money goes, like the transactions list: minus for an expense, plus for an income.
+    @Test
+    fun `an expense reads as negative and an income as positive`()
+    {
+        // GIVEN
+        val accountId = AccountId(UUID.randomUUID())
+        val rent = RecurringTransactionRow(aRecurringTransaction(accountId), "Compte courant", null)
+        val salary = RecurringTransactionRow(
+            aRecurringTransaction(accountId, category = RecordableTransactionCategory.INCOME), "Compte courant", null,
+        )
+
+        // WHEN / THEN
+        assertThat(rent.signedAmountCents).isEqualTo(-1_500L)
+        assertThat(salary.signedAmountCents).isEqualTo(1_500L)
+    }
+
     @Test
     fun `a row resolves its account's and subcategory's names`()
     {

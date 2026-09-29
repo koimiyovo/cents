@@ -245,7 +245,7 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
 
 /**
  * The from/to bounds for a period: preset periods count back from [now] and have no upper bound — a
- * recurring expense can generate a transaction weeks or months ahead (see GenerateRecurringTransactionsService's
+ * recurring transaction can generate a transaction weeks or months ahead (see GenerateRecurringTransactionsService's
  * lookahead), and the list shows what is coming as well as what happened. CUSTOM uses the picked dates
  * (start of day to end of day, in the local zone; its picker still can't select a future one), and
  * ALL_TIME has no lower bound.
@@ -878,7 +878,7 @@ private fun TransactionRow(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                // An upcoming one says so instead of an hour: a recurring expense generated ahead carries a
+                // An upcoming one says so instead of an hour: a recurring transaction generated ahead carries a
                 // placeholder time (noon), which would read as a real one.
                 text = if (isUpcoming(transaction.date, LocalDate.now()))
                     stringResource(R.string.transactions_upcoming)
@@ -926,7 +926,7 @@ internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
 
 /**
  * Whether [date] falls on a day after [today] (in [zone]) — a transaction the list marks as "à venir", such
- * as a recurring expense generated ahead (see GenerateRecurringTransactionsService's lookahead). By the day, not
+ * as a recurring transaction generated ahead (see GenerateRecurringTransactionsService's lookahead). By the day, not
  * by the exact instant: one dated later today is due today, and must not read as upcoming until it has gone by.
  */
 internal fun isUpcoming(date: Instant, today: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Boolean =

@@ -224,7 +224,7 @@ fun HomeScreen(
         }
     }
 
-    // Both a saved budget and a created recurring expense lead to a notification, so both end in the same
+    // Both a saved budget and a created recurring transaction lead to a notification, so both end in the same
     // ask; only its wording differs. Whichever raised it is the one to clear.
     val dismissNotificationAsk = {
         budgetsViewModel.dismissNotificationPermissionAsk()

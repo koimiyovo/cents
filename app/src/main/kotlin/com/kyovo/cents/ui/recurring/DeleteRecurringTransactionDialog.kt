@@ -21,7 +21,7 @@ import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.DialogCancelButton
 
 /**
- * The confirmation before deleting a recurring-expense rule. It says what happens: only the rule
+ * The confirmation before deleting a recurring-transaction rule. It says what happens: only the rule
  * goes, the transactions it already generated stay as ordinary transactions — nothing to lose there,
  * so a plain yes/no, but an informed one (same reasoning as [com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog]).
  */
