@@ -41,7 +41,7 @@ class CentsApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
-        // Catches every recurring expense up as soon as the app opens, off the main thread: safe to run
+        // Catches every recurring transaction up as soon as the app opens, off the main thread: safe to run
         // every time, since an occurrence already generated is never redone.
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             appContainer.generateRecurringTransactions.generate()
@@ -55,13 +55,13 @@ class CentsApplication : Application(), Configuration.Provider {
         workManager.cancelUniqueWork(OLD_BUDGET_ALERT_WORK_NAME)
 
         // Once a day, in the morning (the first run waits for the next 8:00, the following ones follow
-        // 24 hours apart): a recurring expense falls on a calendar day, and it is the day itself the user is
+        // 24 hours apart): a recurring transaction falls on a calendar day, and it is the day itself the user is
         // told about. KEEP, not REPLACE: re-enqueuing the same periodic work on every app launch must not push
         // the next run back out — only the very first launch ever actually schedules it.
         // WorkManager.getInstance(Context), not the no-arg overload, since initialization is on-demand
         // (Configuration.Provider above).
         workManager.enqueueUniquePeriodicWork(
-            RECURRING_EXPENSES_WORK_NAME,
+            RECURRING_TRANSACTIONS_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequestBuilder<RecurringTransactionWorker>(1, TimeUnit.DAYS)
                 .setInitialDelay(delayUntilNext(hour = 8, now = ZonedDateTime.now()))
@@ -70,7 +70,9 @@ class CentsApplication : Application(), Configuration.Provider {
     }
 
     private companion object {
-        const val RECURRING_EXPENSES_WORK_NAME = "recurring-expenses-daily"
+        // The name of the work as it was first scheduled, kept as is: renaming it would enqueue a second
+        // periodic work next to the one already scheduled on the phone.
+        const val RECURRING_TRANSACTIONS_WORK_NAME = "recurring-expenses-daily"
 
         // The name the replaced 6-hourly budget check was scheduled under.
         const val OLD_BUDGET_ALERT_WORK_NAME = "budget-alert-check"

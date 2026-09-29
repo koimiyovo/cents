@@ -6,6 +6,7 @@ import com.kyovo.cents.domain.exception.RecurringTransactionNotFoundException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
@@ -27,6 +28,7 @@ private val TODAY: LocalDate = LocalDate.of(2026, 9, 27)
 private fun aRecurringTransaction(id: RecurringTransactionId = RecurringTransactionId(UUID.randomUUID())) = RecurringTransaction(
     id = id,
     accountId = ACCOUNT_ID,
+    category = RecordableTransactionCategory.EXPENSE,
     amount = Money(1_500),
     title = TransactionTitle("Loyer"),
     subcategoryId = null,
@@ -246,6 +248,21 @@ class RecurringTransactionsViewModelTest
 
         // THEN
         assertThat(state).isEqualTo(RecurringTransactionsUiState())
+    }
+
+    @Test
+    fun `a valid income creation is saved as an income and closes the sheet`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withCategory(RecordableTransactionCategory.INCOME).withAmount("2000").withTitle("Salaire"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(create.commands.single().category).isEqualTo(RecordableTransactionCategory.INCOME)
+        assertThat(form).isNull()
     }
 
     @Test

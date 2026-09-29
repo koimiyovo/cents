@@ -36,7 +36,7 @@ data class RecurringTransactionsUiState(
 )
 
 /**
- * Holds the create/edit form and the deletion confirmation of the recurring-expense management
+ * Holds the create/edit form and the deletion confirmation of the recurring-transaction management
  * screen across configuration changes, like [com.kyovo.cents.ui.subcategory.SubcategoriesViewModel].
  * The list itself is read by the screen directly (`ListRecurringTransactionsUseCase.observe`), not held
  * here — the use cases suspend, so writes are launched in `viewModelScope`.

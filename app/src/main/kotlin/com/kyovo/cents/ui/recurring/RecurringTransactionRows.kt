@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.recurring
 
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.Subcategory
@@ -11,6 +12,15 @@ data class RecurringTransactionRow(
     val accountName: String,
     val subcategoryName: String?,
 )
+{
+    /** Positive for an income, negative for an expense: which way the money goes, like the transactions list. */
+    val signedAmountCents: Long
+        get() = when (recurringTransaction.category)
+        {
+            RecordableTransactionCategory.INCOME  -> recurringTransaction.amount.value
+            RecordableTransactionCategory.EXPENSE -> -recurringTransaction.amount.value
+        }
+}
 
 /**
  * The rows the management screen lists: every rule, resolved against the accounts and subcategories

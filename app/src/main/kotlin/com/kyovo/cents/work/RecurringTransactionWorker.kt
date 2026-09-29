@@ -11,7 +11,7 @@ import java.time.YearMonth
 
 /**
  * The daily check, kept as thin as possible (everything worth testing lives in the use cases): catch the
- * recurring expenses up, tell the user about the ones that fall today, then check the budgets, since the
+ * recurring transactions up, tell the user about the ones that fall today, then check the budgets, since the
  * transactions just generated are the only spending that arrives without the user being in the app — one
  * typed by hand is announced by the form itself. Built by [CentsWorkerFactory], the only way it can carry
  * its use cases: WorkManager's own default instantiation only knows the `(Context, WorkerParameters)`
