@@ -57,6 +57,22 @@ data class RecurringExpense(
             .toList()
     }
 
+    /**
+     * Whether an occurrence falls exactly on [date], whether or not it was already generated: a question
+     * about the rule's calendar only, [lastGeneratedDate] plays no part. Never before [startDate] nor after
+     * [endDate].
+     */
+    fun occursOn(date: LocalDate): Boolean
+    {
+        if (date.isBefore(startDate) || (endDate != null && date.isAfter(endDate))) return false
+
+        // ponytail: walks the occurrences from the start (one per week at worst), fine for a rule's lifetime;
+        // compute the index from the gap between the dates if a rule ever needs to be asked thousands of times.
+        return generateSequence(0) { it + 1 }
+            .map { occurrenceDate(it) }
+            .first { !it.isBefore(date) } == date
+    }
+
     private fun occurrenceDate(occurrenceIndex: Int): LocalDate
     {
         val steps = occurrenceIndex.toLong() * interval
