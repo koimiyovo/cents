@@ -85,6 +85,11 @@ class InMemoryBudgetAlertRepository : BudgetAlertRepository
         alerts += alert
     }
 
+    override suspend fun delete(alert: BudgetAlert)
+    {
+        alerts.remove(alert)
+    }
+
     override suspend fun deleteBySubcategoryId(subcategoryId: SubcategoryId)
     {
         alerts.removeAll { it.subcategoryId == subcategoryId }

@@ -18,6 +18,11 @@ class RoomBudgetAlertRepository(private val dao: BudgetAlertDao) : BudgetAlertRe
         dao.upsert(alert.toEntity())
     }
 
+    override suspend fun delete(alert: BudgetAlert)
+    {
+        dao.delete(alert.toEntity())
+    }
+
     override suspend fun deleteBySubcategoryId(subcategoryId: SubcategoryId)
     {
         dao.deleteBySubcategoryId(subcategoryId.value)

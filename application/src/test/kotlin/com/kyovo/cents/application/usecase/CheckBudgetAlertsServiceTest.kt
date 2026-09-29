@@ -120,6 +120,89 @@ class CheckBudgetAlertsServiceTest
         assertThat(budgetAlertRepository.saved).isEmpty()
     }
 
+    // The expense behind an alert can be deleted or moved to another subcategory: the budget is back
+    // under the threshold, and a later crossing is news again — not silence because "it was reported".
+    @Test
+    fun `a crossing that no longer holds is forgotten, so reaching it again is reported again`() = runTest()
+    {
+        // GIVEN over the limit, reported
+        val over = BudgetAlert(groceriesId, september, BudgetAlertLevel.OVER)
+        aServiceWith(mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_001)))).check(september)
+
+        // WHEN the expense is gone: back on track
+        val onTrack = mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(1_000)))
+        assertThat(aServiceWith(onTrack).check(september)).isEmpty()
+
+        // THEN nothing is remembered any more...
+        assertThat(budgetAlertRepository.saved).isEmpty()
+
+        // ...and the real expense that crosses the limit later is reported
+        val overAgain = mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_500)))
+        assertThat(aServiceWith(overAgain).check(september)).containsExactly(over)
+    }
+
+    @Test
+    fun `dropping from over back to close forgets over and reports close, which holds again`() = runTest()
+    {
+        // GIVEN only OVER was reported (spending jumped straight past the limit)
+        aServiceWith(mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_001)))).check(september)
+
+        // WHEN the spending comes back under the limit, but is still past the threshold
+        val alerts = aServiceWith(mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(29_000)))).check(september)
+
+        // THEN
+        val close = BudgetAlert(groceriesId, september, BudgetAlertLevel.CLOSE_TO_LIMIT)
+        assertThat(alerts).containsExactly(close)
+        assertThat(budgetAlertRepository.saved).containsExactly(close)
+    }
+
+    @Test
+    fun `a level below the current one stays remembered while the budget is still over`() = runTest()
+    {
+        // GIVEN close reported, then over
+        aServiceWith(mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_000)))).check(september)
+        val over = mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_001)))
+        aServiceWith(over).check(september)
+
+        // WHEN checked again with the spending unchanged
+        val alerts = aServiceWith(over).check(september)
+
+        // THEN nothing new, and neither level was forgotten
+        assertThat(alerts).isEmpty()
+        assertThat(budgetAlertRepository.saved).containsExactlyInAnyOrder(
+            BudgetAlert(groceriesId, september, BudgetAlertLevel.CLOSE_TO_LIMIT),
+            BudgetAlert(groceriesId, september, BudgetAlertLevel.OVER),
+        )
+    }
+
+    @Test
+    fun `an alert of a subcategory that has no budget in force any more is forgotten`() = runTest()
+    {
+        // GIVEN reported while it had a budget
+        aServiceWith(mapOf(groceriesId to BudgetProgress(aMoney(30_000), aMoney(30_001)))).check(september)
+
+        // WHEN the month has no budget for it (absent from the progress)
+        val alerts = aServiceWith(emptyMap()).check(september)
+
+        // THEN
+        assertThat(alerts).isEmpty()
+        assertThat(budgetAlertRepository.saved).isEmpty()
+    }
+
+    @Test
+    fun `checking a month leaves the alerts of the other months alone`() = runTest()
+    {
+        // GIVEN an alert reported for August
+        val august = BudgetAlert(groceriesId, YearMonth.of(2026, 8), BudgetAlertLevel.OVER)
+        budgetAlertRepository.record(august)
+
+        // WHEN September is checked, with nothing to report
+        aServiceWith(emptyMap()).check(september)
+
+        // THEN
+        assertThat(budgetAlertRepository.saved).containsExactly(august)
+    }
+
     @Test
     fun `each subcategory is checked and reported on its own`() = runTest()
     {

@@ -180,6 +180,56 @@ abstract class BudgetAlertRepositoryContract
         assertThat(repository.findByMonth(september)).containsExactly(transportAlert)
     }
 
+    // A crossing that no longer holds (the expense behind it was deleted or corrected) is forgotten one
+    // alert at a time: the other level of the same budget, and other months, stay as they were.
+    @Test
+    fun `deletes one alert and leaves the other level, the other months and the other subcategories`() = realTime()
+    {
+        // GIVEN
+        val over = anAlert(groceries, september, BudgetAlertLevel.OVER)
+        val close = anAlert(groceries, september, BudgetAlertLevel.CLOSE_TO_LIMIT)
+        val inAugust = anAlert(groceries, august, BudgetAlertLevel.OVER)
+        val forTransport = anAlert(transport, september, BudgetAlertLevel.OVER)
+        listOf(over, close, inAugust, forTransport).forEach { repository.record(it) }
+
+        // WHEN
+        repository.delete(over)
+
+        // THEN
+        assertThat(repository.findByMonth(september)).containsExactlyInAnyOrder(close, forTransport)
+        assertThat(repository.findByMonth(august)).containsExactly(inAugust)
+    }
+
+    @Test
+    fun `is silent about deleting an alert that was never recorded`() = realTime()
+    {
+        // GIVEN
+        val recorded = anAlert(groceries, september, BudgetAlertLevel.CLOSE_TO_LIMIT)
+        repository.record(recorded)
+
+        // WHEN
+        repository.delete(anAlert(groceries, september, BudgetAlertLevel.OVER))
+
+        // THEN
+        assertThat(repository.findByMonth(september)).containsExactly(recorded)
+    }
+
+    @Test
+    fun `a deleted crossing can be recorded again`() = realTime()
+    {
+        // GIVEN
+        val alert = anAlert(groceries, september)
+        repository.record(alert)
+        repository.delete(alert)
+        assertThat(repository.findByMonth(september)).isEmpty()
+
+        // WHEN
+        repository.record(alert)
+
+        // THEN
+        assertThat(repository.findByMonth(september)).containsExactly(alert)
+    }
+
     @Test
     fun `a crossing can be recorded again once the alerts of its subcategory were deleted`() = realTime()
     {
