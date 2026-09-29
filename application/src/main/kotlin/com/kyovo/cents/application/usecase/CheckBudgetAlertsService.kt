@@ -17,7 +17,17 @@ class CheckBudgetAlertsService(
     override suspend fun check(month: YearMonth): List<BudgetAlert>
     {
         val progress = getBudgetProgressUseCase.observeAll(month).first()
-        val alreadyNotified = budgetAlertRepository.findByMonth(month)
+        val recorded = budgetAlertRepository.findByMonth(month)
+
+        // An alert is only worth remembering while the budget still holds that level: once the expense
+        // behind it is deleted or corrected, the budget is back below it, and reaching it again later is
+        // news again — not silence because "it was reported once". A lower level stays remembered while
+        // a higher one is reached (close stays while over).
+        val (stale, alreadyNotified) = recorded.partition { alert ->
+            val current = progress[alert.subcategoryId]?.alertLevel()
+            current == null || current < alert.level
+        }
+        stale.forEach { budgetAlertRepository.delete(it) }
 
         val newAlerts = progress.mapNotNull { (subcategoryId, budgetProgress) ->
             val level = budgetProgress.alertLevel() ?: return@mapNotNull null
