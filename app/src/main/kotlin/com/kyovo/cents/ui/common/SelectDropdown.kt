@@ -109,23 +109,9 @@ internal fun <T> SelectDropdown(
                     .bringIntoViewRequester(listRequester),
             ) {
                 // Only the options scroll: the footer action below stays in view, however long the list.
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = MAX_OPTIONS_HEIGHT)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    options.forEach { option ->
-                        SelectableOptionRow(
-                            label = option.label,
-                            selected = option.value == selected,
-                            palette = palette,
-                            onClick = {
-                                expanded = false
-                                onSelect(option.value)
-                            },
-                        )
-                    }
+                SelectOptionRows(palette, options, selected) { value ->
+                    expanded = false
+                    onSelect(value)
                 }
                 if (footerLabel != null && onFooterClick != null)
                 {
@@ -151,6 +137,35 @@ internal fun <T> SelectDropdown(
 
 // About six rows: enough to browse without the list swallowing the sheet or the screen.
 private val MAX_OPTIONS_HEIGHT = 288.dp
+
+/**
+ * The rows of an unfolded picker: capped at about six rows, and scrolling inside itself past that. Shared by
+ * [SelectDropdown] and by pickers that unfold their list somewhere else than right under their own pill.
+ */
+@Composable
+internal fun <T> SelectOptionRows(
+    palette: AccountsPalette,
+    options: List<SelectOption<T>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+)
+{
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = MAX_OPTIONS_HEIGHT)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        options.forEach { option ->
+            SelectableOptionRow(
+                label = option.label,
+                selected = option.value == selected,
+                palette = palette,
+                onClick = { onSelect(option.value) },
+            )
+        }
+    }
+}
 
 /** A pill showing [label] with a hand-drawn chevron — not a "▾"/"⌄" glyph, whose vertical metrics
  *  vary across fonts and don't sit level with the label text (see EyeToggleIcon for the same
