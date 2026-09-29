@@ -7,6 +7,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +66,7 @@ import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
+import com.kyovo.cents.ui.common.SelectOptionRows
 import com.kyovo.cents.ui.common.SelectableOptionRow
 import com.kyovo.cents.ui.common.formatSignedEuroCents
 import com.kyovo.cents.ui.transaction.reactsToTap
@@ -108,8 +111,8 @@ fun TransactionsScreen(
     var chosenSubcategory by remember { mutableStateOf<SubcategoryId?>(null) }
     // One deleted from the management screen meanwhile no longer filters: back to "all".
     val selectedSubcategory = validSubcategoryFilter(chosenSubcategory, subcategories)
-    var periodMenuExpanded by remember { mutableStateOf(false) }
-    var accountMenuExpanded by remember { mutableStateOf(false) }
+    // Which of the three filter lists is unfolded below the filter bar, if any.
+    var openFilter by remember { mutableStateOf<FilterMenu?>(null) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
@@ -158,29 +161,21 @@ fun TransactionsScreen(
             color = palette.textMuted,
             fontSize = 13.sp,
         )
-        PeriodFilterRow(
+        TransactionFilters(
             palette = palette,
-            selected = selectedPeriod,
-            label = periodLabel(selectedPeriod, customFrom, customTo),
-            expanded = periodMenuExpanded,
-            onToggleExpanded = { periodMenuExpanded = !periodMenuExpanded },
-            onSelectPreset = { periodMenuExpanded = false; selectedPeriod = it },
-            onSelectCustom = { periodMenuExpanded = false; showCustomRangePicker = true },
-        )
-        AccountFilterRow(
-            palette = palette,
+            periodLabel = periodLabel(selectedPeriod, customFrom, customTo),
+            selectedPeriod = selectedPeriod,
             accounts = accounts,
             selectedAccountId = selectedAccountId,
-            expanded = accountMenuExpanded,
-            onToggleExpanded = { accountMenuExpanded = !accountMenuExpanded },
-            onSelect = { accountMenuExpanded = false; selectedAccountId = it },
-            movementsCount = filteredTransactions.size,
-        )
-        SubcategoryFilter(
-            palette = palette,
-            subcategories = subcategoriesInPeriod,
-            selected = selectedSubcategory,
-            onSelect = { chosenSubcategory = it },
+            allSubcategories = subcategories,
+            subcategoryChoices = subcategoriesInPeriod,
+            selectedSubcategory = selectedSubcategory,
+            openMenu = openFilter,
+            onToggleMenu = { openFilter = toggledMenu(openFilter, it) },
+            onSelectPeriod = { openFilter = null; selectedPeriod = it },
+            onSelectCustomPeriod = { openFilter = null; showCustomRangePicker = true },
+            onSelectAccount = { openFilter = null; selectedAccountId = it },
+            onSelectSubcategory = { openFilter = null; chosenSubcategory = it },
         )
 
         StatsRow(
@@ -190,6 +185,12 @@ fun TransactionsScreen(
             netCents = netCents
         )
         SearchField(palette, searchQuery) { searchQuery = it }
+        Text(
+            text = movementsCountLabel(filteredTransactions.size),
+            color = palette.textMuted,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
         if (groupedByDay.isEmpty())
         {
             Text(
@@ -556,61 +557,108 @@ internal fun PeriodFilterRow(
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.surface),
             ) {
-                listOf(
-                    TransactionsPeriod.LAST_7_DAYS,
-                    TransactionsPeriod.LAST_30_DAYS,
-                    TransactionsPeriod.ALL_TIME
-                )
-                    .forEach { period ->
-                        SelectableOptionRow(
-                            label = stringResource(period.labelRes),
-                            selected = period == selected,
-                            palette = palette,
-                            onClick = { onSelectPreset(period) },
-                        )
-                    }
-                SelectableOptionRow(
-                    label = stringResource(R.string.transactions_period_custom),
-                    selected = selected == TransactionsPeriod.CUSTOM,
-                    palette = palette,
-                    onClick = onSelectCustom,
-                )
+                PeriodOptions(palette, selected, onSelectPreset, onSelectCustom)
             }
         }
     }
 }
 
+/** The rows of the period list: the presets, then "Personnalisée". */
 @Composable
-private fun AccountFilterRow(
+private fun PeriodOptions(
     palette: AccountsPalette,
-    accounts: List<Account>,
-    selectedAccountId: AccountId?,
-    expanded: Boolean,
-    onToggleExpanded: () -> Unit,
-    onSelect: (AccountId?) -> Unit,
-    movementsCount: Int,
+    selected: TransactionsPeriod,
+    onSelectPreset: (TransactionsPeriod) -> Unit,
+    onSelectCustom: () -> Unit,
 )
 {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val selectedLabel = accounts.firstOrNull { it.id == selectedAccountId }?.name?.value
-                ?: stringResource(R.string.transactions_all_accounts)
-            DropdownPill(
-                label = "💳 $selectedLabel",
+    listOf(
+        TransactionsPeriod.LAST_7_DAYS,
+        TransactionsPeriod.LAST_30_DAYS,
+        TransactionsPeriod.ALL_TIME
+    )
+        .forEach { period ->
+            SelectableOptionRow(
+                label = stringResource(period.labelRes),
+                selected = period == selected,
                 palette = palette,
-                modifier = Modifier.clickable(onClick = onToggleExpanded),
-            )
-            Text(
-                text = movementsCountLabel(movementsCount),
-                color = palette.textMuted,
-                fontSize = 13.sp,
+                onClick = { onSelectPreset(period) },
             )
         }
-        if (expanded)
+    SelectableOptionRow(
+        label = stringResource(R.string.transactions_period_custom),
+        selected = selected == TransactionsPeriod.CUSTOM,
+        palette = palette,
+        onClick = onSelectCustom,
+    )
+}
+
+/** Which of the three filter lists of the Transactions screen is unfolded below the filter bar. */
+internal enum class FilterMenu
+{
+    PERIOD,
+    ACCOUNT,
+    SUBCATEGORY,
+}
+
+/** Tapping a filter opens its list, tapping it again folds it, tapping another one switches to that one. */
+internal fun toggledMenu(open: FilterMenu?, tapped: FilterMenu): FilterMenu? =
+    if (open == tapped) null else tapped
+
+/**
+ * The three filters (period, account, subcategory) on one bar: side by side when the screen is wide enough
+ * (landscape, a tablet), wrapping onto the next line when it is not (portrait).
+ * The list of the filter being opened unfolds below the whole bar, at the full width of the screen, rather
+ * than squeezed under its own pill; only one is open at a time ([openMenu]).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TransactionFilters(
+    palette: AccountsPalette,
+    periodLabel: String,
+    selectedPeriod: TransactionsPeriod,
+    accounts: List<Account>,
+    selectedAccountId: AccountId?,
+    allSubcategories: List<Subcategory>,
+    subcategoryChoices: List<Subcategory>,
+    selectedSubcategory: SubcategoryId?,
+    openMenu: FilterMenu?,
+    onToggleMenu: (FilterMenu) -> Unit,
+    onSelectPeriod: (TransactionsPeriod) -> Unit,
+    onSelectCustomPeriod: () -> Unit,
+    onSelectAccount: (AccountId?) -> Unit,
+    onSelectSubcategory: (SubcategoryId?) -> Unit,
+)
+{
+    val allAccountsLabel = stringResource(R.string.transactions_all_accounts)
+    val allSubcategoriesLabel = stringResource(R.string.transactions_all_subcategories)
+    val accountLabel = accounts.firstOrNull { it.id == selectedAccountId }?.name?.value ?: allAccountsLabel
+    val subcategoryLabel = allSubcategories.firstOrNull { it.id == selectedSubcategory }?.name?.value
+        ?: allSubcategoriesLabel
+
+    Column {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DropdownPill(
+                label = "📅 $periodLabel",
+                palette = palette,
+                modifier = Modifier.clickable { onToggleMenu(FilterMenu.PERIOD) },
+            )
+            DropdownPill(
+                label = "💳 $accountLabel",
+                palette = palette,
+                modifier = Modifier.clickable { onToggleMenu(FilterMenu.ACCOUNT) },
+            )
+            DropdownPill(
+                label = "🏷️ $subcategoryLabel",
+                palette = palette,
+                modifier = Modifier.clickable { onToggleMenu(FilterMenu.SUBCATEGORY) },
+            )
+        }
+        if (openMenu != null)
         {
             Column(
                 modifier = Modifier
@@ -619,18 +667,23 @@ private fun AccountFilterRow(
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.surface),
             ) {
-                SelectableOptionRow(
-                    label = stringResource(R.string.transactions_all_accounts),
-                    selected = selectedAccountId == null,
-                    palette = palette,
-                    onClick = { onSelect(null) },
-                )
-                accounts.forEach { account ->
-                    SelectableOptionRow(
-                        label = account.name.value,
-                        selected = selectedAccountId == account.id,
-                        palette = palette,
-                        onClick = { onSelect(account.id) },
+                when (openMenu)
+                {
+                    FilterMenu.PERIOD      -> PeriodOptions(palette, selectedPeriod, onSelectPeriod, onSelectCustomPeriod)
+                    FilterMenu.ACCOUNT     -> SelectOptionRows(
+                        palette,
+                        listOf(SelectOption<AccountId?>(null, allAccountsLabel)) +
+                            accounts.map { SelectOption<AccountId?>(it.id, it.name.value) },
+                        selectedAccountId,
+                        onSelectAccount,
+                    )
+
+                    FilterMenu.SUBCATEGORY -> SelectOptionRows(
+                        palette,
+                        listOf(SelectOption<SubcategoryId?>(null, allSubcategoriesLabel)) +
+                            subcategoryChoices.map { SelectOption<SubcategoryId?>(it.id, it.name.value) },
+                        selectedSubcategory,
+                        onSelectSubcategory,
                     )
                 }
             }
