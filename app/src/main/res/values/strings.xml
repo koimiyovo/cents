@@ -63,6 +63,8 @@
     <string name="budget_alert_title">Alerte budget</string>
     <string name="budget_alert_close_body">%1$s %2$s approche de sa limite mensuelle.</string>
     <string name="budget_alert_over_body">%1$s %2$s a dépassé sa limite mensuelle.</string>
+    <string name="recurring_notification_title">Autoriser la notification des dépenses récurrentes</string>
+    <string name="recurring_notification_body">Cents vous préviendra le jour où une dépense récurrente est enregistrée.</string>
     <string name="recurring_expense_channel_name">Dépenses récurrentes</string>
     <string name="recurring_expense_title">Dépense récurrente</string>
     <string name="recurring_expense_body">🔁 %1$s (%2$s) est enregistrée aujourd\'hui.</string>
