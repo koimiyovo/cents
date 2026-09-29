@@ -19,7 +19,7 @@ import java.util.UUID
 
 /**
  * The app's storage, built once: one Room database, and the six repositories (accounts, subcategories,
- * transactions, budgets, budget alerts already reported, recurring expenses) and the unit of work that all
+ * transactions, budgets, budget alerts already reported, recurring transactions) and the unit of work that all
  * work on it. What it shows to the outside are the domain's ports only, never a Room type, so the app
  * module needs to know nothing about Room.
  */

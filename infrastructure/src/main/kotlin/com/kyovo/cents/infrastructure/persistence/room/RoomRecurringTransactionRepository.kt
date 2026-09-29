@@ -6,7 +6,7 @@ import com.kyovo.cents.domain.port.output.RecurringTransactionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/** The recurring expenses, stored in the Room database. */
+/** The recurring transactions, stored in the Room database. */
 class RoomRecurringTransactionRepository(private val dao: RecurringTransactionDao) : RecurringTransactionRepository
 {
     override suspend fun save(recurringTransaction: RecurringTransaction)

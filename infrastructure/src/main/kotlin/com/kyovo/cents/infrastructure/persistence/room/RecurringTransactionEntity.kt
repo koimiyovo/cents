@@ -7,17 +7,19 @@ import androidx.room3.PrimaryKey
 import java.util.UUID
 
 /**
- * A row of the `recurring_expenses` table: a planned expense — a rent, a subscription — from which real
- * `transactions` rows are generated as their due dates come.
+ * A row of the `recurring_transactions` table: a planned income or expense — a salary, a rent, a
+ * subscription — from which real `transactions` rows are generated as their due dates come. (Until version 5
+ * the table was called `recurring_expenses`, back when only expenses could recur.)
  *
- * `frequency` is the enum constant's name as text, on purpose (the same reason `category` is, on
- * `transactions`): renaming a domain constant must not silently change what the database means.
+ * `category` (`INCOME` or `EXPENSE`) and `frequency` are enum constants' names as text, on purpose (the same
+ * reason `category` is, on `transactions`): renaming a domain constant must not silently change what the
+ * database means.
  * `startDate`, `endDate` and `lastGeneratedDate` are epoch days (`LocalDate.toEpochDay()`), the same kind
  * of plain, sortable number as the nanosecond instants elsewhere — a day has no time zone to lose.
  *
  * There is deliberately **no** foreign key on `accountId`: unlike a transaction, an account with only a
- * recurring expense pointing at it (and no transaction of its own) can still be hard-deleted today, since
- * [com.kyovo.cents.application.usecase.DeleteAccountService] does not know about recurring expenses. Adding
+ * recurring transaction pointing at it (and no transaction of its own) can still be hard-deleted today, since
+ * [com.kyovo.cents.application.usecase.DeleteAccountService] does not know about recurring transactions. Adding
  * a `RESTRICT` here would turn that into a raw database crash instead of the clean refusal a transaction
  * gets; the generation service already copes with a since-vanished account by skipping the rule
  * (`accountRepository.findById(rule.accountId) ?: continue`), so nothing breaks — a deleted account's rule
@@ -27,7 +29,7 @@ import java.util.UUID
  * (`SET NULL`), the same rule as an existing transaction losing its subcategory.
  */
 @Entity(
-    tableName = "recurring_expenses",
+    tableName = "recurring_transactions",
     foreignKeys = [
         ForeignKey(
             entity = SubcategoryEntity::class,
@@ -41,6 +43,7 @@ import java.util.UUID
 data class RecurringTransactionEntity(
     @PrimaryKey val id: UUID,
     val accountId: UUID,
+    val category: String,
     val amount: Long,
     val title: String,
     val subcategoryId: UUID?,
