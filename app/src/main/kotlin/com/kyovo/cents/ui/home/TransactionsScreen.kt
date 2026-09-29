@@ -997,7 +997,12 @@ private fun TransactionRow(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = if (showDate) dateTimeLabel(transaction.date) else timeLabel(transaction.date),
+                text = when
+                {
+                    showDate                                      -> dateTimeLabel(transaction.date)
+                    isUpcoming(transaction.date, LocalDate.now()) -> stringResource(R.string.transactions_upcoming)
+                    else                                          -> timeLabel(transaction.date)
+                },
                 color = palette.textMuted,
                 fontSize = 11.sp,
                 maxLines = 1,
@@ -1109,13 +1114,24 @@ internal fun formatDayHeader(date: LocalDate, today: LocalDate): String
     return date.format(DateTimeFormatter.ofPattern(pattern, Locale.FRENCH))
 }
 
+/**
+ * Whether [date] falls on a day after [today] (in [zone]) — a transaction the list marks as "à venir", such
+ * as a recurring expense generated ahead (see GenerateRecurringExpensesService's lookahead). By the day, not
+ * by the exact instant: one dated later today is due today, and must not read as upcoming until it has gone by.
+ */
+internal fun isUpcoming(date: Instant, today: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Boolean =
+    date.atZone(zone).toLocalDate().isAfter(today)
+
 /** [dayLabel] and [timeLabel] together — for a row whose neighbours aren't necessarily the same day
  * (the biggest-expenses list), unlike a day's own group where the header already says which day it is. */
 @Composable
 private fun dateTimeLabel(date: Instant): String
 {
     val day = date.atZone(ZoneId.systemDefault()).toLocalDate()
-    return "${dayLabel(day)} · ${timeLabel(date)}"
+    // An upcoming one says so instead of an hour: a recurring expense generated ahead carries a placeholder
+    // time (noon), which would read as a real one.
+    val timePart = if (isUpcoming(date, LocalDate.now())) stringResource(R.string.transactions_upcoming) else timeLabel(date)
+    return "${dayLabel(day)} · $timePart"
 }
 
 private fun timeLabel(date: Instant): String =
