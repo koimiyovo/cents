@@ -61,7 +61,7 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
-import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
@@ -73,10 +73,10 @@ import com.kyovo.cents.ui.budget.BudgetLimitsScreen
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.budget.budgetAlertNotice
-import com.kyovo.cents.ui.recurring.DeleteRecurringExpenseDialog
-import com.kyovo.cents.ui.recurring.RecurringExpenseFormSheet
-import com.kyovo.cents.ui.recurring.RecurringExpensesScreen
-import com.kyovo.cents.ui.recurring.RecurringExpensesViewModel
+import com.kyovo.cents.ui.recurring.DeleteRecurringTransactionDialog
+import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
+import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
+import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
 import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
@@ -116,13 +116,13 @@ fun HomeScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
-    listRecurringExpenses: ListRecurringExpensesUseCase,
+    listRecurringTransactions: ListRecurringTransactionsUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
-    recurringExpensesViewModel: RecurringExpensesViewModel,
+    recurringTransactionsViewModel: RecurringTransactionsViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -134,7 +134,7 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
-    val recurringExpensesState by recurringExpensesViewModel.uiState.collectAsStateWithLifecycle()
+    val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -228,14 +228,14 @@ fun HomeScreen(
     // ask; only its wording differs. Whichever raised it is the one to clear.
     val dismissNotificationAsk = {
         budgetsViewModel.dismissNotificationPermissionAsk()
-        recurringExpensesViewModel.dismissNotificationPermissionAsk()
+        recurringTransactionsViewModel.dismissNotificationPermissionAsk()
     }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             dismissNotificationAsk()
         }
 
-    if (budgetsState.askNotificationPermission || recurringExpensesState.askNotificationPermission)
+    if (budgetsState.askNotificationPermission || recurringTransactionsState.askNotificationPermission)
     {
         // The system dialog never re-asks once granted, but this rationale dialog is ours: without
         // this check it would reappear on every save even after the user already said yes.
@@ -359,22 +359,22 @@ fun HomeScreen(
                 onBack = { destination = HomeDestination.Tabs },
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
-                onOpenRecurringExpenses = { destination = HomeDestination.RecurringExpenses },
+                onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
                 modifier = Modifier.weight(1f),
             )
-        } else if (destination == HomeDestination.RecurringExpenses)
+        } else if (destination == HomeDestination.RecurringTransactions)
         {
-            RecurringExpensesScreen(
-                listRecurringExpenses = listRecurringExpenses,
+            RecurringTransactionsScreen(
+                listRecurringTransactions = listRecurringTransactions,
                 listAccounts = listAccounts,
                 listArchivedAccounts = listArchivedAccounts,
                 listSubcategories = listSubcategories,
                 onBack = { destination = HomeDestination.Settings },
-                onCreate = { recurringExpensesViewModel.openCreate(accounts.singleOrNull()?.id) },
+                onCreate = { recurringTransactionsViewModel.openCreate(accounts.singleOrNull()?.id) },
                 onEdit = { row ->
-                    recurringExpensesViewModel.openForEdit(
+                    recurringTransactionsViewModel.openForEdit(
                         row,
-                        subcategories.find { it.id == row.recurringExpense.subcategoryId },
+                        subcategories.find { it.id == row.recurringTransaction.subcategoryId },
                     )
                 },
                 modifier = Modifier.weight(1f),
@@ -564,24 +564,24 @@ fun HomeScreen(
             onDismiss = subcategoriesViewModel::dismissDelete,
         )
     }
-    recurringExpensesState.form?.let { form ->
-        RecurringExpenseFormSheet(
+    recurringTransactionsState.form?.let { form ->
+        RecurringTransactionFormSheet(
             accounts = accounts,
             subcategories = subcategories,
             form = form,
-            errors = recurringExpensesState.errors,
-            onFormChange = recurringExpensesViewModel::update,
-            onSubmit = recurringExpensesViewModel::submit,
-            onDelete = recurringExpensesViewModel::askToDelete,
-            onDismiss = recurringExpensesViewModel::close,
+            errors = recurringTransactionsState.errors,
+            onFormChange = recurringTransactionsViewModel::update,
+            onSubmit = recurringTransactionsViewModel::submit,
+            onDelete = recurringTransactionsViewModel::askToDelete,
+            onDismiss = recurringTransactionsViewModel::close,
         )
     }
-    recurringExpensesState.confirmingDelete?.let { rule ->
-        DeleteRecurringExpenseDialog(
+    recurringTransactionsState.confirmingDelete?.let { rule ->
+        DeleteRecurringTransactionDialog(
             palette = palette,
             rule = rule,
-            onConfirm = recurringExpensesViewModel::confirmDelete,
-            onDismiss = recurringExpensesViewModel::dismissDelete,
+            onConfirm = recurringTransactionsViewModel::confirmDelete,
+            onDismiss = recurringTransactionsViewModel::dismissDelete,
         )
     }
     accountFormState.form?.let { form ->

@@ -11,7 +11,7 @@ internal enum class HomeDestination
     Settings,
     Subcategories,
     Budgets,
-    RecurringExpenses;
+    RecurringTransactions;
 
     /**
      * Where Back leads from here — one level up at a time — or null on the tabs, where Back is left to
@@ -23,6 +23,6 @@ internal enum class HomeDestination
         Settings         -> Tabs
         Subcategories    -> Settings
         Budgets          -> Settings
-        RecurringExpenses -> Settings
+        RecurringTransactions -> Settings
     }
 }

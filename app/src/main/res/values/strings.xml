@@ -278,13 +278,13 @@
     <string name="budget_form_error_unavailable">Cette sous-catégorie n\'existe plus ou n\'est plus une dépense.</string>
 
     <!-- Recurring expenses -->
-    <string name="settings_recurring_expenses">Dépenses récurrentes</string>
-    <string name="settings_recurring_expenses_hint">Loyer, abonnements : à saisir une fois</string>
-    <string name="recurring_expenses_title">Dépenses récurrentes</string>
-    <string name="recurring_expenses_intro">Une dépense récurrente génère automatiquement ses transactions à chaque échéance. Touchez-en une pour la modifier ou la supprimer.</string>
-    <string name="recurring_expenses_new">Nouvelle dépense récurrente</string>
-    <string name="recurring_expenses_empty">Aucune dépense récurrente pour le moment.</string>
-    <string name="recurring_expenses_edit_action">Modifier</string>
+    <string name="settings_recurring_transactions">Dépenses récurrentes</string>
+    <string name="settings_recurring_transactions_hint">Loyer, abonnements : à saisir une fois</string>
+    <string name="recurring_transactions_title">Dépenses récurrentes</string>
+    <string name="recurring_transactions_intro">Une dépense récurrente génère automatiquement ses transactions à chaque échéance. Touchez-en une pour la modifier ou la supprimer.</string>
+    <string name="recurring_transactions_new">Nouvelle dépense récurrente</string>
+    <string name="recurring_transactions_empty">Aucune dépense récurrente pour le moment.</string>
+    <string name="recurring_transactions_edit_action">Modifier</string>
     <string name="recurring_form_title_new">Nouvelle dépense récurrente</string>
     <string name="recurring_form_title_edit">Modifier la dépense récurrente</string>
     <string name="recurring_form_account_label">Compte</string>

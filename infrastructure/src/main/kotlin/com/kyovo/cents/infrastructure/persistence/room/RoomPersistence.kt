@@ -10,7 +10,7 @@ import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.BudgetAlertRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
-import com.kyovo.cents.domain.port.output.RecurringExpenseRepository
+import com.kyovo.cents.domain.port.output.RecurringTransactionRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import com.kyovo.cents.domain.port.output.UnitOfWork
@@ -30,7 +30,7 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
     val transactions: TransactionRepository = RoomTransactionRepository(database.transactionDao())
     val budgets: BudgetRepository = RoomBudgetRepository(database.budgetDao())
     val budgetAlerts: BudgetAlertRepository = RoomBudgetAlertRepository(database.budgetAlertDao())
-    val recurringExpenses: RecurringExpenseRepository = RoomRecurringExpenseRepository(database.recurringExpenseDao())
+    val recurringTransactions: RecurringTransactionRepository = RoomRecurringTransactionRepository(database.recurringTransactionDao())
     val unitOfWork: UnitOfWork = RoomUnitOfWork(database)
 
     fun close()
