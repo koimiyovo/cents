@@ -3,9 +3,7 @@ package com.kyovo.cents.ui.home
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
-import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
-import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import org.assertj.core.api.Assertions.assertThat
@@ -27,20 +25,6 @@ private fun aTransactionAt(date: Instant): Transaction
         subcategory = null,
         description = null,
         date = date,
-    )
-}
-
-private fun aTransactionOn(accountId: AccountId, subcategoryId: SubcategoryId?): Transaction
-{
-    return Transaction.restored(
-        id = TransactionId(UUID.randomUUID()),
-        accountId = accountId,
-        amount = Money(1_000),
-        title = TransactionTitle("Test transaction"),
-        category = TransactionCategory.EXPENSE,
-        subcategoryId = subcategoryId,
-        description = null,
-        date = Instant.parse("2026-09-15T12:00:00Z"),
     )
 }
 
@@ -186,75 +170,5 @@ class TransactionsWithinRangeTest
 
         // THEN
         assertThat(result).containsExactly(before, onReference, after)
-    }
-}
-
-/**
- * The Analyse tab's insights (Top 5, weekday pattern) share these two filters with Mouvements — same
- * as [transactionsWithinRange] does for the period, just on account and subcategory instead of dates.
- */
-class FilterByAccountAndSubcategoryTest
-{
-    private val accountA = AccountId(UUID.randomUUID())
-    private val accountB = AccountId(UUID.randomUUID())
-    private val subcategoryX = SubcategoryId(UUID.randomUUID())
-    private val subcategoryY = SubcategoryId(UUID.randomUUID())
-
-    private val onAccountASubcategoryX = aTransactionOn(accountA, subcategoryX)
-    private val onAccountBSubcategoryX = aTransactionOn(accountB, subcategoryX)
-    private val onAccountASubcategoryY = aTransactionOn(accountA, subcategoryY)
-    private val onAccountANoSubcategory = aTransactionOn(accountA, null)
-
-    private val all =
-        listOf(onAccountASubcategoryX, onAccountBSubcategoryX, onAccountASubcategoryY, onAccountANoSubcategory)
-
-    @Test
-    fun `neither filter set returns everything`()
-    {
-        // WHEN
-        val result = filterByAccountAndSubcategory(all, accountId = null, subcategoryId = null)
-
-        // THEN
-        assertThat(result).containsExactlyElementsOf(all)
-    }
-
-    @Test
-    fun `an account filter keeps only that account's transactions`()
-    {
-        // WHEN
-        val result = filterByAccountAndSubcategory(all, accountId = accountA, subcategoryId = null)
-
-        // THEN
-        assertThat(result).containsExactly(onAccountASubcategoryX, onAccountASubcategoryY, onAccountANoSubcategory)
-    }
-
-    @Test
-    fun `a subcategory filter keeps only that subcategory's transactions`()
-    {
-        // WHEN
-        val result = filterByAccountAndSubcategory(all, accountId = null, subcategoryId = subcategoryX)
-
-        // THEN
-        assertThat(result).containsExactly(onAccountASubcategoryX, onAccountBSubcategoryX)
-    }
-
-    @Test
-    fun `both filters combine`()
-    {
-        // WHEN
-        val result = filterByAccountAndSubcategory(all, accountId = accountA, subcategoryId = subcategoryX)
-
-        // THEN
-        assertThat(result).containsExactly(onAccountASubcategoryX)
-    }
-
-    @Test
-    fun `a subcategory filter never matches a transaction with none`()
-    {
-        // WHEN a subcategory that happens to be null on both sides is not treated as a match
-        val result = filterByAccountAndSubcategory(listOf(onAccountANoSubcategory), accountId = null, subcategoryId = subcategoryX)
-
-        // THEN
-        assertThat(result).isEmpty()
     }
 }
