@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
                     updateTransaction = appContainer.updateTransaction,
                     deleteTransaction = appContainer.deleteTransaction,
                     createSubcategory = appContainer.createSubcategory,
+                    checkBudgetAlerts = appContainer.checkBudgetAlerts,
                 )
             }
         }

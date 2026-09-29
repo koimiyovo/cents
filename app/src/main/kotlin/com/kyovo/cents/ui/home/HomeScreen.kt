@@ -22,11 +22,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,6 +53,7 @@ import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteAccountWithTransactionsException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
@@ -67,6 +72,7 @@ import com.kyovo.cents.ui.budget.BudgetFormSheet
 import com.kyovo.cents.ui.budget.BudgetLimitsScreen
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
+import com.kyovo.cents.ui.budget.budgetAlertNotice
 import com.kyovo.cents.ui.recurring.DeleteRecurringExpenseDialog
 import com.kyovo.cents.ui.recurring.RecurringExpenseFormSheet
 import com.kyovo.cents.ui.recurring.RecurringExpensesScreen
@@ -255,6 +261,26 @@ fun HomeScreen(
         }
     }
 
+    // A budget the expense just saved has newly reached a threshold: said right here, in a snackbar, since
+    // the user just did it. rememberUpdatedState: the collector below lives as long as the screen, but must
+    // read the subcategories as they are when an alert arrives, not as they were when it started.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    val latestSubcategories by rememberUpdatedState(subcategories)
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.budgetAlerts.collect { alert ->
+            val notice = budgetAlertNotice(alert, latestSubcategories) ?: return@collect
+            val bodyRes = when (notice.level)
+            {
+                BudgetAlertLevel.CLOSE_TO_LIMIT -> R.string.budget_alert_close_body
+                BudgetAlertLevel.OVER           -> R.string.budget_alert_over_body
+            }
+            // Suspends until this one is gone, so several alerts show one after the other.
+            snackbarHostState.showSnackbar(resources.getString(bodyRes, notice.emoji, notice.subcategoryName))
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -425,6 +451,18 @@ fun HomeScreen(
                 },
             )
         }
+    }
+
+    // Over whichever screen is shown, above the bottom bar when there is one (about its height).
+    Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing))
+    {
+        val bottomBarShown = openedAccountId == null && destination == HomeDestination.Tabs
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (bottomBarShown) 80.dp else 16.dp),
+        )
     }
 
     unarchiveBlockedName?.let { name ->

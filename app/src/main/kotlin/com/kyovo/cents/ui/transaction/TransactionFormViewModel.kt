@@ -15,22 +15,31 @@ import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.domain.model.TransactionCategory
+import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneId
 
 /** Why a syntactically valid form still couldn't be saved (rules only the use cases can check). */
 enum class SubmitFailure
@@ -98,11 +107,24 @@ class TransactionFormViewModel(
     private val updateTransaction: UpdateTransactionUseCase,
     private val deleteTransaction: DeleteTransactionUseCase,
     private val createSubcategory: CreateSubcategoryUseCase,
+    private val checkBudgetAlerts: CheckBudgetAlertsUseCase,
     private val now: () -> Instant = { Instant.now() },
+    private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(TransactionFormUiState())
     val uiState: StateFlow<TransactionFormUiState> = _uiState.asStateFlow()
+
+    // A channel, not a state: an alert is something that happened once, and it must reach the screen
+    // exactly once — even if the screen is away (rotation) when it is raised.
+    private val _budgetAlerts = Channel<BudgetAlert>(Channel.UNLIMITED)
+
+    /**
+     * The budget alerts an expense just saved from this form has newly reached (see [checkBudgetAlerts]),
+     * for the screen to tell the user about right away. The check is the one the background worker runs
+     * and it remembers what it reported, so the worker won't notify the same alert a second time.
+     */
+    val budgetAlerts: Flow<BudgetAlert> = _budgetAlerts.receiveAsFlow()
 
     /** The transaction being edited, as it was when the edit began (what a deletion would erase). */
     private var editedTransaction: Transaction? = null
@@ -275,6 +297,7 @@ class TransactionFormViewModel(
     private suspend fun delete()
     {
         val id = _uiState.value.form?.editingId ?: return
+        val original = editedTransaction
         try
         {
             deleteTransaction.delete(id)
@@ -290,6 +313,13 @@ class TransactionFormViewModel(
             return
         }
         close()
+
+        // The alert this expense may have raised no longer holds: the check forgets it, so that a later
+        // expense crossing the same threshold is reported again (see CheckBudgetAlertsService).
+        if (original != null && original.category == TransactionCategory.EXPENSE)
+        {
+            reportBudgetAlerts(original.date)
+        }
     }
 
     /** Saves the form. On success the sheet closes; otherwise the state says what to show. */
@@ -302,7 +332,7 @@ class TransactionFormViewModel(
     private suspend fun save()
     {
         val form = _uiState.value.form ?: return
-        val submission = form.stampedAt(now()).submit()
+        val submission = form.stampedAt(now(), zone).submit()
         try
         {
             when (submission)
@@ -346,5 +376,20 @@ class TransactionFormViewModel(
 
         // Close only once the write went through.
         close()
+
+        // Only spending can cross a budget: an income or a transfer cannot.
+        val spentOn = when (submission)
+        {
+            is FormSubmission.Record -> submission.command.takeIf { it.category == RecordableTransactionCategory.EXPENSE }?.date
+            is FormSubmission.Update -> submission.command.takeIf { it.category == RecordableTransactionCategory.EXPENSE }?.date
+            else                     -> null
+        }
+        if (spentOn != null) reportBudgetAlerts(spentOn)
+    }
+
+    /** Runs the alert check for the month [date] falls in and hands each new alert to the screen. */
+    private suspend fun reportBudgetAlerts(date: Instant)
+    {
+        checkBudgetAlerts.check(YearMonth.from(date.atZone(zone))).forEach { _budgetAlerts.send(it) }
     }
 }
