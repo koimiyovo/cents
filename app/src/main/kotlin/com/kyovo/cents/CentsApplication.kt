@@ -7,7 +7,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import com.kyovo.cents.work.CentsWorkerFactory
-import com.kyovo.cents.work.RecurringExpenseWorker
+import com.kyovo.cents.work.RecurringTransactionWorker
 import com.kyovo.cents.work.delayUntilNext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +44,7 @@ class CentsApplication : Application(), Configuration.Provider {
         // Catches every recurring expense up as soon as the app opens, off the main thread: safe to run
         // every time, since an occurrence already generated is never redone.
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            appContainer.generateRecurringExpenses.generate()
+            appContainer.generateRecurringTransactions.generate()
         }
 
         val workManager = WorkManager.getInstance(this)
@@ -63,7 +63,7 @@ class CentsApplication : Application(), Configuration.Provider {
         workManager.enqueueUniquePeriodicWork(
             RECURRING_EXPENSES_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<RecurringExpenseWorker>(1, TimeUnit.DAYS)
+            PeriodicWorkRequestBuilder<RecurringTransactionWorker>(1, TimeUnit.DAYS)
                 .setInitialDelay(delayUntilNext(hour = 8, now = ZonedDateTime.now()))
                 .build(),
         )

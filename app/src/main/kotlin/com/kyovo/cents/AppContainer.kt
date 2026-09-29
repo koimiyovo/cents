@@ -4,22 +4,22 @@ import android.content.Context
 import com.kyovo.cents.application.usecase.ArchiveAccountService
 import com.kyovo.cents.application.usecase.CheckBudgetAlertsService
 import com.kyovo.cents.application.usecase.CreateSubcategoryService
-import com.kyovo.cents.application.usecase.CreateRecurringExpenseService
+import com.kyovo.cents.application.usecase.CreateRecurringTransactionService
 import com.kyovo.cents.application.usecase.DeleteAccountService
-import com.kyovo.cents.application.usecase.DeleteRecurringExpenseService
+import com.kyovo.cents.application.usecase.DeleteRecurringTransactionService
 import com.kyovo.cents.application.usecase.DeleteSubcategoryService
 import com.kyovo.cents.application.usecase.DeleteTransactionService
-import com.kyovo.cents.application.usecase.GenerateRecurringExpensesService
+import com.kyovo.cents.application.usecase.GenerateRecurringTransactionsService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
 import com.kyovo.cents.application.usecase.NotifyBudgetAlertsService
-import com.kyovo.cents.application.usecase.NotifyDueRecurringExpensesService
+import com.kyovo.cents.application.usecase.NotifyDueRecurringTransactionsService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
-import com.kyovo.cents.application.usecase.ListRecurringExpensesService
+import com.kyovo.cents.application.usecase.ListRecurringTransactionsService
 import com.kyovo.cents.application.usecase.ListSubcategoriesService
 import com.kyovo.cents.application.usecase.ListTransactionsService
 import com.kyovo.cents.application.usecase.OpenAccountService
@@ -30,18 +30,18 @@ import com.kyovo.cents.application.usecase.SetBudgetService
 import com.kyovo.cents.application.usecase.UnarchiveAccountService
 import com.kyovo.cents.application.usecase.UpdateAccountService
 import com.kyovo.cents.application.usecase.UpdateInitialDepositService
-import com.kyovo.cents.application.usecase.UpdateRecurringExpenseService
+import com.kyovo.cents.application.usecase.UpdateRecurringTransactionService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
-import com.kyovo.cents.domain.port.input.CreateRecurringExpenseUseCase
+import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
-import com.kyovo.cents.domain.port.input.DeleteRecurringExpenseUseCase
+import com.kyovo.cents.domain.port.input.DeleteRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.DeleteSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
-import com.kyovo.cents.domain.port.input.GenerateRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
@@ -49,11 +49,11 @@ import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
-import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
-import com.kyovo.cents.domain.port.input.NotifyDueRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.NotifyDueRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
@@ -62,16 +62,16 @@ import com.kyovo.cents.domain.port.input.SetBudgetUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateInitialDepositUseCase
-import com.kyovo.cents.domain.port.input.UpdateRecurringExpenseUseCase
+import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.infrastructure.id.UuidAccountIdGenerator
-import com.kyovo.cents.infrastructure.id.UuidRecurringExpenseIdGenerator
+import com.kyovo.cents.infrastructure.id.UuidRecurringTransactionIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import com.kyovo.cents.notification.SystemBudgetAlertNotifier
-import com.kyovo.cents.notification.SystemRecurringExpenseNotifier
+import com.kyovo.cents.notification.SystemRecurringTransactionNotifier
 import java.time.Clock
 import java.time.ZoneId
 
@@ -88,7 +88,7 @@ class AppContainer(context: Context, persistence: RoomPersistence) {
     private val subcategoryRepository = persistence.subcategories
     private val budgetRepository = persistence.budgets
     private val budgetAlertRepository = persistence.budgetAlerts
-    private val recurringExpenseRepository = persistence.recurringExpenses
+    private val recurringTransactionRepository = persistence.recurringTransactions
     private val transactionIdGenerator = UuidTransactionIdGenerator()
     private val unitOfWork = persistence.unitOfWork
 
@@ -150,18 +150,18 @@ class AppContainer(context: Context, persistence: RoomPersistence) {
         unitOfWork,
     )
 
-    val listRecurringExpenses: ListRecurringExpensesUseCase = ListRecurringExpensesService(recurringExpenseRepository)
-    val createRecurringExpense: CreateRecurringExpenseUseCase = CreateRecurringExpenseService(
-        recurringExpenseRepository, accountRepository, subcategoryRepository, UuidRecurringExpenseIdGenerator()
+    val listRecurringTransactions: ListRecurringTransactionsUseCase = ListRecurringTransactionsService(recurringTransactionRepository)
+    val createRecurringTransaction: CreateRecurringTransactionUseCase = CreateRecurringTransactionService(
+        recurringTransactionRepository, accountRepository, subcategoryRepository, UuidRecurringTransactionIdGenerator()
     )
-    val updateRecurringExpense: UpdateRecurringExpenseUseCase =
-        UpdateRecurringExpenseService(recurringExpenseRepository, subcategoryRepository)
-    val deleteRecurringExpense: DeleteRecurringExpenseUseCase = DeleteRecurringExpenseService(recurringExpenseRepository)
+    val updateRecurringTransaction: UpdateRecurringTransactionUseCase =
+        UpdateRecurringTransactionService(recurringTransactionRepository, subcategoryRepository)
+    val deleteRecurringTransaction: DeleteRecurringTransactionUseCase = DeleteRecurringTransactionService(recurringTransactionRepository)
 
     // Uses the device's own time zone, like the budgets: a rule's due date is a calendar day where the
     // user lives, not in UTC.
-    val generateRecurringExpenses: GenerateRecurringExpensesUseCase = GenerateRecurringExpensesService(
-        recurringExpenseRepository,
+    val generateRecurringTransactions: GenerateRecurringTransactionsUseCase = GenerateRecurringTransactionsService(
+        recurringTransactionRepository,
         transactionRepository,
         accountRepository,
         subcategoryRepository,
@@ -170,7 +170,7 @@ class AppContainer(context: Context, persistence: RoomPersistence) {
         Clock.system(ZoneId.systemDefault()),
         notifyBudgetAlerts,
     )
-    val notifyDueRecurringExpenses: NotifyDueRecurringExpensesUseCase = NotifyDueRecurringExpensesService(
-        recurringExpenseRepository, accountRepository, SystemRecurringExpenseNotifier(context)
+    val notifyDueRecurringTransactions: NotifyDueRecurringTransactionsUseCase = NotifyDueRecurringTransactionsService(
+        recurringTransactionRepository, accountRepository, SystemRecurringTransactionNotifier(context)
     )
 }

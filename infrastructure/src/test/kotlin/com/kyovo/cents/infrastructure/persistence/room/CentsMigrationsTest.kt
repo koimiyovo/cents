@@ -12,8 +12,8 @@ import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
-import com.kyovo.cents.domain.model.RecurringExpense
-import com.kyovo.cents.domain.model.RecurringExpenseId
+import com.kyovo.cents.domain.model.RecurringTransaction
+import com.kyovo.cents.domain.model.RecurringTransactionId
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -280,20 +280,20 @@ class CentsMigrationsTest
         val database = openMigrated()
         try
         {
-            val recurringExpenses = RoomRecurringExpenseRepository(database.recurringExpenseDao())
+            val recurringTransactions = RoomRecurringTransactionRepository(database.recurringTransactionDao())
 
             // WHEN / THEN nobody had a rule before, and one can now be set on an existing subcategory
-            assertThat(recurringExpenses.observeAll().first()).isEmpty()
+            assertThat(recurringTransactions.observeAll().first()).isEmpty()
 
-            val ruleId = RecurringExpenseId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
-            val rule = RecurringExpense(
+            val ruleId = RecurringTransactionId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
+            val rule = RecurringTransaction(
                 ruleId, AccountId(accountId), Money(80_000), TransactionTitle("Loyer"), groceries.id, null,
                 RecurrenceFrequency.MONTHLY, 1, LocalDate.of(2026, 9, 5),
             )
-            recurringExpenses.save(rule)
-            recurringExpenses.save(rule.copy(amount = Money(85_000)))
+            recurringTransactions.save(rule)
+            recurringTransactions.save(rule.copy(amount = Money(85_000)))
 
-            assertThat(recurringExpenses.observeAll().first()).containsExactly(rule.copy(amount = Money(85_000)))
+            assertThat(recurringTransactions.observeAll().first()).containsExactly(rule.copy(amount = Money(85_000)))
         } finally
         {
             database.close()
@@ -311,20 +311,20 @@ class CentsMigrationsTest
             val database = openMigrated()
             try
             {
-                val recurringExpenses = RoomRecurringExpenseRepository(database.recurringExpenseDao())
+                val recurringTransactions = RoomRecurringTransactionRepository(database.recurringTransactionDao())
                 val subcategories = RoomSubcategoryRepository(database.subcategoryDao())
-                val ruleId = RecurringExpenseId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
-                val rule = RecurringExpense(
+                val ruleId = RecurringTransactionId(UUID.fromString("77777777-7777-7777-7777-777777777777"))
+                val rule = RecurringTransaction(
                     ruleId, AccountId(accountId), Money(80_000), TransactionTitle("Loyer"), groceries.id, null,
                     RecurrenceFrequency.MONTHLY, 1, LocalDate.of(2026, 9, 5),
                 )
-                recurringExpenses.save(rule)
+                recurringTransactions.save(rule)
 
                 // WHEN
                 subcategories.deleteById(groceries.id)
 
                 // THEN
-                assertThat(recurringExpenses.findById(ruleId)?.subcategoryId).isNull()
+                assertThat(recurringTransactions.findById(ruleId)?.subcategoryId).isNull()
             } finally
             {
                 database.close()

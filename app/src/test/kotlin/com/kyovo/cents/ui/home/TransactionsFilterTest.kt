@@ -33,7 +33,7 @@ class PeriodRangeTest
     private val now = Instant.parse("2026-09-23T12:00:00Z")
 
     // A preset period says how far back to look and nothing about the future: a recurring expense is
-    // generated weeks or months ahead (see GenerateRecurringExpensesService's lookahead) and the list shows
+    // generated weeks or months ahead (see GenerateRecurringTransactionsService's lookahead) and the list shows
     // what is coming as well as what happened, so there is no upper bound.
     @Test
     fun `7-day period starts 7 days before now and has no upper bound`()
