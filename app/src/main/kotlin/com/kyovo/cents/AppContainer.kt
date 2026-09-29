@@ -168,6 +168,7 @@ class AppContainer(context: Context, persistence: RoomPersistence) {
         transactionIdGenerator,
         unitOfWork,
         Clock.system(ZoneId.systemDefault()),
+        notifyBudgetAlerts,
     )
     val notifyDueRecurringExpenses: NotifyDueRecurringExpensesUseCase = NotifyDueRecurringExpensesService(
         recurringExpenseRepository, accountRepository, SystemRecurringExpenseNotifier(context)

@@ -3,6 +3,7 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.GenerateRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.RecurringExpenseRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
@@ -12,6 +13,7 @@ import com.kyovo.cents.domain.port.output.UnitOfWork
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 
 /**
  * How far past today a recurring expense's occurrences are generated: far enough that browsing a couple
@@ -26,13 +28,17 @@ class GenerateRecurringExpensesService(
     private val subcategoryRepository: SubcategoryRepository,
     private val transactionIdGenerator: TransactionIdGenerator,
     private val unitOfWork: UnitOfWork,
-    private val clock: Clock
+    private val clock: Clock,
+    private val notifyBudgetAlerts: NotifyBudgetAlertUseCase
 ) : GenerateRecurringExpensesUseCase
 {
     override suspend fun generate()
     {
         val zone = clock.zone
-        val horizon = LocalDate.now(clock).plusMonths(LOOKAHEAD_MONTHS)
+        val today = LocalDate.now(clock)
+        val horizon = today.plusMonths(LOOKAHEAD_MONTHS)
+        val currentMonth = YearMonth.from(today)
+        var recordedInCurrentMonth = false
 
         for (rule in recurringExpenseRepository.findAll())
         {
@@ -67,6 +73,14 @@ class GenerateRecurringExpensesService(
                 }
                 recurringExpenseRepository.save(rule.copy(lastGeneratedDate = pending.last()))
             }
+
+            if (pending.any { YearMonth.from(it) == currentMonth }) recordedInCurrentMonth = true
         }
+
+        // Nobody is typing these in, so nobody sees a budget move: the alerts are checked right now, once
+        // everything is recorded, instead of waiting for the daily check. Only the current month: a month
+        // ahead is checked when it becomes the current one (a notification saying "over its monthly limit"
+        // says nothing of which month), and a month long past, reached by a catch-up, is not news any more.
+        if (recordedInCurrentMonth) notifyBudgetAlerts.notify(currentMonth)
     }
 }
