@@ -14,6 +14,7 @@ import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
@@ -22,6 +23,7 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
+import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
@@ -34,6 +36,7 @@ import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.YearMonth
 import java.util.Currency
 import java.util.UUID
 
@@ -128,6 +131,12 @@ private class FakeCreateSubcategory : CreateSubcategoryUseCase
         Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
 }
 
+/** These tests are not about budgets: nothing ever crosses a threshold. */
+private object NoAlerts : CheckBudgetAlertsUseCase
+{
+    override suspend fun check(month: YearMonth): List<BudgetAlert> = emptyList()
+}
+
 private fun anExistingExpense(date: Instant = NOW.minusSeconds(3 * 3600)) = Transaction.recorded(
     id = TransactionId(UUID.randomUUID()),
     accountId = AccountId(UUID.randomUUID()),
@@ -153,6 +162,7 @@ class TransactionFormViewModelTest
         updateTransaction,
         deleteTransaction,
         createSubcategory,
+        NoAlerts,
         now = { NOW },
     )
 
