@@ -222,7 +222,6 @@ fun RecurringExpenseFormSheet(
         SingleDatePickerDialog(
             palette = palette,
             initialDay = form.startDate,
-            allowFuture = true,
             onDismiss = { showStartDatePicker = false },
             onConfirm = { day ->
                 showStartDatePicker = false
@@ -235,7 +234,6 @@ fun RecurringExpenseFormSheet(
         SingleDatePickerDialog(
             palette = palette,
             initialDay = form.endDate,
-            allowFuture = true,
             onDismiss = { showEndDatePicker = false },
             onConfirm = { day ->
                 showEndDatePicker = false

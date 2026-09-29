@@ -235,6 +235,20 @@ class TransactionFormBudgetAlertTest
     }
 
     @Test
+    fun `an expense dated in a future month checks that month`() = runTest()
+    {
+        // GIVEN
+        fillExpense()
+        viewModel.update(form.copy(date = Instant.parse("2026-11-10T10:00:00Z")))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(check.months).containsExactly(YearMonth.of(2026, 11))
+    }
+
+    @Test
     fun `editing an expense checks too, since a bigger amount can cross a threshold`() = runTest()
     {
         // GIVEN

@@ -292,6 +292,22 @@ class TransactionFormViewModelTest
     }
 
     @Test
+    fun `a day in the future is saved as picked`()
+    {
+        // GIVEN
+        openAndFillExpense()
+        val nextWeek = NOW.plusSeconds(7 * 24 * 3600)
+        viewModel.update(form!!.copy(date = nextWeek))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands.single().date).isEqualTo(nextWeek)
+        assertThat(form).isNull()
+    }
+
+    @Test
     fun `a rule only the use case can check keeps the sheet open and says why`()
     {
         // GIVEN
