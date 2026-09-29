@@ -60,7 +60,7 @@ import kotlin.math.roundToInt
  * budget), [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most
  * urgent first — and, apart, the subcategories that have none), and [BudgetTab.TRENDS] (a bar per recent
  * month, so a drift shows up before it becomes a habit). The account filter (same "no filter" convention as
- * Historique's own) narrows every one of them to a single account's spending. It only looks: the limits and
+ * Mouvements's own) narrows every one of them to a single account's spending. It only looks: the limits and
  * their thresholds are set from the settings.
  */
 @Composable
@@ -190,7 +190,7 @@ internal fun MonthSelectorRow(
     }
 }
 
-/** Narrows every tab to one account's spending, same "no filter" convention as Historique's own filter. */
+/** Narrows every tab to one account's spending, same "no filter" convention as Mouvements's own filter. */
 @Composable
 private fun BudgetAccountFilter(
     palette: AccountsPalette,

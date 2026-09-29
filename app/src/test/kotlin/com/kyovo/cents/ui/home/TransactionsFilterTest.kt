@@ -190,7 +190,7 @@ class TransactionsWithinRangeTest
 }
 
 /**
- * The Analyse tab's insights (Top 5, weekday pattern) share these two filters with Historique — same
+ * The Analyse tab's insights (Top 5, weekday pattern) share these two filters with Mouvements — same
  * as [transactionsWithinRange] does for the period, just on account and subcategory instead of dates.
  */
 class FilterByAccountAndSubcategoryTest
