@@ -319,15 +319,11 @@ private enum class TransactionsTab
 }
 
 /**
- * The from/to bounds for a period: preset periods count back from [now] and never look beyond the
- * end of [now]'s day — a recurring expense can generate a transaction weeks or months ahead (see
- * GenerateRecurringExpensesService's lookahead), and the history must not show one that hasn't
- * happened yet. The cap is the end of the day, not the exact instant of [now]: this screen only
- * recomputes [now] when the filters themselves change (see the `remember` around this call), not on
- * every recomposition, so a transaction recorded moments later — still today — must not be treated
- * as "in the future" just because it is after that stale captured instant. CUSTOM uses the picked
- * dates (start of day to end of day, in the local zone; its picker already can't select a future
- * one), and ALL_TIME has no lower bound.
+ * The from/to bounds for a period: preset periods count back from [now] and have no upper bound — a
+ * recurring expense can generate a transaction weeks or months ahead (see GenerateRecurringExpensesService's
+ * lookahead), and the list shows what is coming as well as what happened. CUSTOM uses the picked dates
+ * (start of day to end of day, in the local zone; its picker still can't select a future one), and
+ * ALL_TIME has no lower bound.
  */
 internal fun periodRange(
     period: TransactionsPeriod,
@@ -343,8 +339,7 @@ internal fun periodRange(
         val to = customTo?.plusDays(1)?.atStartOfDay(zone)?.toInstant()?.minusNanos(1)
         return from to to
     }
-    val endOfToday = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
-    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to endOfToday
+    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to null
 }
 
 /** Same boundary semantics as [com.kyovo.cents.application.usecase.ListTransactionsService]: inclusive on both ends. */
@@ -1022,15 +1017,14 @@ internal fun groupByDay(transactions: List<Transaction>): List<Pair<LocalDate, L
 }
 
 /**
- * The [limit] biggest expenses among [transactions] that have already happened (up to [now]), most
- * expensive first — incomes, transfers and the opening deposit don't count as an expense one could
- * overspend on, and neither does one not yet due: a recurring expense's due date can be well ahead of
- * today (see GenerateRecurringExpensesService's lookahead), and it isn't one of the period's biggest
- * expenses until it actually happens.
+ * The [limit] biggest expenses among [transactions], most expensive first — incomes, transfers and the
+ * opening deposit don't count as an expense one could overspend on. One dated in the future (a recurring
+ * expense generated ahead, see GenerateRecurringExpensesService's lookahead) counts like any other: the
+ * insights answer "of what I'm looking at", and the list shows those.
  */
-internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5, now: Instant = Instant.now()): List<Transaction> =
+internal fun topExpenses(transactions: List<Transaction>, limit: Int = 5): List<Transaction> =
     transactions
-        .filter { it.category == TransactionCategory.EXPENSE && !it.date.isAfter(now) }
+        .filter { it.category == TransactionCategory.EXPENSE }
         .sortedByDescending { it.amount.value }
         .take(limit)
 

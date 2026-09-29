@@ -119,32 +119,20 @@ class TopExpensesTest
         assertThat(top).isEmpty()
     }
 
+    // The list shows what is coming as well as what happened, and the insights answer "of what I'm looking
+    // at": an expense generated ahead of its due date (see the lookahead horizon) counts like any other.
     @Test
-    fun `a not-yet-due expense is excluded, however big`()
+    fun `an expense dated in the future counts like any other`()
     {
-        // GIVEN a recurring expense generated well ahead of today (see the lookahead horizon)
-        val now = Instant.parse("2026-09-27T12:00:00Z")
-        val due = aTransaction(1_000, date = now.minus(1, ChronoUnit.DAYS))
-        val notYetDue = aTransaction(999_999, date = now.plusSeconds(1))
+        // GIVEN a recurring expense generated well ahead of today
+        val today = Instant.parse("2026-09-27T12:00:00Z")
+        val past = aTransaction(1_000, date = today.minus(1, ChronoUnit.DAYS))
+        val ahead = aTransaction(999_999, date = today.plus(60, ChronoUnit.DAYS))
 
         // WHEN
-        val top = topExpenses(listOf(due, notYetDue), now = now)
+        val top = topExpenses(listOf(past, ahead))
 
         // THEN
-        assertThat(top).containsExactly(due)
-    }
-
-    @Test
-    fun `an expense due at this very instant counts`()
-    {
-        // GIVEN
-        val now = Instant.parse("2026-09-27T12:00:00Z")
-        val dueNow = aTransaction(1_000, date = now)
-
-        // WHEN
-        val top = topExpenses(listOf(dueNow), now = now)
-
-        // THEN
-        assertThat(top).containsExactly(dueNow)
+        assertThat(top).containsExactly(ahead, past)
     }
 }
