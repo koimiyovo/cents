@@ -32,9 +32,9 @@ class PeriodRangeTest
 {
     private val now = Instant.parse("2026-09-23T12:00:00Z")
 
-    // A preset period says how far back to look and nothing about the future: a recurring expense is
-    // generated weeks or months ahead (see GenerateRecurringTransactionsService's lookahead) and the list shows
-    // what is coming as well as what happened, so there is no upper bound.
+    // A preset period says how far back to look and nothing about the future: a recurring transaction is
+    // generated a little ahead (see GenerateRecurringTransactionsService) and the list shows what is coming as
+    // well as what happened, so there is no upper bound.
     @Test
     fun `7-day period starts 7 days before now and has no upper bound`()
     {
@@ -69,7 +69,7 @@ class PeriodRangeTest
     }
 
     @Test
-    fun `a recurring expense generated months ahead is within a preset period`()
+    fun `a transaction dated months ahead is within a preset period`()
     {
         // GIVEN one dated three months from now, and one from yesterday
         val (from, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)

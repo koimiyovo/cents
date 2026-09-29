@@ -30,7 +30,7 @@ private class RecordingRecurringTransactionNotifier : RecurringTransactionNotifi
 /**
  * What the daily WorkManager check does once the day's transactions have been generated: tell the user
  * about each recurring expense that has an occurrence on the very day asked (today). It goes by the rule's
- * calendar, not by what was generated — generation runs months ahead, so "already generated" says nothing
+ * calendar, not by what was generated — generation can run ahead of today, so "already generated" says nothing
  * about whether today is the day — and it skips a rule generation would skip (an archived or unknown
  * account), since nothing was recorded for it and "recorded today" would be a lie.
  *
