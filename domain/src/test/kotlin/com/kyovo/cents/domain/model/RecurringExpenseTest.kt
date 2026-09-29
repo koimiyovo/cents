@@ -199,4 +199,111 @@ class RecurringExpenseTest
             LocalDate.of(2026, 9, 5),
         )
     }
+
+    // ------------------------------------------------------------------ occursOn
+    // "Is there an occurrence on this very day?" — a question about the rule's calendar only: whether it
+    // was already generated (lastGeneratedDate) does not change it, which is what a reminder for today
+    // needs, since generation runs up to three months ahead.
+
+    @Test
+    fun `occurs on its start date`()
+    {
+        assertThat(aRule(startDate = LocalDate.of(2026, 9, 5)).occursOn(LocalDate.of(2026, 9, 5))).isTrue()
+    }
+
+    @Test
+    fun `does not occur before its start date`()
+    {
+        val rule = aRule(startDate = LocalDate.of(2026, 9, 5))
+
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 4))).isFalse()
+        assertThat(rule.occursOn(LocalDate.of(2025, 9, 5))).isFalse()
+    }
+
+    @Test
+    fun `a monthly rule occurs on the same day of each month and on no other day`()
+    {
+        val rule = aRule(frequency = RecurrenceFrequency.MONTHLY, startDate = LocalDate.of(2026, 9, 5))
+
+        assertThat(rule.occursOn(LocalDate.of(2026, 10, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2029, 1, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 10, 4))).isFalse()
+        assertThat(rule.occursOn(LocalDate.of(2026, 10, 6))).isFalse()
+    }
+
+    @Test
+    fun `a weekly rule occurs every seven days`()
+    {
+        val rule = aRule(frequency = RecurrenceFrequency.WEEKLY, startDate = LocalDate.of(2026, 9, 5))
+
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 12))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 19))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 8))).isFalse()
+    }
+
+    @Test
+    fun `a yearly rule occurs once a year`()
+    {
+        val rule = aRule(frequency = RecurrenceFrequency.YEARLY, startDate = LocalDate.of(2026, 9, 5))
+
+        assertThat(rule.occursOn(LocalDate.of(2027, 9, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2027, 3, 5))).isFalse()
+    }
+
+    @Test
+    fun `an interval skips the occurrences in between`()
+    {
+        // GIVEN every three months, from September
+        val rule = aRule(frequency = RecurrenceFrequency.MONTHLY, interval = 3, startDate = LocalDate.of(2026, 9, 5))
+
+        // WHEN / THEN
+        assertThat(rule.occursOn(LocalDate.of(2026, 12, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 10, 5))).isFalse()
+        assertThat(rule.occursOn(LocalDate.of(2026, 11, 5))).isFalse()
+    }
+
+    // The rule's dates are computed from the start date each time, so a short month's clamp does not drift
+    // the following ones: the 31st is the 28th in February, and the 31st again in March.
+    @Test
+    fun `a rule starting on the 31st occurs on the last day of a shorter month, then on the 31st again`()
+    {
+        val rule = aRule(frequency = RecurrenceFrequency.MONTHLY, startDate = LocalDate.of(2026, 1, 31))
+
+        assertThat(rule.occursOn(LocalDate.of(2026, 2, 28))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 2, 27))).isFalse()
+        assertThat(rule.occursOn(LocalDate.of(2026, 3, 31))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 3, 28))).isFalse()
+        assertThat(rule.occursOn(LocalDate.of(2026, 4, 30))).isTrue()
+    }
+
+    @Test
+    fun `a rule starting on the 29th of February occurs on the 28th in a common year`()
+    {
+        val rule = aRule(frequency = RecurrenceFrequency.YEARLY, startDate = LocalDate.of(2024, 2, 29))
+
+        assertThat(rule.occursOn(LocalDate.of(2025, 2, 28))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2028, 2, 29))).isTrue()
+    }
+
+    @Test
+    fun `occurs on its end date when that is an occurrence, and never after it`()
+    {
+        // GIVEN a monthly rule ending exactly on an occurrence
+        val rule = aRule(startDate = LocalDate.of(2026, 7, 5), endDate = LocalDate.of(2026, 9, 5))
+
+        // WHEN / THEN
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 10, 5))).isFalse()
+    }
+
+    @Test
+    fun `an occurrence already generated still occurs on its day`()
+    {
+        // GIVEN generation already went past September (it runs up to three months ahead)
+        val rule = aRule(startDate = LocalDate.of(2026, 7, 5), lastGeneratedDate = LocalDate.of(2026, 12, 5))
+
+        // WHEN / THEN
+        assertThat(rule.occursOn(LocalDate.of(2026, 9, 5))).isTrue()
+        assertThat(rule.occursOn(LocalDate.of(2026, 12, 5))).isTrue()
+    }
 }
