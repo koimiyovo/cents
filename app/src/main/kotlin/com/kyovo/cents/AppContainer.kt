@@ -14,6 +14,7 @@ import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
 import com.kyovo.cents.application.usecase.NotifyBudgetAlertsService
+import com.kyovo.cents.application.usecase.NotifyDueRecurringExpensesService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
@@ -52,6 +53,7 @@ import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
+import com.kyovo.cents.domain.port.input.NotifyDueRecurringExpensesUseCase
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
@@ -69,6 +71,7 @@ import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import com.kyovo.cents.notification.SystemBudgetAlertNotifier
+import com.kyovo.cents.notification.SystemRecurringExpenseNotifier
 import java.time.Clock
 import java.time.ZoneId
 
@@ -165,5 +168,8 @@ class AppContainer(context: Context, persistence: RoomPersistence) {
         transactionIdGenerator,
         unitOfWork,
         Clock.system(ZoneId.systemDefault()),
+    )
+    val notifyDueRecurringExpenses: NotifyDueRecurringExpensesUseCase = NotifyDueRecurringExpensesService(
+        recurringExpenseRepository, accountRepository, SystemRecurringExpenseNotifier(context)
     )
 }

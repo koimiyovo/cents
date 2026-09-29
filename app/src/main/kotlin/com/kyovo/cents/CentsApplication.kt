@@ -6,12 +6,14 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
-import com.kyovo.cents.work.BudgetAlertWorker
 import com.kyovo.cents.work.CentsWorkerFactory
+import com.kyovo.cents.work.RecurringExpenseWorker
+import com.kyovo.cents.work.delayUntilNext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 /**
@@ -45,19 +47,32 @@ class CentsApplication : Application(), Configuration.Provider {
             appContainer.generateRecurringExpenses.generate()
         }
 
-        // KEEP, not REPLACE: re-enqueuing the same periodic work on every app launch must not push the
-        // next run back out — only the very first launch ever actually schedules it. The 6-hour period
-        // is a starting guess (budget alerts don't need to be minutes-fresh); it's this one constant to
-        // change if that turns out too often or too rare. WorkManager.getInstance(Context), not the
-        // no-arg overload, since initialization is on-demand (Configuration.Provider above).
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            BUDGET_ALERT_WORK_NAME,
+        val workManager = WorkManager.getInstance(this)
+
+        // The 6-hourly budget check this replaced may still be scheduled on a phone that ran an older
+        // version: cancelling it is harmless when it is not, and without it WorkManager would keep trying
+        // to build a worker class that no longer exists.
+        workManager.cancelUniqueWork(OLD_BUDGET_ALERT_WORK_NAME)
+
+        // Once a day, in the morning (the first run waits for the next 8:00, the following ones follow
+        // 24 hours apart): a recurring expense falls on a calendar day, and it is the day itself the user is
+        // told about. KEEP, not REPLACE: re-enqueuing the same periodic work on every app launch must not push
+        // the next run back out — only the very first launch ever actually schedules it.
+        // WorkManager.getInstance(Context), not the no-arg overload, since initialization is on-demand
+        // (Configuration.Provider above).
+        workManager.enqueueUniquePeriodicWork(
+            RECURRING_EXPENSES_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<BudgetAlertWorker>(6, TimeUnit.HOURS).build(),
+            PeriodicWorkRequestBuilder<RecurringExpenseWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(delayUntilNext(hour = 8, now = ZonedDateTime.now()))
+                .build(),
         )
     }
 
     private companion object {
-        const val BUDGET_ALERT_WORK_NAME = "budget-alert-check"
+        const val RECURRING_EXPENSES_WORK_NAME = "recurring-expenses-daily"
+
+        // The name the replaced 6-hourly budget check was scheduled under.
+        const val OLD_BUDGET_ALERT_WORK_NAME = "budget-alert-check"
     }
 }
