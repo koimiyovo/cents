@@ -3,7 +3,6 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import com.kyovo.cents.domain.exception.RecurringTransactionNotFoundException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
-import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionUseCase
@@ -23,7 +22,8 @@ class UpdateRecurringTransactionService(
         val subcategory = command.subcategoryId?.let {
             subcategoryRepository.findById(it) ?: throw SubcategoryNotFoundException()
         }
-        if (subcategory != null && subcategory.kind != RecordableTransactionCategory.EXPENSE)
+        // The rule's category is fixed: its subcategory must be of that kind.
+        if (subcategory != null && subcategory.kind != existing.category)
         {
             throw InvalidTransactionSubcategoryException()
         }

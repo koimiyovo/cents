@@ -9,8 +9,9 @@ import com.kyovo.cents.domain.model.TransactionTitle
 import java.time.LocalDate
 
 /**
- * The account and the start date are not here: changing which account a rule pays out of, or when it
- * began, would rewrite already-generated history in a confusing way. Only what applies to occurrences not
+ * The account, the category (income or expense) and the start date are not here: changing which account a
+ * rule pays out of, whether it is an income or an expense, or when it began, would rewrite already-generated
+ * history in a confusing way. Only what applies to occurrences not
  * yet generated is editable — including the frequency and interval, which only change the pace of what
  * comes next.
  */

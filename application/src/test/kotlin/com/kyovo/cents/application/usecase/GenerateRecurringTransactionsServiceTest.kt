@@ -14,7 +14,10 @@ import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.domain.model.AccountName
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
+import com.kyovo.cents.domain.model.RecurringTransaction
+import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -386,5 +389,89 @@ class GenerateRecurringTransactionsServiceTest
         // THEN
         assertThat(transactionRepository.saved).isEmpty()
         assertThat(budgetAlerts.months).isEmpty()
+    }
+
+    // ------------------------------------------------------------------ incomes
+    // A recurring income (a salary) is generated like a recurring expense, but as income transactions, and it
+    // is no news to a budget: only spending can cross one.
+
+    @Test
+    fun `an income rule generates income transactions, filed under its income subcategory`() = runTest()
+    {
+        // GIVEN a monthly salary from the 5th (today is Sep 15th): September to December
+        accountRepository.save(anAccount(id = accountId))
+        val salaryId = aSubcategoryId()
+        subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
+        givenRule(
+            aRecurringTransaction(
+                accountId = accountId,
+                category = RecordableTransactionCategory.INCOME,
+                amount = aMoney(200_000),
+                subcategoryId = salaryId,
+                startDate = LocalDate.of(2026, 9, 5),
+            )
+        )
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN
+        assertThat(transactionRepository.saved).hasSize(4)
+        assertThat(transactionRepository.saved.map { it.category }).containsOnly(TransactionCategory.INCOME)
+        assertThat(transactionRepository.saved.map { it.subcategoryId }).containsOnly(salaryId)
+        assertThat(transactionRepository.saved.map { it.amount }).containsOnly(aMoney(200_000))
+    }
+
+    @Test
+    fun `an income does not trigger the budget check, even in the current month`() = runTest()
+    {
+        // GIVEN
+        accountRepository.save(anAccount(id = accountId))
+        givenRule(
+            aRecurringTransaction(
+                accountId = accountId,
+                category = RecordableTransactionCategory.INCOME,
+                startDate = LocalDate.of(2026, 9, 5),
+            )
+        )
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN September is recorded, and no alert is checked
+        assertThat(transactionRepository.saved).hasSize(4)
+        assertThat(budgetAlerts.months).isEmpty()
+    }
+
+    @Test
+    fun `an income next to an expense in the same month checks the budget once, for the expense`() = runTest()
+    {
+        // GIVEN
+        accountRepository.save(anAccount(id = accountId))
+        givenRule(
+            aRecurringTransaction(
+                accountId = accountId,
+                category = RecordableTransactionCategory.INCOME,
+                startDate = LocalDate.of(2026, 9, 5),
+            )
+        )
+        givenRule(
+            aRecurringTransaction(
+                id = aRecurringTransactionId("77777777-7777-7777-7777-777777777777"),
+                accountId = accountId,
+                startDate = LocalDate.of(2026, 9, 20),
+            )
+        )
+
+        // WHEN
+        aService(ids(8)).generate()
+
+        // THEN
+        assertThat(budgetAlerts.months).containsExactly(YearMonth.of(2026, 9))
+    }
+
+    private suspend fun givenRule(rule: RecurringTransaction)
+    {
+        recurringTransactionRepository.save(rule)
     }
 }

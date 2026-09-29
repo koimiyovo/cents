@@ -1,4 +1,4 @@
 package com.kyovo.cents.domain.exception
 
 class InvalidRecurringTransactionEndException :
-    IllegalArgumentException("Recurring expense end month must not be before its start month")
+    IllegalArgumentException("Recurring transaction end month must not be before its start month")

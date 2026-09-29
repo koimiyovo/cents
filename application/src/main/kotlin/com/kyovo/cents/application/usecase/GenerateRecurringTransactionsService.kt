@@ -16,7 +16,7 @@ import java.time.LocalTime
 import java.time.YearMonth
 
 /**
- * How far past today a recurring expense's occurrences are generated: far enough that browsing a couple
+ * How far past today a recurring transaction's occurrences are generated: far enough that browsing a couple
  * of months ahead already shows what is coming, bounded so a never-ending rule cannot generate forever.
  */
 private const val LOOKAHEAD_MONTHS = 3L
@@ -64,7 +64,7 @@ class GenerateRecurringTransactionsService(
                         rule.accountId,
                         rule.amount,
                         rule.title,
-                        RecordableTransactionCategory.EXPENSE,
+                        rule.category,
                         subcategory,
                         rule.description,
                         date,
@@ -74,7 +74,11 @@ class GenerateRecurringTransactionsService(
                 recurringTransactionRepository.save(rule.copy(lastGeneratedDate = pending.last()))
             }
 
-            if (pending.any { YearMonth.from(it) == currentMonth }) recordedInCurrentMonth = true
+            // Only spending can cross a budget: an income generated this month changes none.
+            if (rule.category == RecordableTransactionCategory.EXPENSE && pending.any { YearMonth.from(it) == currentMonth })
+            {
+                recordedInCurrentMonth = true
+            }
         }
 
         // Nobody is typing these in, so nobody sees a budget move: the alerts are checked right now, once

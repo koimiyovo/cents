@@ -2,6 +2,7 @@ package com.kyovo.cents.domain.port.input
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
@@ -12,6 +13,7 @@ import java.time.LocalDate
 
 data class CreateRecurringTransactionCommand(
     val accountId: AccountId,
+    val category: RecordableTransactionCategory,
     val amount: Money,
     val title: TransactionTitle,
     val subcategoryId: SubcategoryId?,
@@ -25,7 +27,7 @@ data class CreateRecurringTransactionCommand(
     fun toRecurringTransaction(id: RecurringTransactionId): RecurringTransaction
     {
         return RecurringTransaction(
-            id, accountId, amount, title, subcategoryId, description, frequency, interval, startDate, endDate
+            id, accountId, category, amount, title, subcategoryId, description, frequency, interval, startDate, endDate
         )
     }
 }

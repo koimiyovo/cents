@@ -71,7 +71,7 @@ class CreateRecurringTransactionServiceTest
     }
 
     @Test
-    fun `refuses an income subcategory, since a recurring expense is always an expense`() = runTest()
+    fun `refuses an income subcategory on an expense rule`() = runTest()
     {
         // GIVEN
         val accountId = anAccountId()
@@ -82,6 +82,52 @@ class CreateRecurringTransactionServiceTest
         // WHEN / THEN
         assertThatThrownBySuspending {
             service.create(aCreateRecurringTransactionCommand(accountId = accountId, subcategoryId = incomeSubcategoryId))
+        }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
+        assertThat(recurringTransactionRepository.saved).isEmpty()
+    }
+
+    @Test
+    fun `creates an income rule, keeping its category and an income subcategory`() = runTest()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        accountRepository.save(anAccount(id = accountId))
+        val salaryId = aSubcategoryId()
+        subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
+
+        // WHEN
+        val created = service.create(
+            aCreateRecurringTransactionCommand(
+                accountId = accountId,
+                category = RecordableTransactionCategory.INCOME,
+                subcategoryId = salaryId,
+            )
+        )
+
+        // THEN
+        assertThat(created.category).isEqualTo(RecordableTransactionCategory.INCOME)
+        assertThat(created.subcategoryId).isEqualTo(salaryId)
+        assertThat(recurringTransactionRepository.saved).containsExactly(created)
+    }
+
+    @Test
+    fun `refuses an expense subcategory on an income rule, nothing saved`() = runTest()
+    {
+        // GIVEN
+        val accountId = anAccountId()
+        accountRepository.save(anAccount(id = accountId))
+        val groceriesId = aSubcategoryId()
+        subcategoryRepository.save(aSubcategory(id = groceriesId, kind = RecordableTransactionCategory.EXPENSE))
+
+        // WHEN / THEN
+        assertThatThrownBySuspending {
+            service.create(
+                aCreateRecurringTransactionCommand(
+                    accountId = accountId,
+                    category = RecordableTransactionCategory.INCOME,
+                    subcategoryId = groceriesId,
+                )
+            )
         }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
         assertThat(recurringTransactionRepository.saved).isEmpty()
     }

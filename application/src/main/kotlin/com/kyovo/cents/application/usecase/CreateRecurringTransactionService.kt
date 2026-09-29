@@ -3,7 +3,6 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
-import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
@@ -26,7 +25,8 @@ class CreateRecurringTransactionService(
         val subcategory = command.subcategoryId?.let {
             subcategoryRepository.findById(it) ?: throw SubcategoryNotFoundException()
         }
-        if (subcategory != null && subcategory.kind != RecordableTransactionCategory.EXPENSE)
+        // A subcategory of the other kind would contradict the rule (an income filed under "Loyer").
+        if (subcategory != null && subcategory.kind != command.category)
         {
             throw InvalidTransactionSubcategoryException()
         }
