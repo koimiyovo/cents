@@ -224,15 +224,21 @@ fun HomeScreen(
         }
     }
 
+    // Both a saved budget and a created recurring expense lead to a notification, so both end in the same
+    // ask; only its wording differs. Whichever raised it is the one to clear.
+    val dismissNotificationAsk = {
+        budgetsViewModel.dismissNotificationPermissionAsk()
+        recurringExpensesViewModel.dismissNotificationPermissionAsk()
+    }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            budgetsViewModel.dismissNotificationPermissionAsk()
+            dismissNotificationAsk()
         }
 
-    if (budgetsState.askNotificationPermission)
+    if (budgetsState.askNotificationPermission || recurringExpensesState.askNotificationPermission)
     {
         // The system dialog never re-asks once granted, but this rationale dialog is ours: without
-        // this check it would reappear on every budget save even after the user already said yes.
+        // this check it would reappear on every save even after the user already said yes.
         val notificationContext = LocalContext.current
         val notificationsAlreadyGranted = ContextCompat.checkSelfPermission(
             notificationContext, Manifest.permission.POST_NOTIFICATIONS
@@ -240,12 +246,17 @@ fun HomeScreen(
 
         if (notificationsAlreadyGranted)
         {
-            LaunchedEffect(Unit) { budgetsViewModel.dismissNotificationPermissionAsk() }
+            LaunchedEffect(Unit) { dismissNotificationAsk() }
         } else
         {
+            val forBudgets = budgetsState.askNotificationPermission
             NotificationPermissionDialog(
-                title = stringResource(R.string.budgets_notification_title),
-                body = stringResource(R.string.budgets_notification_body),
+                title = stringResource(
+                    if (forBudgets) R.string.budgets_notification_title else R.string.recurring_notification_title
+                ),
+                body = stringResource(
+                    if (forBudgets) R.string.budgets_notification_body else R.string.recurring_notification_body
+                ),
                 palette = palette,
                 onConfirm = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -253,10 +264,10 @@ fun HomeScreen(
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else
                     {
-                        budgetsViewModel.dismissNotificationPermissionAsk()
+                        dismissNotificationAsk()
                     }
                 },
-                onDismiss = budgetsViewModel::dismissNotificationPermissionAsk
+                onDismiss = dismissNotificationAsk
             )
         }
     }

@@ -24,12 +24,15 @@ data class RecurringExpenseToDelete(val title: String)
 /**
  * [form] is null while the sheet is closed, so "is it open" and its content can't disagree.
  * [errors] are what is wrong with the last attempt to save; [confirmingDelete] is set while the user
- * is being asked whether to delete the rule being edited.
+ * is being asked whether to delete the rule being edited. [askNotificationPermission] is raised once a rule
+ * has been created, for the screen to ask for the permission its notification needs (see
+ * [RecurringExpensesViewModel.dismissNotificationPermissionAsk]).
  */
 data class RecurringExpensesUiState(
     val form: RecurringExpenseFormState? = null,
     val errors: Set<RecurringExpenseFormError> = emptySet(),
     val confirmingDelete: RecurringExpenseToDelete? = null,
+    val askNotificationPermission: Boolean = false,
 )
 
 /**
@@ -81,9 +84,10 @@ class RecurringExpensesViewModel(
     private suspend fun save()
     {
         val form = _uiState.value.form ?: return
+        val submission = form.submit()
         try
         {
-            when (val submission = form.submit())
+            when (submission)
             {
                 is RecurringExpenseSubmission.Invalid ->
                 {
@@ -114,6 +118,19 @@ class RecurringExpensesViewModel(
 
         // Close only once the write went through.
         close()
+
+        // A new rule will notify the user the day it falls, which needs the permission: ask now, while
+        // they have just asked for it. Editing one does not ask again.
+        if (submission is RecurringExpenseSubmission.Create)
+        {
+            _uiState.update { it.copy(askNotificationPermission = true) }
+        }
+    }
+
+    /** The screen has shown the rationale (or launched the system request): the ask is done. */
+    fun dismissNotificationPermissionAsk()
+    {
+        _uiState.update { it.copy(askNotificationPermission = false) }
     }
 
     /** Asks for confirmation before deleting the rule being edited. Does nothing on a new one. */

@@ -166,6 +166,85 @@ class RecurringExpensesViewModelTest
         // THEN
         assertThat(create.commands).hasSize(1)
         assertThat(create.commands.single().title).isEqualTo(TransactionTitle("Loyer"))
+        assertThat(state).isEqualTo(RecurringExpensesUiState(askNotificationPermission = true))
+    }
+
+    // ------------------------------------------------------------------ notification permission
+    // A recurring expense announces itself with a notification the day it falls, which needs the
+    // permission: the ask comes when a rule is created, the moment the user has just asked for it.
+
+    @Test
+    fun `creating a rule asks for the notification permission`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withAmount("15,00").withTitle("Loyer"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(state.askNotificationPermission).isTrue()
+        assertThat(form).isNull()
+    }
+
+    @Test
+    fun `editing a rule does not ask again`()
+    {
+        // GIVEN
+        viewModel.openForEdit(aRow(), null)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(update.commands).hasSize(1)
+        assertThat(state.askNotificationPermission).isFalse()
+    }
+
+    @Test
+    fun `a refused creation does not ask`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withAmount("15,00").withTitle("Loyer"))
+        create.failWith = AccountNotFoundException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(state.askNotificationPermission).isFalse()
+    }
+
+    @Test
+    fun `an invalid form does not ask`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(state.askNotificationPermission).isFalse()
+    }
+
+    // The screen consumes the ask once it has shown the rationale (or launched the real system request):
+    // it must not still be there after a later recomposition, unrelated to a save.
+    @Test
+    fun `dismissing the ask clears it`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withAmount("15,00").withTitle("Loyer"))
+        viewModel.submit()
+        assertThat(state.askNotificationPermission).isTrue()
+
+        // WHEN
+        viewModel.dismissNotificationPermissionAsk()
+
+        // THEN
         assertThat(state).isEqualTo(RecurringExpensesUiState())
     }
 
