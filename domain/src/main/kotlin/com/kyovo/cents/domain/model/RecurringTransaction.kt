@@ -6,11 +6,12 @@ import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
 import java.time.LocalDate
 
 /**
- * A planned expense that recurs — weekly, monthly, yearly, or anything "every N [weeks/months/years]" via
- * [interval] (interval 3 with [RecurrenceFrequency.MONTHLY] is "every three months") — from which real
- * [Transaction]s are generated as their due dates come, instead of typing each one in by hand. Always an
- * expense: there is no category to choose, the same way [Transaction.openingDeposit] structurally can't be
- * anything else.
+ * A planned transaction that recurs — a rent, a salary, a subscription — weekly, monthly, yearly, or anything
+ * "every N [weeks/months/years]" via [interval] (interval 3 with [RecurrenceFrequency.MONTHLY] is "every three
+ * months"), from which real [Transaction]s are generated as their due dates come, instead of typing each one in
+ * by hand. It is an income or an expense ([category]), never a transfer or an opening deposit — the same
+ * restriction as [Transaction.recorded] — and it is chosen when the rule is created and never changes: what has
+ * been generated so far would contradict it.
  *
  * Occurrences fall on [startDate] and every [interval] [frequency] after it, computed fresh from
  * [startDate] each time — never by chaining from the previous occurrence — so a short month's clamp (the
@@ -21,6 +22,7 @@ import java.time.LocalDate
 data class RecurringTransaction(
     val id: RecurringTransactionId,
     val accountId: AccountId,
+    val category: RecordableTransactionCategory,
     val amount: Money,
     val title: TransactionTitle,
     val subcategoryId: SubcategoryId?,

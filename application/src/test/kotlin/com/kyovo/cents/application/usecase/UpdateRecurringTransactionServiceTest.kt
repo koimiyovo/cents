@@ -78,7 +78,7 @@ class UpdateRecurringTransactionServiceTest
     }
 
     @Test
-    fun `refuses an income subcategory`() = runTest()
+    fun `refuses an income subcategory on an expense rule`() = runTest()
     {
         // GIVEN
         val id = aRecurringTransactionId()
@@ -90,5 +90,53 @@ class UpdateRecurringTransactionServiceTest
         assertThatThrownBySuspending {
             service.update(anUpdateRecurringTransactionCommand(id = id, subcategoryId = incomeSubcategoryId))
         }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
+    }
+
+    @Test
+    fun `accepts an income subcategory on an income rule, and the category stays`() = runTest()
+    {
+        // GIVEN an income rule
+        val id = aRecurringTransactionId()
+        recurringTransactionRepository.save(aRecurringTransaction(id = id, category = RecordableTransactionCategory.INCOME))
+        val salaryId = aSubcategoryId()
+        subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
+
+        // WHEN
+        val updated = service.update(anUpdateRecurringTransactionCommand(id = id, subcategoryId = salaryId))
+
+        // THEN
+        assertThat(updated.subcategoryId).isEqualTo(salaryId)
+        assertThat(updated.category).isEqualTo(RecordableTransactionCategory.INCOME)
+    }
+
+    @Test
+    fun `refuses an expense subcategory on an income rule, the rule left untouched`() = runTest()
+    {
+        // GIVEN
+        val id = aRecurringTransactionId()
+        val rule = aRecurringTransaction(id = id, category = RecordableTransactionCategory.INCOME)
+        recurringTransactionRepository.save(rule)
+        val groceriesId = aSubcategoryId()
+        subcategoryRepository.save(aSubcategory(id = groceriesId, kind = RecordableTransactionCategory.EXPENSE))
+
+        // WHEN / THEN
+        assertThatThrownBySuspending {
+            service.update(anUpdateRecurringTransactionCommand(id = id, subcategoryId = groceriesId))
+        }.isInstanceOf(InvalidTransactionSubcategoryException::class.java)
+        assertThat(recurringTransactionRepository.saved).containsExactly(rule)
+    }
+
+    @Test
+    fun `an update never changes the category of an expense rule either`() = runTest()
+    {
+        // GIVEN
+        val id = aRecurringTransactionId()
+        recurringTransactionRepository.save(aRecurringTransaction(id = id, category = RecordableTransactionCategory.EXPENSE))
+
+        // WHEN
+        val updated = service.update(anUpdateRecurringTransactionCommand(id = id, amount = Money(1_000)))
+
+        // THEN
+        assertThat(updated.category).isEqualTo(RecordableTransactionCategory.EXPENSE)
     }
 }

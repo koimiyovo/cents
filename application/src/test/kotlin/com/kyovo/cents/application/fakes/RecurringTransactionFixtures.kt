@@ -2,6 +2,7 @@ package com.kyovo.cents.application.fakes
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
@@ -25,6 +26,7 @@ fun aRecurringTransactionId(value: String = "66666666-6666-6666-6666-66666666666
 fun aRecurringTransaction(
     id: RecurringTransactionId = aRecurringTransactionId(),
     accountId: AccountId = anAccountId(),
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     amount: Money = aMoney(80_000),
     title: TransactionTitle = aTransactionTitle("Loyer"),
     subcategoryId: SubcategoryId? = null,
@@ -37,12 +39,13 @@ fun aRecurringTransaction(
 ): RecurringTransaction
 {
     return RecurringTransaction(
-        id, accountId, amount, title, subcategoryId, description, frequency, interval, startDate, endDate, lastGeneratedDate
+        id, accountId, category, amount, title, subcategoryId, description, frequency, interval, startDate, endDate, lastGeneratedDate
     )
 }
 
 fun aCreateRecurringTransactionCommand(
     accountId: AccountId = anAccountId(),
+    category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     amount: Money = aMoney(80_000),
     title: TransactionTitle = aTransactionTitle("Loyer"),
     subcategoryId: SubcategoryId? = null,
@@ -54,7 +57,7 @@ fun aCreateRecurringTransactionCommand(
 ): CreateRecurringTransactionCommand
 {
     return CreateRecurringTransactionCommand(
-        accountId, amount, title, subcategoryId, description, frequency, interval, startDate, endDate
+        accountId, category, amount, title, subcategoryId, description, frequency, interval, startDate, endDate
     )
 }
 

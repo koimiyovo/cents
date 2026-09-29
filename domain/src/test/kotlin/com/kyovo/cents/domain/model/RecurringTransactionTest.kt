@@ -25,9 +25,11 @@ class RecurringTransactionTest
         endDate: LocalDate? = null,
         lastGeneratedDate: LocalDate? = null,
         amount: Money = Money(80_000),
+        category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     ) = RecurringTransaction(
         id = id,
         accountId = accountId,
+        category = category,
         amount = amount,
         title = TransactionTitle("Loyer"),
         subcategoryId = null,
@@ -49,6 +51,18 @@ class RecurringTransactionTest
         assertThat(rule.endDate).isNull()
         assertThat(rule.lastGeneratedDate).isNull()
         assertThat(rule.interval).isEqualTo(1)
+    }
+
+    @Test
+    fun `is an expense or an income, and keeps which`()
+    {
+        // WHEN
+        val rent = aRule(category = RecordableTransactionCategory.EXPENSE)
+        val salary = aRule(category = RecordableTransactionCategory.INCOME)
+
+        // THEN
+        assertThat(rent.category).isEqualTo(RecordableTransactionCategory.EXPENSE)
+        assertThat(salary.category).isEqualTo(RecordableTransactionCategory.INCOME)
     }
 
     @Test
