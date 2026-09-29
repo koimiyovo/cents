@@ -87,6 +87,7 @@ abstract class RecurringTransactionRepositoryContract
 
     private fun aRule(
         suffix: Int,
+        category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
         amount: Long = 80_000,
         title: String = "Loyer",
         subcategory: Subcategory? = rent,
@@ -97,7 +98,7 @@ abstract class RecurringTransactionRepositoryContract
         endDate: LocalDate? = null,
         lastGeneratedDate: LocalDate? = null,
     ) = RecurringTransaction(
-        anId(suffix), account.id, Money(amount), TransactionTitle(title), subcategory?.id,
+        anId(suffix), account.id, category, Money(amount), TransactionTitle(title), subcategory?.id,
         TransactionDescription.of(description), frequency, interval, startDate, endDate, lastGeneratedDate,
     )
 
@@ -143,6 +144,35 @@ abstract class RecurringTransactionRepositoryContract
 
         // WHEN / THEN
         assertThat(repository.findAll()).containsExactly(full, bare)
+    }
+
+    // An income and an expense are two different rules: what is read back is what was saved, never the default.
+    @Test
+    fun `gives back an income as an income and an expense as an expense`() = realTime()
+    {
+        // GIVEN
+        val salary = aRule(1, category = RecordableTransactionCategory.INCOME, title = "Salaire", subcategory = null)
+        val rent = aRule(2, category = RecordableTransactionCategory.EXPENSE)
+        listOf(salary, rent).forEach { repository.save(it) }
+
+        // WHEN / THEN
+        assertThat(repository.findAll().map { it.category })
+            .containsExactly(RecordableTransactionCategory.INCOME, RecordableTransactionCategory.EXPENSE)
+        assertThat(repository.findById(salary.id)).isEqualTo(salary)
+    }
+
+    @Test
+    fun `saving an existing rule again keeps its category`() = realTime()
+    {
+        // GIVEN
+        val salary = aRule(1, category = RecordableTransactionCategory.INCOME, subcategory = null)
+        repository.save(salary)
+
+        // WHEN
+        repository.save(salary.copy(amount = Money(210_000)))
+
+        // THEN
+        assertThat(repository.findById(salary.id)?.category).isEqualTo(RecordableTransactionCategory.INCOME)
     }
 
     @Test
