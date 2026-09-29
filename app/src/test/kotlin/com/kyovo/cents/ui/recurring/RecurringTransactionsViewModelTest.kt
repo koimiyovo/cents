@@ -14,6 +14,7 @@ import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.DeleteRecurringTransactionUseCase
+import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionUseCase
 import org.assertj.core.api.Assertions.assertThat
@@ -75,6 +76,17 @@ private class RecordingUpdate : UpdateRecurringTransactionUseCase
     }
 }
 
+/** Counts the times it is asked to generate, and how many rules had been created at each of them. */
+private class RecordingGenerate(private val create: RecordingCreate) : GenerateRecurringTransactionsUseCase
+{
+    val createdWhenCalled = mutableListOf<Int>()
+
+    override suspend fun generate()
+    {
+        createdWhenCalled += create.commands.size
+    }
+}
+
 private class RecordingDelete : DeleteRecurringTransactionUseCase
 {
     val deleted = mutableListOf<RecurringTransactionId>()
@@ -91,7 +103,8 @@ class RecurringTransactionsViewModelTest
     private val create = RecordingCreate()
     private val update = RecordingUpdate()
     private val delete = RecordingDelete()
-    private val viewModel = RecurringTransactionsViewModel(create, update, delete)
+    private val generate = RecordingGenerate(create)
+    private val viewModel = RecurringTransactionsViewModel(create, update, delete, generate)
 
     private val state get() = viewModel.uiState.value
     private val form get() = state.form
@@ -169,6 +182,66 @@ class RecurringTransactionsViewModelTest
         assertThat(create.commands).hasSize(1)
         assertThat(create.commands.single().title).isEqualTo(TransactionTitle("Loyer"))
         assertThat(state).isEqualTo(RecurringTransactionsUiState(askNotificationPermission = true))
+    }
+
+    // ------------------------------------------------------------------ generation after a creation
+    // Generation runs at launch and once a day, so a rule that starts today would only show its transaction at
+    // the next launch. Creating one generates right away: the user sees what they just asked for.
+
+    @Test
+    fun `creating a rule generates its transactions right after it is saved`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withAmount("15,00").withTitle("Loyer"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN generation ran once, and after the rule existed (so it can see it)
+        assertThat(generate.createdWhenCalled).containsExactly(1)
+    }
+
+    @Test
+    fun `a refused creation does not generate`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+        viewModel.update(form!!.withAmount("15,00").withTitle("Loyer"))
+        create.failWith = AccountNotFoundException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(generate.createdWhenCalled).isEmpty()
+    }
+
+    @Test
+    fun `an invalid form does not generate`()
+    {
+        // GIVEN
+        viewModel.openCreate(ACCOUNT_ID, TODAY)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(generate.createdWhenCalled).isEmpty()
+    }
+
+    @Test
+    fun `editing a rule does not generate, the daily run takes care of it`()
+    {
+        // GIVEN
+        viewModel.openForEdit(aRow(), null)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(update.commands).hasSize(1)
+        assertThat(generate.createdWhenCalled).isEmpty()
     }
 
     // ------------------------------------------------------------------ notification permission

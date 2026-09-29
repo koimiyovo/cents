@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
                     createRecurringTransaction = appContainer.createRecurringTransaction,
                     updateRecurringTransaction = appContainer.updateRecurringTransaction,
                     deleteRecurringTransaction = appContainer.deleteRecurringTransaction,
+                    generateRecurringTransactions = appContainer.generateRecurringTransactions,
                 )
             }
         }
