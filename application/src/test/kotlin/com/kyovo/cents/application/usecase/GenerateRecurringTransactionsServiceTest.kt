@@ -48,9 +48,9 @@ private class RecordingNotifyBudgetAlerts(private val transactions: InMemoryTran
 }
 
 /**
- * Catches every recurring expense up: generates the real transactions for whichever of their due
- * occurrences have not been generated yet, up to a few months ahead of today — never forever, and never
- * the same occurrence twice.
+ * Catches every recurring transaction up: generates the real transactions of the occurrences that have
+ * already come, and at most one more, the next one, when it falls later in the current month — never the
+ * same occurrence twice, and never months in advance.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GenerateRecurringTransactionsServiceTest
@@ -67,24 +67,23 @@ class GenerateRecurringTransactionsServiceTest
 
     private val accountId = anAccountId()
 
-    private fun aService(ids: List<TransactionId>) = GenerateRecurringTransactionsService(
+    private fun aService(ids: List<TransactionId>, at: Clock = clock) = GenerateRecurringTransactionsService(
         recurringTransactionRepository,
         transactionRepository,
         accountRepository,
         subcategoryRepository,
         SequentialTransactionIdGenerator(ids),
         unitOfWork,
-        clock,
+        at,
         budgetAlerts,
     )
 
     private fun ids(count: Int) = List(count) { TransactionId(UUID.randomUUID()) }
 
     @Test
-    fun `generates a transaction for every pending occurrence, up to the lookahead horizon`() = runTest()
+    fun `generates every occurrence already due, catching up on the past months`() = runTest()
     {
-        // GIVEN a monthly rent starting in July, nothing generated yet — "today" is Sep 15th, the
-        // horizon is 3 months ahead of it, Dec 15th
+        // GIVEN a monthly rent starting in July, nothing generated yet — "today" is Sep 15th
         accountRepository.save(anAccount(id = accountId))
         recurringTransactionRepository.save(
             aRecurringTransaction(
@@ -98,14 +97,11 @@ class GenerateRecurringTransactionsServiceTest
         // WHEN
         aService(ids(6)).generate()
 
-        // THEN July through December — the next one, January, is past the horizon
+        // THEN July, August and September — the ones that have come — and not October's, next month
         assertThat(transactionRepository.saved.map { it.date }).containsExactly(
             LocalDate.of(2026, 7, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
             LocalDate.of(2026, 8, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
             LocalDate.of(2026, 9, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
-            LocalDate.of(2026, 10, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
-            LocalDate.of(2026, 11, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
-            LocalDate.of(2026, 12, 5).atTime(12, 0).toInstant(ZoneOffset.UTC),
         )
         assertThat(transactionRepository.saved).allSatisfy { assertThat(it.amount).isEqualTo(aMoney(80_000)) }
     }
@@ -121,14 +117,14 @@ class GenerateRecurringTransactionsServiceTest
         // WHEN
         aService(ids(4)).generate()
 
-        // THEN generated up to the lookahead horizon (today + 3 months)
-        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 12, 5))
+        // THEN only September's, the one that has come (October's is next month)
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 9, 5))
     }
 
     @Test
     fun `generates nothing more, and leaves lastGeneratedDate as it was, once caught up`() = runTest()
     {
-        // GIVEN already generated up to the lookahead horizon
+        // GIVEN already generated well ahead (as an older version of the app did)
         accountRepository.save(anAccount(id = accountId))
         recurringTransactionRepository.save(
             aRecurringTransaction(
@@ -147,9 +143,9 @@ class GenerateRecurringTransactionsServiceTest
     }
 
     @Test
-    fun `does not generate past the lookahead horizon`() = runTest()
+    fun `does not generate past the current month`() = runTest()
     {
-        // GIVEN a weekly rule that would otherwise have many more occurrences
+        // GIVEN a yearly rule started years ago
         accountRepository.save(anAccount(id = accountId))
         recurringTransactionRepository.save(
             aRecurringTransaction(
@@ -162,7 +158,7 @@ class GenerateRecurringTransactionsServiceTest
         // WHEN
         aService(ids(10)).generate()
 
-        // THEN the last one generated is the one on or before today + 3 months (Dec 15th), i.e. Sep 5th 2026
+        // THEN the last one generated is this year's (Sep 5th 2026), not next year's
         assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 9, 5))
     }
 
@@ -274,14 +270,14 @@ class GenerateRecurringTransactionsServiceTest
     @Test
     fun `checks the budget alerts of the current month once its transactions are generated`() = runTest()
     {
-        // GIVEN a monthly rule from the 5th: September (today is Sep 15th) up to December
+        // GIVEN a monthly rule from the 5th: September's occurrence is the one that has come (today is Sep 15th)
         accountRepository.save(anAccount(id = accountId))
         recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 9, 5)))
 
         // WHEN
         aService(ids(4)).generate()
 
-        // THEN only September, the current month, is checked
+        // THEN September, the current month, is checked
         assertThat(budgetAlerts.months).containsExactly(YearMonth.of(2026, 9))
     }
 
@@ -316,8 +312,8 @@ class GenerateRecurringTransactionsServiceTest
         // WHEN
         aService(ids(4)).generate()
 
-        // THEN all four transactions (September to December) were there when the check ran
-        assertThat(budgetAlerts.savedWhenCalled).containsExactly(4)
+        // THEN September's transaction was there when the check ran
+        assertThat(budgetAlerts.savedWhenCalled).containsExactly(1)
     }
 
     @Test
@@ -341,9 +337,9 @@ class GenerateRecurringTransactionsServiceTest
     }
 
     @Test
-    fun `does not check a month ahead, only generated occurrences of the current one count`() = runTest()
+    fun `a rule that starts next month generates nothing yet, so nothing is checked`() = runTest()
     {
-        // GIVEN a rule that starts next month: October to December are generated, nothing in September
+        // GIVEN a rule whose first occurrence is next month (today is Sep 15th)
         accountRepository.save(anAccount(id = accountId))
         recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 10, 5)))
 
@@ -351,7 +347,8 @@ class GenerateRecurringTransactionsServiceTest
         aService(ids(3)).generate()
 
         // THEN
-        assertThat(transactionRepository.saved).hasSize(3)
+        assertThat(transactionRepository.saved).isEmpty()
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isNull()
         assertThat(budgetAlerts.months).isEmpty()
     }
 
@@ -398,7 +395,7 @@ class GenerateRecurringTransactionsServiceTest
     @Test
     fun `an income rule generates income transactions, filed under its income subcategory`() = runTest()
     {
-        // GIVEN a monthly salary from the 5th (today is Sep 15th): September to December
+        // GIVEN a monthly salary from the 5th (today is Sep 15th): September's is the one that has come
         accountRepository.save(anAccount(id = accountId))
         val salaryId = aSubcategoryId()
         subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
@@ -416,7 +413,7 @@ class GenerateRecurringTransactionsServiceTest
         aService(ids(4)).generate()
 
         // THEN
-        assertThat(transactionRepository.saved).hasSize(4)
+        assertThat(transactionRepository.saved).hasSize(1)
         assertThat(transactionRepository.saved.map { it.category }).containsOnly(TransactionCategory.INCOME)
         assertThat(transactionRepository.saved.map { it.subcategoryId }).containsOnly(salaryId)
         assertThat(transactionRepository.saved.map { it.amount }).containsOnly(aMoney(200_000))
@@ -439,7 +436,7 @@ class GenerateRecurringTransactionsServiceTest
         aService(ids(4)).generate()
 
         // THEN September is recorded, and no alert is checked
-        assertThat(transactionRepository.saved).hasSize(4)
+        assertThat(transactionRepository.saved).hasSize(1)
         assertThat(budgetAlerts.months).isEmpty()
     }
 
@@ -473,5 +470,132 @@ class GenerateRecurringTransactionsServiceTest
     private suspend fun givenRule(rule: RecurringTransaction)
     {
         recurringTransactionRepository.save(rule)
+    }
+
+    // ------------------------------------------------------------------ what is generated, and when
+    // Generating months ahead crowded the transactions list with what is not due yet. So a rule generates
+    // what has already come, plus at most one more: the next one, when it falls later this month.
+
+    @Test
+    fun `generates the first occurrence when it falls later in the current month`() = runTest()
+    {
+        // GIVEN a monthly rule whose first occurrence is Sep 20th (today is Sep 15th)
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 9, 20)))
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN only that one, and not October's, November's or December's
+        assertThat(transactionRepository.saved.map { it.date })
+            .containsExactly(LocalDate.of(2026, 9, 20).atTime(12, 0).toInstant(ZoneOffset.UTC))
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 9, 20))
+    }
+
+    @Test
+    fun `generates nothing for a rule whose first occurrence falls in a later month`() = runTest()
+    {
+        // GIVEN a first occurrence on Oct 5th (today is Sep 15th)
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 10, 5)))
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN nothing yet, and it stays pending
+        assertThat(transactionRepository.saved).isEmpty()
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isNull()
+    }
+
+    @Test
+    fun `generates the next occurrence once its month has come`() = runTest()
+    {
+        // GIVEN a monthly rule generated up to September, and "today" is now Oct 1st
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(
+            aRecurringTransaction(
+                accountId = accountId,
+                startDate = LocalDate.of(2026, 7, 5),
+                lastGeneratedDate = LocalDate.of(2026, 9, 5),
+            )
+        )
+        val firstOfOctober = Clock.fixed(Instant.parse("2026-10-01T10:00:00Z"), ZoneOffset.UTC)
+
+        // WHEN
+        aService(ids(4), firstOfOctober).generate()
+
+        // THEN October's, which falls later this month, and not November's
+        assertThat(transactionRepository.saved.map { it.date })
+            .containsExactly(LocalDate.of(2026, 10, 5).atTime(12, 0).toInstant(ZoneOffset.UTC))
+    }
+
+    @Test
+    fun `generates at most one occurrence ahead of today, after the ones that have come`() = runTest()
+    {
+        // GIVEN a weekly rule from Thursday Sep 10th (today is Tuesday Sep 15th): 10th has come, 17th and 24th are ahead
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(
+            aRecurringTransaction(
+                accountId = accountId,
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 9, 10),
+            )
+        )
+
+        // WHEN
+        aService(ids(6)).generate()
+
+        // THEN the 10th, and the next one (the 17th), but not the 24th
+        assertThat(transactionRepository.saved.map { it.date }).containsExactly(
+            LocalDate.of(2026, 9, 10).atTime(12, 0).toInstant(ZoneOffset.UTC),
+            LocalDate.of(2026, 9, 17).atTime(12, 0).toInstant(ZoneOffset.UTC),
+        )
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 9, 17))
+    }
+
+    // The service runs at every launch and every day: running it again must not pull one more occurrence ahead.
+    @Test
+    fun `running it again generates nothing more while one occurrence is already ahead`() = runTest()
+    {
+        // GIVEN the weekly rule above, already generated once
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(
+            aRecurringTransaction(
+                accountId = accountId,
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 9, 10),
+            )
+        )
+        aService(ids(6)).generate()
+
+        // WHEN it runs a second time the same day
+        aService(ids(6)).generate()
+
+        // THEN still the two of the first run
+        assertThat(transactionRepository.saved).hasSize(2)
+        assertThat(recurringTransactionRepository.saved.single().lastGeneratedDate).isEqualTo(LocalDate.of(2026, 9, 17))
+    }
+
+    @Test
+    fun `generates the next one ahead once the previous one has come`() = runTest()
+    {
+        // GIVEN the weekly rule generated up to the 17th, and "today" is now the 17th
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(
+            aRecurringTransaction(
+                accountId = accountId,
+                frequency = RecurrenceFrequency.WEEKLY,
+                startDate = LocalDate.of(2026, 9, 10),
+                lastGeneratedDate = LocalDate.of(2026, 9, 17),
+            )
+        )
+        val theSeventeenth = Clock.fixed(Instant.parse("2026-09-17T10:00:00Z"), ZoneOffset.UTC)
+
+        // WHEN
+        aService(ids(4), theSeventeenth).generate()
+
+        // THEN the 24th, but not October's 1st, which is next month
+        assertThat(transactionRepository.saved.map { it.date })
+            .containsExactly(LocalDate.of(2026, 9, 24).atTime(12, 0).toInstant(ZoneOffset.UTC))
     }
 }

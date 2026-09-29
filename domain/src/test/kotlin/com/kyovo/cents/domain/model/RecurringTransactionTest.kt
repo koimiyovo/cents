@@ -217,7 +217,7 @@ class RecurringTransactionTest
     // ------------------------------------------------------------------ occursOn
     // "Is there an occurrence on this very day?" — a question about the rule's calendar only: whether it
     // was already generated (lastGeneratedDate) does not change it, which is what a reminder for today
-    // needs, since generation runs up to three months ahead.
+    // needs, since generation can run ahead of today.
 
     @Test
     fun `occurs on its start date`()
@@ -313,7 +313,7 @@ class RecurringTransactionTest
     @Test
     fun `an occurrence already generated still occurs on its day`()
     {
-        // GIVEN generation already went past September (it runs up to three months ahead)
+        // GIVEN generation already went past September (it can run ahead of today)
         val rule = aRule(startDate = LocalDate.of(2026, 7, 5), lastGeneratedDate = LocalDate.of(2026, 12, 5))
 
         // WHEN / THEN
