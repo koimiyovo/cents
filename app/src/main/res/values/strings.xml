@@ -88,8 +88,8 @@
     <string name="transactions_search_placeholder">Rechercher une transaction…</string>
     <string name="transactions_all_accounts">Tous les comptes</string>
     <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
-    <string name="transactions_period_7_days">7 derniers jours</string>
-    <string name="transactions_period_30_days">30 derniers jours</string>
+    <string name="transactions_period_7_days">Depuis 7 jours</string>
+    <string name="transactions_period_30_days">Depuis 30 jours</string>
     <string name="transactions_period_all_time">Toutes les dates</string>
     <string name="transactions_period_custom">Personnalisée</string>
     <string name="transactions_today">Aujourd\'hui</string>
