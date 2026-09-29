@@ -24,7 +24,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -470,9 +469,9 @@ private fun DateRow(
 }
 
 /**
- * Single-day picker, themed with the same scoped color scheme as the transactions range picker.
- * Future days aren't selectable by default: a transaction is recorded once it has happened. Reused
- * by the recurring-expense form with [allowFuture] set — a rule's start/end date is planned ahead.
+ * Single-day picker, themed with the same scoped color scheme as the transactions range picker. Any day
+ * can be picked, future ones included: a transaction can be planned ahead, and so can a rule's start/end
+ * date (the recurring-expense form reuses this picker).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -481,17 +480,9 @@ internal fun SingleDatePickerDialog(
     initialDay: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
-    allowFuture: Boolean = false,
 )
 {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialDay.toEpochMillisUtc(),
-        selectableDates = object : SelectableDates
-        {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                allowFuture || utcTimeMillis <= System.currentTimeMillis()
-        },
-    )
+    val state = rememberDatePickerState(initialSelectedDateMillis = initialDay.toEpochMillisUtc())
     val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     MaterialTheme(colorScheme = datePickerColorScheme(palette)) {
         DatePickerDialog(
