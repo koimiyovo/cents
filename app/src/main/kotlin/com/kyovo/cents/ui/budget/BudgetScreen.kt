@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -455,7 +456,11 @@ private fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 46.dp),
+            // The hole of the ring is about 151 dp wide (the 180 dp canvas minus the two 16 % strokes): the
+            // text is held to a width that leaves a margin all round, so it wraps ("1 160,00 €" then
+            // "dépensés") instead of running up to the arcs. The Box is as wide as the screen, so without
+            // this the text was only limited by the screen.
+            modifier = Modifier.widthIn(max = 104.dp),
         )
     }
 }
