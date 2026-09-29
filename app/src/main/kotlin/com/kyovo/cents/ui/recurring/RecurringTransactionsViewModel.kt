@@ -10,6 +10,7 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.DeleteRecurringTransactionUseCase
+import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.UpdateRecurringTransactionUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,7 @@ class RecurringTransactionsViewModel(
     private val createRecurringTransaction: CreateRecurringTransactionUseCase,
     private val updateRecurringTransaction: UpdateRecurringTransactionUseCase,
     private val deleteRecurringTransaction: DeleteRecurringTransactionUseCase,
+    private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(RecurringTransactionsUiState())
@@ -124,6 +126,11 @@ class RecurringTransactionsViewModel(
         if (submission is RecurringTransactionSubmission.Create)
         {
             _uiState.update { it.copy(askNotificationPermission = true) }
+
+            // Generation only runs at launch and once a day: without this, a rule that starts today would show
+            // its transaction only at the next launch. The sheet is already closed, so this never keeps the user
+            // waiting; an edit does not need it, the daily run takes care of what an edit changes.
+            generateRecurringTransactions.generate()
         }
     }
 
