@@ -76,11 +76,11 @@
 
     <!-- Transactions screen -->
     <string name="transactions_title">Transactions</string>
-    <string name="transactions_subtitle">Historique de vos dépenses &amp; revenus</string>
+    <string name="transactions_subtitle">Vos dépenses et revenus, passés et à venir</string>
     <string name="transactions_expense_label">↘ Dépenses</string>
     <string name="transactions_income_label">↗ Revenus</string>
     <string name="transactions_net_label">🐷 Solde net</string>
-    <string name="transactions_tab_history">Historique</string>
+    <string name="transactions_tab_history">Mouvements</string>
     <string name="transactions_tab_insights">Analyse</string>
     <string name="transactions_insights_empty">Aucune dépense sur cette période.</string>
     <string name="transactions_top_expenses_title">Plus grosses dépenses</string>
@@ -90,7 +90,7 @@
     <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
     <string name="transactions_period_7_days">7 derniers jours</string>
     <string name="transactions_period_30_days">30 derniers jours</string>
-    <string name="transactions_period_all_time">Tout l\'historique</string>
+    <string name="transactions_period_all_time">Toutes les dates</string>
     <string name="transactions_period_custom">Personnalisée</string>
     <string name="transactions_today">Aujourd\'hui</string>
     <string name="transactions_yesterday">Hier</string>

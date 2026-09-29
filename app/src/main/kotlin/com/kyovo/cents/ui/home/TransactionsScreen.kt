@@ -117,8 +117,8 @@ fun TransactionsScreen(
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showCustomRangePicker by remember { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    // Unlike the filters above, which page the user is on (Historique/Analyse) is worth keeping across
-    // a rotation: being bounced back to Historique while looking at Analyse is jarring, not a minor loss.
+    // Unlike the filters above, which page the user is on (Mouvements/Analyse) is worth keeping across
+    // a rotation: being bounced back to Mouvements while looking at Analyse is jarring, not a minor loss.
     var selectedTab by rememberSaveable { mutableStateOf(TransactionsTab.HISTORY) }
 
     // The whole point of the use case's from/to range is to scope the screen to a period instead
@@ -141,12 +141,12 @@ fun TransactionsScreen(
     val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
         availableSubcategories(transactionsInPeriod, subcategories)
     }
-    // The Analyse insights share the account/subcategory filters with Historique (moved above the tab
+    // The Analyse insights share the account/subcategory filters with Mouvements (moved above the tab
     // switch), so they answer "of what I'm looking at", not always "of everything".
     val topExpensesInPeriod = remember(transactionsInPeriod, selectedAccountId, selectedSubcategory) {
         topExpenses(filterByAccountAndSubcategory(transactionsInPeriod, selectedAccountId, selectedSubcategory))
     }
-    // Always the current week, whatever the Historique period filter is set to: a recurring expense can
+    // Always the current week, whatever the Mouvements period filter is set to: a recurring expense can
     // generate a transaction weeks or months ahead (see GenerateRecurringExpensesService's lookahead), and
     // a habit chart must not let one of those stand in for a day that hasn't happened yet.
     val (weekStart, weekEnd) = remember { currentWeekRange(LocalDate.now()) }
@@ -355,7 +355,7 @@ internal fun transactionsWithinRange(
     }
 
 /** [transactions] narrowed to [accountId] and [subcategoryId] when set (either or both) — the same
- * account/subcategory filters Historique uses, shared with the Analyse tab's insights. */
+ * account/subcategory filters Mouvements uses, shared with the Analyse tab's insights. */
 internal fun filterByAccountAndSubcategory(
     transactions: List<Transaction>,
     accountId: AccountId?,
@@ -807,7 +807,7 @@ internal fun DayGroup(
 
 /**
  * The period's biggest expenses, most expensive first — often what explains a period's total at a
- * glance. Scoped to the same account/subcategory filters as Historique, shared above the tab switch:
+ * glance. Scoped to the same account/subcategory filters as Mouvements, shared above the tab switch:
  * it answers "where did the big spending go" for whatever slice is currently being browsed. Unlike a
  * day's group, these can span many different days, so each row shows its day too, not only its time
  * (see [TransactionListCard]'s `showDate`). Nothing shown when there is no expense at all.
@@ -831,7 +831,7 @@ internal fun TopExpensesSection(
 
 /**
  * Where the money went by day of the week, over the current week (Monday to Sunday) — always that week,
- * whatever the Historique period filter is set to: a recurring expense can generate a transaction weeks or
+ * whatever the Mouvements period filter is set to: a recurring expense can generate a transaction weeks or
  * months ahead, and a habit chart must not include a day that hasn't happened yet. The busiest day is in
  * the accent colour, the rest a muted context. Nothing shown when the week has no expense at all.
  */

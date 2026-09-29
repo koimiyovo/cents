@@ -50,7 +50,7 @@ enum class BudgetTab
 
 /**
  * Everything the budgets screens show: the month ([selector]), the account the tab is scoped to
- * ([selectedAccountId], null meaning every account — the same "no filter" convention as Historique's own
+ * ([selectedAccountId], null meaning every account — the same "no filter" convention as Mouvements's own
  * account filter), one [rows] entry per expense subcategory with its progress for that month and account,
  * the month's spending [breakdown] (the overview tab's pie), the last few months' totals ([trend], the
  * trends tab's bars), and the [form] that sets a limit and an alert threshold — null while it is closed, so

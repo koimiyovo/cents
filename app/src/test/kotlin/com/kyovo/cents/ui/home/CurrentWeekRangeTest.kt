@@ -6,7 +6,7 @@ import java.time.LocalDate
 
 /**
  * The Monday-to-Sunday week the weekday-spending chart is scoped to, always — independent of the
- * Historique period filter, so a recurring expense generated weeks or months ahead (see
+ * Mouvements period filter, so a recurring expense generated weeks or months ahead (see
  * GenerateRecurringExpensesService's lookahead) never stands in for a day that hasn't happened yet.
  */
 class CurrentWeekRangeTest
