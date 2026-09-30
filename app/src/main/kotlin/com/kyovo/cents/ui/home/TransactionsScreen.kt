@@ -26,7 +26,6 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -316,11 +315,6 @@ internal fun CustomDateRangePickerDialog(
 )
 {
     val today = LocalDate.now()
-        selectableDates = object : SelectableDates
-        {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                utcTimeMillis <= System.currentTimeMillis()
-        },
     val state = rememberDateRangePickerState(
         initialSelectedStartDateMillis = (initialFrom ?: today.minusDays(30)).toEpochMillisUtc(),
         initialSelectedEndDateMillis = (initialTo ?: today).toEpochMillisUtc(),
