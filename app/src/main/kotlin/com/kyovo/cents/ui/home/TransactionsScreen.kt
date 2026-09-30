@@ -72,6 +72,7 @@ import com.kyovo.cents.ui.common.formatSignedEuroCents
 import com.kyovo.cents.ui.transaction.reactsToTap
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -244,11 +245,11 @@ internal enum class TransactionsPeriod(val labelRes: Int, val days: Long?)
 }
 
 /**
- * The from/to bounds for a period: preset periods count back from [now] and have no upper bound — a
- * recurring transaction generates its next occurrence a little ahead (see GenerateRecurringTransactionsService),
- * and the list shows what is coming as well as what happened. CUSTOM uses the picked dates
- * (start of day to end of day, in the local zone; its picker still can't select a future one), and
- * ALL_TIME has no lower bound.
+ * The from/to bounds for a period: preset periods count back from [now] and stop at the end of the current
+ * month, so the list shows what is still coming this month (a recurring transaction generates its next
+ * occurrence a little ahead, see GenerateRecurringTransactionsService) but not later months. CUSTOM uses the
+ * picked dates (start of day to end of day, in the local zone; any date can be picked, future included), and
+ * ALL_TIME has no bounds at all.
  */
 internal fun periodRange(
     period: TransactionsPeriod,
@@ -264,7 +265,9 @@ internal fun periodRange(
         val to = customTo?.plusDays(1)?.atStartOfDay(zone)?.toInstant()?.minusNanos(1)
         return from to to
     }
-    return (period.days?.let { now.minus(it, ChronoUnit.DAYS) }) to null
+    val from = period.days?.let { now.minus(it, ChronoUnit.DAYS) } ?: return null to null
+    val endOfMonth = YearMonth.from(now.atZone(zone)).plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().minusNanos(1)
+    return from to endOfMonth
 }
 
 /** Same boundary semantics as [com.kyovo.cents.application.usecase.ListTransactionsService]: inclusive on both ends. */
@@ -313,14 +316,14 @@ internal fun CustomDateRangePickerDialog(
 )
 {
     val today = LocalDate.now()
-    val state = rememberDateRangePickerState(
-        initialSelectedStartDateMillis = (initialFrom ?: today.minusDays(30)).toEpochMillisUtc(),
-        initialSelectedEndDateMillis = (initialTo ?: today).toEpochMillisUtc(),
         selectableDates = object : SelectableDates
         {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean =
                 utcTimeMillis <= System.currentTimeMillis()
         },
+    val state = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = (initialFrom ?: today.minusDays(30)).toEpochMillisUtc(),
+        initialSelectedEndDateMillis = (initialTo ?: today).toEpochMillisUtc(),
     )
     val colorScheme = datePickerColorScheme(palette)
     Dialog(
