@@ -2,6 +2,7 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.input.DeleteSubcategoryUseCase
+import com.kyovo.cents.domain.port.output.BudgetAlertRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
@@ -11,6 +12,7 @@ class DeleteSubcategoryService(
     private val subcategoryRepository: SubcategoryRepository,
     private val transactionRepository: TransactionRepository,
     private val budgetRepository: BudgetRepository,
+    private val budgetAlertRepository: BudgetAlertRepository,
     private val unitOfWork: UnitOfWork
 ) : DeleteSubcategoryUseCase
 {
@@ -25,6 +27,7 @@ class DeleteSubcategoryService(
                     .filter { it.subcategoryId == id }
                     .forEach { transactionRepository.save(it.withoutSubcategory()) }
                 budgetRepository.deleteBySubcategoryId(id)
+                budgetAlertRepository.deleteBySubcategoryId(id)
                 subcategoryRepository.deleteById(id)
             }
         }

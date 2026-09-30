@@ -200,9 +200,8 @@ data class TransactionFormState(
         if (editingId != null)
         {
             // An edited transaction keeps its own time of day, so it stays where it was among that
-            // day's others — but never lands in the future, which the date picker doesn't allow either.
-            val moved = dateOnDay(day, date, zone)
-            return copy(date = if (moved.isAfter(now)) now else moved)
+            // day's others. The day may be one ahead: a transaction can be dated in the future.
+            return copy(date = dateOnDay(day, date, zone))
         }
         return copy(date = dateOnDay(day, now, zone))
     }

@@ -479,6 +479,42 @@ class BudgetsViewModelTest
         assertThat(state.error).isNull()
     }
 
+    // A budget is the first thing in the app that has anything to say to the user outside of it being
+    // open (an alert that spending crossed a threshold, via WorkManager later) — so the permission is
+    // asked for right where that need first exists, with an explanation, not upfront at first launch.
+    @Test
+    fun `saving a budget asks to request the notification permission`()
+    {
+        // GIVEN
+        viewModel.openForm(state.rows.first())
+        viewModel.updateLimit("450")
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(state.askNotificationPermission).isTrue()
+    }
+
+    // The screen consumes the ask once it has shown the rationale (or launched the real system
+    // request) — otherwise it would still be there after any later recomposition, unrelated to
+    // whether a save just happened.
+    @Test
+    fun `dismissing the notification permission ask clears it`()
+    {
+        // GIVEN
+        viewModel.openForm(state.rows.first())
+        viewModel.updateLimit("450")
+        viewModel.submit()
+        assertThat(state.askNotificationPermission).isTrue()
+
+        // WHEN
+        viewModel.dismissNotificationPermissionAsk()
+
+        // THEN
+        assertThat(state.askNotificationPermission).isFalse()
+    }
+
     @Test
     fun `a limit that is empty or zero is refused, the form stays open and nothing is set`()
     {

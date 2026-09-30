@@ -5,18 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DatePicker
@@ -24,7 +20,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -36,18 +31,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
@@ -312,7 +303,7 @@ fun TransactionFormSheet(
 }
 
 @Composable
-private fun TypeSelector(
+internal fun TypeSelector(
     palette: AccountsPalette,
     types: List<TransactionFormType>,
     selected: TransactionFormType,
@@ -470,9 +461,9 @@ private fun DateRow(
 }
 
 /**
- * Single-day picker, themed with the same scoped color scheme as the transactions range picker.
- * Future days aren't selectable by default: a transaction is recorded once it has happened. Reused
- * by the recurring-expense form with [allowFuture] set — a rule's start/end date is planned ahead.
+ * Single-day picker, themed with the same scoped color scheme as the transactions range picker. Any day
+ * can be picked, future ones included: a transaction can be planned ahead, and so can a rule's start/end
+ * date (the recurring-transaction form reuses this picker).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -481,17 +472,9 @@ internal fun SingleDatePickerDialog(
     initialDay: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
-    allowFuture: Boolean = false,
 )
 {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialDay.toEpochMillisUtc(),
-        selectableDates = object : SelectableDates
-        {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                allowFuture || utcTimeMillis <= System.currentTimeMillis()
-        },
-    )
+    val state = rememberDatePickerState(initialSelectedDateMillis = initialDay.toEpochMillisUtc())
     val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     MaterialTheme(colorScheme = datePickerColorScheme(palette)) {
         DatePickerDialog(

@@ -64,5 +64,69 @@ object CentsMigrations
         )
     }
 
-    val ALL: List<Migration> = listOf(MIGRATION_1_2, MIGRATION_2_3)
+    /**
+     * Version 4 adds the budget alerts already reported (the WorkManager check's memory, so it never
+     * notifies the same crossing twice). Nothing existing is touched: only a new, empty table. The SQL is
+     * the one Room exported for version 4 (`schemas/.../4.json`), word for word.
+     */
+    val MIGRATION_3_4 = Migration(3, 4)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `budget_alerts` (" +
+                    "`subcategoryId` BLOB NOT NULL, " +
+                    "`month` INTEGER NOT NULL, " +
+                    "`level` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`subcategoryId`, `month`, `level`), " +
+                    "FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+    }
+
+    /**
+     * Version 5 turns `recurring_expenses` into `recurring_transactions`: a rule can now be an income as well
+     * as an expense, so it gets a `category`, and the table is renamed to say what it holds. Nothing is lost:
+     * the new table is created (the SQL is the one Room exported for version 5, `schemas/.../5.json`, word
+     * for word), every existing rule is copied into it as an `EXPENSE` — the only kind that could exist
+     * before — and the old table, with its indices, is dropped. Copying rather than `ALTER TABLE ... RENAME`
+     * keeps the table, its indices and its foreign key exactly what Room expects, whatever names the old
+     * ones had.
+     */
+    val MIGRATION_4_5 = Migration(4, 5)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `recurring_transactions` (" +
+                    "`id` BLOB NOT NULL, " +
+                    "`accountId` BLOB NOT NULL, " +
+                    "`category` TEXT NOT NULL, " +
+                    "`amount` INTEGER NOT NULL, " +
+                    "`title` TEXT NOT NULL, " +
+                    "`subcategoryId` BLOB, " +
+                    "`description` TEXT, " +
+                    "`frequency` TEXT NOT NULL, " +
+                    "`interval` INTEGER NOT NULL, " +
+                    "`startDate` INTEGER NOT NULL, " +
+                    "`endDate` INTEGER, " +
+                    "`lastGeneratedDate` INTEGER, " +
+                    "PRIMARY KEY(`id`), " +
+                    "FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE SET NULL )"
+        )
+        connection.execSQL(
+            "INSERT INTO `recurring_transactions` (" +
+                    "`id`, `accountId`, `category`, `amount`, `title`, `subcategoryId`, `description`, " +
+                    "`frequency`, `interval`, `startDate`, `endDate`, `lastGeneratedDate`) " +
+                    "SELECT `id`, `accountId`, 'EXPENSE', `amount`, `title`, `subcategoryId`, `description`, " +
+                    "`frequency`, `interval`, `startDate`, `endDate`, `lastGeneratedDate` " +
+                    "FROM `recurring_expenses`"
+        )
+        connection.execSQL("DROP TABLE `recurring_expenses`")
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_recurring_transactions_accountId` ON `recurring_transactions` (`accountId`)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_recurring_transactions_subcategoryId` ON `recurring_transactions` (`subcategoryId`)"
+        )
+    }
+
+    val ALL: List<Migration> = listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }
