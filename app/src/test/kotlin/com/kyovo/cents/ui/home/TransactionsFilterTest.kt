@@ -32,29 +32,31 @@ class PeriodRangeTest
 {
     private val now = Instant.parse("2026-09-23T12:00:00Z")
 
-    // A preset period says how far back to look and nothing about the future: a recurring transaction is
-    // generated a little ahead (see GenerateRecurringTransactionsService) and the list shows what is coming as
-    // well as what happened, so there is no upper bound.
+    // A preset period looks back from now and forward to the end of the current month: what is coming this month
+    // is shown (marked "À venir"), a later month only under "Toutes les dates" or a custom range.
+    private val endOfSeptember = LocalDate.of(2026, 9, 30).plusDays(1).atStartOfDay(ZoneId.systemDefault())
+        .toInstant().minusNanos(1)
+
     @Test
-    fun `7-day period starts 7 days before now and has no upper bound`()
+    fun `7-day period starts 7 days before now and ends with the current month`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_7_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(7, ChronoUnit.DAYS))
-        assertThat(to).isNull()
+        assertThat(to).isEqualTo(endOfSeptember)
     }
 
     @Test
-    fun `30-day period starts 30 days before now and has no upper bound`()
+    fun `30-day period starts 30 days before now and ends with the current month`()
     {
         // WHEN
         val (from, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)
 
         // THEN
         assertThat(from).isEqualTo(now.minus(30, ChronoUnit.DAYS))
-        assertThat(to).isNull()
+        assertThat(to).isEqualTo(endOfSeptember)
     }
 
     @Test
@@ -69,18 +71,19 @@ class PeriodRangeTest
     }
 
     @Test
-    fun `a transaction dated months ahead is within a preset period`()
+    fun `a preset period shows the rest of this month but not a later one`()
     {
-        // GIVEN one dated three months from now, and one from yesterday
+        // GIVEN one later this month, one next month, and one from yesterday
         val (from, to) = periodRange(TransactionsPeriod.LAST_30_DAYS, customFrom = null, customTo = null, now = now)
-        val ahead = aTransactionAt(now.plus(90, ChronoUnit.DAYS))
+        val laterThisMonth = aTransactionAt(Instant.parse("2026-09-29T12:00:00Z"))
+        val nextMonth = aTransactionAt(Instant.parse("2026-10-02T12:00:00Z"))
         val yesterday = aTransactionAt(now.minus(1, ChronoUnit.DAYS))
 
         // WHEN
-        val inPeriod = transactionsWithinRange(listOf(ahead, yesterday), from, to)
+        val inPeriod = transactionsWithinRange(listOf(laterThisMonth, nextMonth, yesterday), from, to)
 
         // THEN
-        assertThat(inPeriod).containsExactlyInAnyOrder(ahead, yesterday)
+        assertThat(inPeriod).containsExactlyInAnyOrder(laterThisMonth, yesterday)
     }
 
     @Test
