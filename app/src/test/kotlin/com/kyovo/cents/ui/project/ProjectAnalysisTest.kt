@@ -158,6 +158,35 @@ class ProjectAnalysisTest
         assertThat(resolveSelectedProject(null, listOf(japan, kitchen), transactions)).isEqualTo(kitchen)
     }
 
+    // ------------------------------------------------------------------ the project just created
+
+    // A new project has no transaction, so the default choice would never land on it: after the user creates one
+    // from this tab, the tab shows it. The ids known when they asked tell which one is new.
+    @Test
+    fun `the project that was not there when the user asked is the new one`()
+    {
+        assertThat(newlyCreatedProject(setOf(JAPAN_ID), listOf(japan, kitchen))).isEqualTo(kitchen)
+    }
+
+    @Test
+    fun `without a new project there is nothing to choose`()
+    {
+        assertThat(newlyCreatedProject(setOf(JAPAN_ID, KITCHEN_ID), listOf(japan, kitchen))).isNull()
+    }
+
+    @Test
+    fun `a project that is gone since does not count`()
+    {
+        assertThat(newlyCreatedProject(setOf(JAPAN_ID, KITCHEN_ID), listOf(japan))).isNull()
+    }
+
+    // Two at once cannot be one creation from here (another screen added one meanwhile): no guess.
+    @Test
+    fun `several new projects at once are not guessed between`()
+    {
+        assertThat(newlyCreatedProject(emptySet(), listOf(japan, kitchen))).isNull()
+    }
+
     // ------------------------------------------------------------------ where the money went
 
     @Test

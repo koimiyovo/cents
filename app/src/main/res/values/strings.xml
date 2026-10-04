@@ -367,7 +367,7 @@
     <string name="project_delete_confirm">Supprimer</string>
     <string name="budget_section_month">Mois</string>
     <string name="budget_section_projects">Projets</string>
-    <string name="project_analysis_no_project">Aucun projet pour l\'instant. Créez-en un dans Réglages pour suivre un voyage, des travaux…</string>
+    <string name="project_analysis_no_project">Aucun projet pour l\'instant. Créez-en un pour suivre un voyage, des travaux…</string>
     <string name="project_analysis_open">Voir la page du projet</string>
     <string name="project_analysis_breakdown_title">Répartition</string>
     <string name="project_analysis_breakdown_empty">Aucune dépense dans ce projet.</string>
