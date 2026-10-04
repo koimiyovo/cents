@@ -1,10 +1,12 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryBudgetAlertRepository
 import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.aBudget
+import com.kyovo.cents.application.fakes.aBudgetAlert
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -13,6 +15,7 @@ import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.aTransactionTitle
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
@@ -40,11 +43,13 @@ class DeleteSubcategoryServiceTest
     private val transactionRepository = InMemoryTransactionRepository()
     private val unitOfWork = InMemoryUnitOfWork()
     private val budgetRepository = InMemoryBudgetRepository()
+    private val budgetAlertRepository = InMemoryBudgetAlertRepository()
     private val service =
         DeleteSubcategoryService(
             subcategoryRepository,
             transactionRepository,
             budgetRepository,
+            budgetAlertRepository,
             unitOfWork
         )
 
@@ -211,6 +216,39 @@ class DeleteSubcategoryServiceTest
 
             // THEN
             assertThat(budgetRepository.saved).containsExactly(fuelBudget)
+        }
+
+    // An alert already sent about a deleted subcategory would mean nothing either — same reasoning
+    // as its budgets, and for every month.
+    @Test
+    fun `deletes the budget alerts of the subcategory, for every month, and keeps the others`() =
+        runTest()
+        {
+            // GIVEN
+            subcategoryRepository.save(groceries)
+            subcategoryRepository.save(fuel)
+            budgetAlertRepository.record(
+                aBudgetAlert(
+                    subcategoryId = groceriesId,
+                    month = YearMonth.of(2026, 8),
+                    level = BudgetAlertLevel.CLOSE_TO_LIMIT,
+                )
+            )
+            budgetAlertRepository.record(
+                aBudgetAlert(
+                    subcategoryId = groceriesId,
+                    month = YearMonth.of(2026, 9),
+                    level = BudgetAlertLevel.OVER,
+                )
+            )
+            val fuelAlert = aBudgetAlert(subcategoryId = fuelId, month = YearMonth.of(2026, 9))
+            budgetAlertRepository.record(fuelAlert)
+
+            // WHEN
+            service.delete(groceriesId)
+
+            // THEN
+            assertThat(budgetAlertRepository.saved).containsExactly(fuelAlert)
         }
 
     @Test

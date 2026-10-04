@@ -321,7 +321,7 @@ class TransactionFormEditTest
     }
 
     @Test
-    fun `moving to today never puts the transaction in the future`()
+    fun `moving to today keeps the time of day, even when it has not come yet`()
     {
         // GIVEN a transaction from late in the evening, brought to today at noon
         val lateEvening = Instant.parse("2026-09-20T23:00:00Z")
@@ -330,8 +330,21 @@ class TransactionFormEditTest
         // WHEN
         val moved = form.withDay(LocalDate.parse("2026-09-23"), NOW_INSTANT, ZoneOffset.UTC)
 
-        // THEN 23:00 today hasn't happened yet: it lands at the current time instead
-        assertThat(moved.date).isEqualTo(NOW_INSTANT)
+        // THEN a transaction may be dated later today (or any day ahead): it is not pulled back to now
+        assertThat(moved.date).isEqualTo(Instant.parse("2026-09-23T23:00:00Z"))
+    }
+
+    @Test
+    fun `moving to a day in the future keeps the time of day the transaction had`()
+    {
+        // GIVEN
+        val form = TransactionFormState.editing(anExpense(date = EARLIER))
+
+        // WHEN
+        val moved = form.withDay(LocalDate.parse("2026-10-05"), NOW_INSTANT, ZoneOffset.UTC)
+
+        // THEN
+        assertThat(moved.date).isEqualTo(Instant.parse("2026-10-05T08:30:00Z"))
     }
 
     @Test

@@ -5,18 +5,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DatePicker
@@ -24,7 +19,8 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -40,14 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
@@ -71,6 +63,9 @@ import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.datePickerColorScheme
 import com.kyovo.cents.ui.home.toEpochMillisUtc
 import com.kyovo.cents.ui.home.toLocalDateUtc
+import com.kyovo.cents.ui.recurring.EndDateField
+import com.kyovo.cents.ui.recurring.FrequencyField
+import com.kyovo.cents.ui.recurring.IntervalField
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -107,6 +102,8 @@ fun TransactionFormSheet(
     // Opens straight on the details when the edited transaction already has some.
     var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showEndDatePicker by rememberSaveable { mutableStateOf(false) }
+    val endDateFormatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     val errors = if (showErrors)
     {
         (form.submit() as? FormSubmission.Invalid)?.errors.orEmpty()
@@ -129,7 +126,6 @@ fun TransactionFormSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
                 .imePadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
@@ -143,14 +139,20 @@ fun TransactionFormSheet(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
-            val archivedOriginal = remember(accounts, form.originalAccountId) { form.archivedOriginalAccount(accounts) }
+            val archivedOriginal = remember(
+                accounts,
+                form.originalAccountId
+            ) { form.archivedOriginalAccount(accounts) }
             if (archivedOriginal != null)
             {
                 ArchivedAccountNotice(palette, archivedOriginal.name.value)
             }
             TypeSelector(
                 palette = palette,
-                types = if (form.isEditing) listOf(TransactionFormType.EXPENSE, TransactionFormType.INCOME)
+                types = if (form.isEditing) listOf(
+                    TransactionFormType.EXPENSE,
+                    TransactionFormType.INCOME
+                )
                 else TransactionFormType.entries,
                 selected = form.type,
             ) { onFormChange(form.withType(it)) }
@@ -213,7 +215,11 @@ fun TransactionFormSheet(
                     onSelect = { onFormChange(form.copy(accountId = it)) },
                     onCreate = { onCreateAccount(AccountField.SOURCE) },
                 )
-                FieldError(palette, FormError.ACCOUNT_REQUIRED in errors, FormError.ACCOUNT_REQUIRED)
+                FieldError(
+                    palette,
+                    FormError.ACCOUNT_REQUIRED in errors,
+                    FormError.ACCOUNT_REQUIRED
+                )
                 if (isTransfer)
                 {
                     AccountPicker(
@@ -236,6 +242,18 @@ fun TransactionFormSheet(
             // A transfer has no subcategory or description (its command carries neither).
             if (form.type != TransactionFormType.TRANSFER)
             {
+                SubcategoryPicker(
+                    palette = palette,
+                    subcategories = form.subcategoryChoices(subcategories),
+                    selected = form.subcategory,
+                    onSelect = { onFormChange(form.copy(subcategory = it)) },
+                    onCreate = onCreateSubcategory,
+                )
+                FieldError(
+                    palette,
+                    FormError.SUBCATEGORY_MISMATCH in errors,
+                    FormError.SUBCATEGORY_MISMATCH,
+                )
                 Text(
                     text = stringResource(
                         if (showDetails) R.string.transaction_form_less_details
@@ -248,18 +266,6 @@ fun TransactionFormSheet(
                 )
                 if (showDetails)
                 {
-                    SubcategoryPicker(
-                        palette = palette,
-                        subcategories = form.subcategoryChoices(subcategories),
-                        selected = form.subcategory,
-                        onSelect = { onFormChange(form.copy(subcategory = it)) },
-                        onCreate = onCreateSubcategory,
-                    )
-                    FieldError(
-                        palette,
-                        FormError.SUBCATEGORY_MISMATCH in errors,
-                        FormError.SUBCATEGORY_MISMATCH,
-                    )
                     FormTextField(
                         palette = palette,
                         value = form.description,
@@ -273,28 +279,65 @@ fun TransactionFormSheet(
                 }
             }
 
+            // Only for a new income or expense: it becomes a recurring rule starting on the date chosen above.
+            if (form.canRepeat)
+            {
+                RepeatSection(
+                    palette = palette,
+                    form = form,
+                    errors = errors,
+                    endDateFormatter = endDateFormatter,
+                    onFormChange = onFormChange,
+                    onPickEndDate = { showEndDatePicker = true },
+                )
+            }
+
             failure?.let {
                 ErrorText(
                     palette = palette,
                     text = stringResource(
                         when (it)
                         {
-                            SubmitFailure.ACCOUNT_NOT_FOUND -> R.string.transaction_form_failure_account_not_found
-                            SubmitFailure.ARCHIVED_ACCOUNT  -> R.string.transaction_form_failure_archived
-                            SubmitFailure.SAME_ACCOUNT      -> R.string.transaction_form_error_same_account
+                            SubmitFailure.ACCOUNT_NOT_FOUND       -> R.string.transaction_form_failure_account_not_found
+                            SubmitFailure.ARCHIVED_ACCOUNT        -> R.string.transaction_form_failure_archived
+                            SubmitFailure.SAME_ACCOUNT            -> R.string.transaction_form_error_same_account
                             SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
                         },
                     ),
                 )
             }
 
-            SubmitButton(palette, stringResource(R.string.transaction_form_submit), onSubmit)
+            SubmitButton(
+                palette,
+                stringResource(
+                    if (form.isRepeating) R.string.transaction_form_submit_repeat else R.string.transaction_form_submit,
+                ),
+                onSubmit,
+            )
             // Only for a transaction that exists: there is nothing to delete in a new one.
             if (form.isEditing)
             {
-                DestructiveButton(palette, stringResource(R.string.transaction_form_delete), onDelete)
+                DestructiveButton(
+                    palette,
+                    stringResource(R.string.transaction_form_delete),
+                    onDelete
+                )
             }
         }
+    }
+
+    val endDate = form.repeat?.endDate
+    if (showEndDatePicker && endDate != null)
+    {
+        SingleDatePickerDialog(
+            palette = palette,
+            initialDay = endDate,
+            onDismiss = { showEndDatePicker = false },
+            onConfirm = { day ->
+                showEndDatePicker = false
+                onFormChange(form.withEndDate(day))
+            },
+        )
     }
 
     if (showDatePicker)
@@ -311,8 +354,59 @@ fun TransactionFormSheet(
     }
 }
 
+/** The "Répéter" switch and, once on, the recurring form's own pace fields. */
 @Composable
-private fun TypeSelector(
+private fun RepeatSection(
+    palette: AccountsPalette,
+    form: TransactionFormState,
+    errors: Set<FormError>,
+    endDateFormatter: DateTimeFormatter,
+    onFormChange: (TransactionFormState) -> Unit,
+    onPickEndDate: () -> Unit,
+)
+{
+    val repeat = form.repeat
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                SectionLabel(palette, stringResource(R.string.transaction_form_repeat_label))
+                Text(
+                    text = stringResource(R.string.transaction_form_repeat_hint),
+                    color = palette.textMuted,
+                    fontSize = 13.sp,
+                )
+            }
+            Switch(
+                checked = repeat != null,
+                onCheckedChange = { onFormChange(form.withRepeat(it)) },
+                colors = SwitchDefaults.colors(checkedTrackColor = palette.iconToneGreen),
+            )
+        }
+        if (repeat != null)
+        {
+            FrequencyField(palette, repeat.frequency, onSelect = { onFormChange(form.withFrequency(it)) })
+            IntervalField(
+                palette = palette,
+                frequency = repeat.frequency,
+                text = repeat.intervalText,
+                onValueChange = { onFormChange(form.withInterval(it)) },
+            )
+            FieldError(palette, FormError.INTERVAL_INVALID in errors, FormError.INTERVAL_INVALID)
+            EndDateField(
+                palette = palette,
+                hasEndDate = repeat.endDate != null,
+                endDate = repeat.endDate ?: form.day(),
+                formatter = endDateFormatter,
+                onToggle = { onFormChange(form.withEndDateEnabled(it)) },
+                onClick = onPickEndDate,
+            )
+            FieldError(palette, FormError.END_BEFORE_START in errors, FormError.END_BEFORE_START)
+        }
+    }
+}
+
+@Composable
+internal fun TypeSelector(
     palette: AccountsPalette,
     types: List<TransactionFormType>,
     selected: TransactionFormType,
@@ -396,7 +490,7 @@ private fun SubcategoryPicker(
         SelectDropdown(
             palette = palette,
             options = listOf(SelectOption<Subcategory?>(null, noneLabel)) +
-                subcategories.map { SelectOption<Subcategory?>(it, it.name.value) },
+                    subcategories.map { SelectOption<Subcategory?>(it, it.name.value) },
             selected = selected,
             onSelect = onSelect,
             fillWidth = true,
@@ -415,12 +509,14 @@ private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormEr
         text = stringResource(
             when (error)
             {
-                FormError.AMOUNT_INVALID                -> R.string.transaction_form_error_amount
-                FormError.TITLE_REQUIRED                -> R.string.transaction_form_error_title
-                FormError.ACCOUNT_REQUIRED              -> R.string.transaction_form_error_account
-                FormError.DESTINATION_ACCOUNT_REQUIRED  -> R.string.transaction_form_error_destination
-                FormError.SAME_ACCOUNT                  -> R.string.transaction_form_error_same_account
-                FormError.SUBCATEGORY_MISMATCH          -> R.string.transaction_form_error_subcategory
+                FormError.AMOUNT_INVALID               -> R.string.transaction_form_error_amount
+                FormError.TITLE_REQUIRED               -> R.string.transaction_form_error_title
+                FormError.ACCOUNT_REQUIRED             -> R.string.transaction_form_error_account
+                FormError.DESTINATION_ACCOUNT_REQUIRED -> R.string.transaction_form_error_destination
+                FormError.SAME_ACCOUNT                 -> R.string.transaction_form_error_same_account
+                FormError.SUBCATEGORY_MISMATCH         -> R.string.transaction_form_error_subcategory
+                FormError.INTERVAL_INVALID             -> R.string.recurring_form_error_interval
+                FormError.END_BEFORE_START             -> R.string.recurring_form_error_end_before_start
             },
         ),
     )
@@ -470,9 +566,9 @@ private fun DateRow(
 }
 
 /**
- * Single-day picker, themed with the same scoped color scheme as the transactions range picker.
- * Future days aren't selectable by default: a transaction is recorded once it has happened. Reused
- * by the recurring-expense form with [allowFuture] set — a rule's start/end date is planned ahead.
+ * Single-day picker, themed with the same scoped color scheme as the transactions range picker. Any day
+ * can be picked, future ones included: a transaction can be planned ahead, and so can a rule's start/end
+ * date (the recurring-transaction form reuses this picker).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -481,17 +577,9 @@ internal fun SingleDatePickerDialog(
     initialDay: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
-    allowFuture: Boolean = false,
 )
 {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialDay.toEpochMillisUtc(),
-        selectableDates = object : SelectableDates
-        {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                allowFuture || utcTimeMillis <= System.currentTimeMillis()
-        },
-    )
+    val state = rememberDatePickerState(initialSelectedDateMillis = initialDay.toEpochMillisUtc())
     val formatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     MaterialTheme(colorScheme = datePickerColorScheme(palette)) {
         DatePickerDialog(
@@ -520,7 +608,8 @@ internal fun SingleDatePickerDialog(
                 // sized for a full-screen dialog and isn't French.
                 headline = {
                     Text(
-                        text = state.selectedDateMillis?.toLocalDateUtc()?.format(formatter).orEmpty(),
+                        text = state.selectedDateMillis?.toLocalDateUtc()?.format(formatter)
+                            .orEmpty(),
                         fontSize = 16.sp,
                         modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
                     )

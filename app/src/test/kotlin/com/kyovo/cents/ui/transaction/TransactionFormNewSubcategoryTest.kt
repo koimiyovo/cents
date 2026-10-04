@@ -16,6 +16,8 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.model.TransferResult
+import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
@@ -28,6 +30,7 @@ import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.YearMonth
 import java.util.Currency
 import java.util.UUID
 
@@ -75,6 +78,11 @@ private val unusedDelete = object : DeleteTransactionUseCase
     override suspend fun delete(id: TransactionId) = error("not used")
 }
 
+private val unusedCheck = object : CheckBudgetAlertsUseCase
+{
+    override suspend fun check(month: YearMonth): List<BudgetAlert> = error("not used")
+}
+
 /**
  * The dropdown of the form offers "+ Nouvelle sous-catégorie": a name and an optional emoji typed in
  * a small dialog, a subcategory of the kind the form records (never of the other), selected right
@@ -84,12 +92,16 @@ private val unusedDelete = object : DeleteTransactionUseCase
 class TransactionFormNewSubcategoryTest
 {
     private val create = RecordingCreateSubcategory()
+    private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         unusedRecord,
         unusedTransfer,
         unusedUpdate,
         unusedDelete,
         create,
+        unusedCheck,
+        createRecurring,
+        FakeGenerateRecurring(createRecurring),
         now = { MOMENT },
     )
 

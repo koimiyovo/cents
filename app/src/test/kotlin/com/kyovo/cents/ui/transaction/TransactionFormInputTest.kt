@@ -48,6 +48,15 @@ class TransactionFormDayTest
     }
 
     @Test
+    fun `choosing a day in the future keeps the current time of day`()
+    {
+        val form = aForm().withDay(today.plusDays(3), now, paris)
+
+        assertThat(form.date).isEqualTo(Instant.parse("2026-09-26T14:30:00Z"))
+        assertThat(form.day(paris)).isEqualTo(today.plusDays(3))
+    }
+
+    @Test
     fun `saving refreshes a form still dated today to the moment of saving`()
     {
         val openedAt = Instant.parse("2026-09-23T10:00:00Z")
@@ -56,6 +65,16 @@ class TransactionFormDayTest
         val stamped = aForm(date = openedAt).stampedAt(savedAt, paris)
 
         assertThat(stamped.date).isEqualTo(savedAt)
+    }
+
+    @Test
+    fun `saving leaves a day in the future picked on purpose alone`()
+    {
+        val picked = Instant.parse("2026-10-01T09:15:00Z")
+
+        val stamped = aForm(date = picked).stampedAt(now, paris)
+
+        assertThat(stamped.date).isEqualTo(picked)
     }
 
     @Test

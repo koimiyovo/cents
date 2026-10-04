@@ -1,25 +1,22 @@
 package com.kyovo.cents.ui.home
 
-import kotlinx.coroutines.flow.map
-import androidx.compose.runtime.produceState
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.res.Configuration
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -64,13 +61,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
@@ -84,10 +82,11 @@ import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.IconTone
 import com.kyovo.cents.ui.common.formatEuroCents
 import com.kyovo.cents.ui.common.formatSignedEuroCents
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 /** Bottom padding of the scrolling screens, so the last item can scroll clear of the floating "+" button. */
 internal val FAB_CLEARANCE = 88.dp
@@ -124,7 +123,9 @@ fun AccountsScreen(
     val displayedAccounts = remember(accounts, droppedOrder) {
         val order = droppedOrder
         if (order == null) accounts
-        else accounts.sortedBy { account -> order.indexOf(account.id).takeIf { it >= 0 } ?: Int.MAX_VALUE }
+        else accounts.sortedBy { account ->
+            order.indexOf(account.id).takeIf { it >= 0 } ?: Int.MAX_VALUE
+        }
     }
     val displayedIds = remember(displayedAccounts) { displayedAccounts.map { it.id } }
     // Whatever the saved list turns out to be (the new order, or unchanged if it was refused),
@@ -144,15 +145,20 @@ fun AccountsScreen(
     // The row whose "Modifier" button is showing (a left swipe leaves it open), by UUID string
     // for the same reason. One at a time: opening a row closes the previous one.
     var revealedId by rememberSaveable { mutableStateOf<String?>(null) }
-    val pendingArchive = pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
-    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val pendingArchive =
+        pendingArchiveId?.let { id -> accounts.firstOrNull { it.id.value.toString() == id } }
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
+        initialValue = emptyList()
+    )
     // The account whose deletion the user is being asked to confirm: from either list.
     var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingDelete = pendingDeleteId?.let { id ->
         (accounts + archivedAccounts).firstOrNull { it.id.value.toString() == id }
     }
     // Every account's balance, in cents: it follows the transactions as they change.
-    val balanceByAccountId by remember { getAccountBalance.observeAll().map { balances -> balances.mapValues { it.value.value } } }
+    val balanceByAccountId by remember {
+        getAccountBalance.observeAll().map { balances -> balances.mapValues { it.value.value } }
+    }
         .collectAsStateWithLifecycle(initialValue = emptyMap())
     // The consolidated figures cover the active accounts only: an archived account is closed, so
     // it counts neither in the total nor in the income/expense lines below.
@@ -161,7 +167,9 @@ fun AccountsScreen(
     }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
-    val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(
+        initialValue = emptyList()
+    )
     val allTransactions = remember(everyTransaction, accounts) {
         val activeIds = accounts.map { it.id }.toSet()
         everyTransaction.filter { it.accountId in activeIds }
@@ -186,7 +194,12 @@ fun AccountsScreen(
             }
             .background(palette.background)
             .verticalScroll(scrollState)
-            .padding(start = 16.dp, end = 16.dp, top = if (isCompact) 10.dp else 16.dp, bottom = FAB_CLEARANCE),
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = if (isCompact) 10.dp else 16.dp,
+                bottom = FAB_CLEARANCE
+            ),
         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 20.dp),
     ) {
         HomeTopBar(palette, stringResource(R.string.accounts_title), onOpenSettings)
@@ -224,7 +237,9 @@ fun AccountsScreen(
                             palette = palette,
                             archived = false,
                             revealed = revealedId == idText,
-                            onRevealedChange = { open -> revealedId = revealedIdAfter(revealedId, idText, open) },
+                            onRevealedChange = { open ->
+                                revealedId = revealedIdAfter(revealedId, idText, open)
+                            },
                             onOpen = {
                                 // The finger lifting at the end of a drag must not open the account.
                                 if (!reorder.clicksSuppressed)
@@ -293,7 +308,9 @@ fun AccountsScreen(
     {
         // Counted when the question is asked (and again if the data changes underneath): it is what
         // the dialog tells the user they are about to erase.
-        val transactionCount by remember(pendingDelete.id) { listTransactions.observe(accountId = pendingDelete.id).map { it.size } }
+        val transactionCount by remember(pendingDelete.id) {
+            listTransactions.observe(accountId = pendingDelete.id).map { it.size }
+        }
             .collectAsStateWithLifecycle(initialValue = null)
         // Nothing is asked until the count is known: a dialog saying "no transactions" for a frame would
         // offer a plain delete that the account's history does not deserve.
@@ -305,7 +322,10 @@ fun AccountsScreen(
                 alreadyArchived = pendingDelete.archivedAt != null,
                 onDelete = {
                     pendingDeleteId = null
-                    onDeleteAccount(pendingDelete.id, deleteChoices(count, alreadyArchived = false).deletesTransactions)
+                    onDeleteAccount(
+                        pendingDelete.id,
+                        deleteChoices(count, alreadyArchived = false).deletesTransactions
+                    )
                 },
                 onArchive = {
                     pendingDeleteId = null
@@ -323,7 +343,11 @@ fun AccountsScreen(
  * actions leaves it out.
  */
 @Composable
-internal fun HomeTopBar(palette: AccountsPalette, title: String, onSettingsClick: (() -> Unit)? = null)
+internal fun HomeTopBar(
+    palette: AccountsPalette,
+    title: String,
+    onSettingsClick: (() -> Unit)? = null
+)
 {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
@@ -386,11 +410,6 @@ private fun GreetingRow(palette: AccountsPalette)
                 fontSize = 13.sp,
             )
         }
-        Pill(
-            text = stringResource(R.string.accounts_vault_badge),
-            background = palette.badgeBackground,
-            content = palette.badgeContent,
-        )
     }
 }
 
@@ -814,8 +833,18 @@ private fun SwipeableRow(
                 modifier = Modifier.matchParentSize(),
                 horizontalArrangement = Arrangement.spacedBy(ACTION_BUTTON_GAP, Alignment.End),
             ) {
-                SwipeActionButton(palette, Icons.Filled.Edit, editLabel, palette.textPrimary) { currentOnEdit() }
-                SwipeActionButton(palette, Icons.Filled.Delete, deleteLabel, palette.error) { currentOnDelete() }
+                SwipeActionButton(
+                    palette,
+                    Icons.Filled.Edit,
+                    editLabel,
+                    palette.textPrimary
+                ) { currentOnEdit() }
+                SwipeActionButton(
+                    palette,
+                    Icons.Filled.Delete,
+                    deleteLabel,
+                    palette.error
+                ) { currentOnDelete() }
             }
         }
         Box(
@@ -829,24 +858,26 @@ private fun SwipeableRow(
                     onDragStopped = { velocity ->
                         when
                         {
-                            offsetPx > rowWidthPx * SWIPE_RIGHT_THRESHOLD ->
+                            offsetPx > rowWidthPx * SWIPE_RIGHT_THRESHOLD                              ->
                             {
                                 currentOnSwipeRight()
                                 currentOnRevealedChange(false)
                                 settleTo(0f)
                             }
                             // A quick flick counts as much as a long drag.
-                            velocity > FLING_VELOCITY ->
+                            velocity > FLING_VELOCITY                                                  ->
                             {
                                 currentOnRevealedChange(false)
                                 settleTo(0f)
                             }
+
                             offsetPx < -revealPx / 2f || (velocity < -FLING_VELOCITY && offsetPx < 0f) ->
                             {
                                 currentOnRevealedChange(true)
                                 settleTo(-revealPx)
                             }
-                            else ->
+
+                            else                                                                       ->
                             {
                                 currentOnRevealedChange(false)
                                 settleTo(0f)
@@ -883,7 +914,12 @@ private fun SwipeActionButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -949,7 +985,15 @@ private fun ArchivedAccountsSection(
                         palette = palette,
                         archived = true,
                         revealed = revealedId == idText,
-                        onRevealedChange = { open -> onRevealedIdChange(revealedIdAfter(revealedId, idText, open)) },
+                        onRevealedChange = { open ->
+                            onRevealedIdChange(
+                                revealedIdAfter(
+                                    revealedId,
+                                    idText,
+                                    open
+                                )
+                            )
+                        },
                         onOpen = { onRevealedIdChange(null); onAccountClick(account.id) },
                         onSwipeRight = { onUnarchiveAccount(account.id) },
                         onEdit = { onRevealedIdChange(null); onEditAccount(account) },

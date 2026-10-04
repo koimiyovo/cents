@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,7 +60,7 @@ import kotlin.math.roundToInt
  * budget), [BudgetTab.BUDGETS] (a summary of the whole month, then a card per budget that is set — the most
  * urgent first — and, apart, the subcategories that have none), and [BudgetTab.TRENDS] (a bar per recent
  * month, so a drift shows up before it becomes a habit). The account filter (same "no filter" convention as
- * Historique's own) narrows every one of them to a single account's spending. It only looks: the limits and
+ * Mouvements's own) narrows every one of them to a single account's spending. It only looks: the limits and
  * their thresholds are set from the settings.
  */
 @Composable
@@ -189,7 +190,7 @@ internal fun MonthSelectorRow(
     }
 }
 
-/** Narrows every tab to one account's spending, same "no filter" convention as Historique's own filter. */
+/** Narrows every tab to one account's spending, same "no filter" convention as Mouvements's own filter. */
 @Composable
 private fun BudgetAccountFilter(
     palette: AccountsPalette,
@@ -455,7 +456,11 @@ private fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 46.dp),
+            // The hole of the ring is about 151 dp wide (the 180 dp canvas minus the two 16 % strokes): the
+            // text is held to a width that leaves a margin all round, so it wraps ("1 160,00 €" then
+            // "dépensés") instead of running up to the arcs. The Box is as wide as the screen, so without
+            // this the text was only limited by the screen.
+            modifier = Modifier.widthIn(max = 104.dp),
         )
     }
 }
