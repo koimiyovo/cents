@@ -85,6 +85,11 @@ data class TransactionFormState(
      * that does not repeat can have one (see [canHaveProject]); the others forget it.
      */
     val project: Project? = null,
+    /**
+     * Set when the form was opened from a project's page: the transaction is that project's, so the project
+     * cannot be changed, and what makes no sense there (repeating, a transfer) is not offered.
+     */
+    val projectLocked: Boolean = false,
     /** Set when "Répéter" is on: saving then creates a recurring rule instead of recording one transaction. */
     val repeat: RepeatSettings? = null,
 )
@@ -95,7 +100,7 @@ data class TransactionFormState(
     val hasDetails: Boolean get() = description.isNotBlank()
 
     /** Only a new income or expense can repeat: an existing transaction is not turned into a rule, a transfer has none. */
-    val canRepeat: Boolean get() = !isEditing && type != TransactionFormType.TRANSFER
+    val canRepeat: Boolean get() = !isEditing && type != TransactionFormType.TRANSFER && !projectLocked
 
     val isRepeating: Boolean get() = repeat != null && canRepeat
 
@@ -131,7 +136,8 @@ data class TransactionFormState(
         fun initial(
             accounts: List<Account>,
             preselectedAccountId: AccountId?,
-            now: Instant
+            now: Instant,
+            project: Project? = null
         ): TransactionFormState
         {
             val preselected = preselectedAccountId?.takeIf { id ->
@@ -141,6 +147,8 @@ data class TransactionFormState(
                 type = TransactionFormType.EXPENSE,
                 accountId = preselected,
                 date = now,
+                project = project,
+                projectLocked = project != null,
             )
         }
     }
@@ -276,7 +284,7 @@ data class TransactionFormState(
     /** The project the transaction is filed under; null takes it out of any. Ignored where [canHaveProject] is false. */
     fun withProject(project: Project?): TransactionFormState
     {
-        if (!canHaveProject) return this
+        if (!canHaveProject || projectLocked) return this
         return copy(project = project)
     }
 
@@ -321,7 +329,7 @@ data class TransactionFormState(
     fun withType(type: TransactionFormType): TransactionFormState
     {
         // An income can become an expense and back, but not a transfer (see [canEditTransaction]).
-        if (isEditing && type == TransactionFormType.TRANSFER) return this
+        if ((isEditing || projectLocked) && type == TransactionFormType.TRANSFER) return this
         val category = type.recordableCategory()
         val keptSubcategory = subcategory?.takeIf { category != null && it.kind == category }
         val keptDestination =

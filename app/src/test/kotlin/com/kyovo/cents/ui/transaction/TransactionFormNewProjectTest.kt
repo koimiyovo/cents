@@ -107,6 +107,7 @@ class TransactionFormNewProjectTest
         createRecurring,
         FakeGenerateRecurring(createRecurring),
         createProject,
+        NoProjectProgress,
         now = { MOMENT },
     )
 

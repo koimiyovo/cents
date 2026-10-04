@@ -153,7 +153,8 @@ fun TransactionFormSheet(
             }
             TypeSelector(
                 palette = palette,
-                types = if (form.isEditing) listOf(
+                // An edit, or a form opened from a project's page, is an income or an expense: no transfer there.
+                types = if (form.isEditing || form.projectLocked) listOf(
                     TransactionFormType.EXPENSE,
                     TransactionFormType.INCOME
                 )
@@ -267,6 +268,8 @@ fun TransactionFormSheet(
                         selected = form.project,
                         onSelect = { onFormChange(form.withProject(it)) },
                         onCreate = onCreateProject,
+                        // Opened from a project's page, the project is fixed: shown, greyed.
+                        locked = form.projectLocked,
                     )
                 }
                 Text(
@@ -524,6 +527,7 @@ private fun ProjectPicker(
     selected: Project?,
     onSelect: (Project?) -> Unit,
     onCreate: () -> Unit,
+    locked: Boolean,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -538,6 +542,7 @@ private fun ProjectPicker(
             fillWidth = true,
             footerLabel = stringResource(R.string.transaction_form_project_create),
             onFooterClick = onCreate,
+            enabled = !locked,
         )
     }
 }

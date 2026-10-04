@@ -119,6 +119,7 @@ class TransactionFormBudgetAlertTest
         createRecurring,
         FakeGenerateRecurring(createRecurring),
         FakeCreateProject(),
+        NoProjectProgress,
         now = { NOW },
         zone = PARIS,
     )

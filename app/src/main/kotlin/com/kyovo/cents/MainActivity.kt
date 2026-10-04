@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                     createRecurringTransaction = appContainer.createRecurringTransaction,
                     generateRecurringTransactions = appContainer.generateRecurringTransactions,
                     createProject = appContainer.createProject,
+                    getProjectProgress = appContainer.getProjectProgress,
                 )
             }
         }

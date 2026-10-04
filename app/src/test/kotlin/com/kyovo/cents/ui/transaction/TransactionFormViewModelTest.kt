@@ -167,6 +167,7 @@ class TransactionFormViewModelTest
         createRecurring,
         FakeGenerateRecurring(createRecurring),
         FakeCreateProject(),
+        NoProjectProgress,
         now = { NOW },
     )
 

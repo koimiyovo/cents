@@ -53,6 +53,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Project
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
@@ -84,6 +86,7 @@ fun TransactionsScreen(
     listArchivedAccounts: ListArchivedAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
+    projects: List<Project>,
     onTransactionClick: (Transaction) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -101,6 +104,7 @@ fun TransactionsScreen(
     // Already ordered by name by the use case.
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
+    val projectsById = remember(projects) { projects.associateBy { it.id } }
 
     // Filter selection isn't saved across configuration changes: AccountId/SubcategoryId
     // aren't trivially Saveable, and losing a filter on rotation is a minor, acceptable trade-off.
@@ -203,7 +207,7 @@ fun TransactionsScreen(
         {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick)
+                    DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick, projectsById)
                 }
             }
         }
@@ -743,6 +747,8 @@ internal fun DayGroup(
     accountsById: Map<AccountId, Account>,
     subcategoriesById: Map<SubcategoryId, Subcategory>,
     onTransactionClick: ((Transaction) -> Unit)? = null,
+    // Left empty on a project's own page, where every row is in that project and repeating it would be noise.
+    projectsById: Map<ProjectId, Project> = emptyMap(),
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -763,7 +769,7 @@ internal fun DayGroup(
                 fontSize = 13.sp
             )
         }
-        TransactionListCard(palette, transactions, accountsById, subcategoriesById, onTransactionClick)
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, projectsById, onTransactionClick)
     }
 }
 
@@ -777,6 +783,7 @@ private fun TransactionListCard(
     transactions: List<Transaction>,
     accountsById: Map<AccountId, Account>,
     subcategoriesById: Map<SubcategoryId, Subcategory>,
+    projectsById: Map<ProjectId, Project>,
     onTransactionClick: ((Transaction) -> Unit)?,
 )
 {
@@ -792,6 +799,7 @@ private fun TransactionListCard(
                 transaction = transaction,
                 account = accountsById[transaction.accountId],
                 subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
+                project = transaction.projectId?.let(projectsById::get),
                 // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
                 // does, but only for its amount (it opens its own, one-field form).
                 onClick = onTransactionClick
@@ -817,6 +825,7 @@ private fun TransactionRow(
     transaction: Transaction,
     account: Account?,
     subcategory: Subcategory?,
+    project: Project?,
     onClick: (() -> Unit)?,
 )
 {
@@ -858,10 +867,7 @@ private fun TransactionRow(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
             )
-            val subtitle = listOfNotNull(
-                subcategory?.name?.value,
-                account?.name?.value,
-            ).joinToString(" • ")
+            val subtitle = transactionSubtitle(subcategory, account, project)
             if (subtitle.isNotEmpty())
             {
                 Text(text = subtitle, color = palette.textMuted, fontSize = 12.sp)

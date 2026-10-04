@@ -86,6 +86,7 @@ import com.kyovo.cents.ui.project.ProjectDetailsScreen
 import com.kyovo.cents.ui.project.ProjectFormSheet
 import com.kyovo.cents.ui.project.ProjectsScreen
 import com.kyovo.cents.ui.project.ProjectsViewModel
+import com.kyovo.cents.ui.project.projectAlertNotice
 import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
 import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
@@ -312,6 +313,20 @@ fun HomeScreen(
         }
     }
 
+    // A project that the transaction just saved has brought close to its target, or over it: same snackbar.
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.projectAlerts.collect { alert ->
+            val notice = projectAlertNotice(alert)
+            val bodyRes = when (notice.level)
+            {
+                BudgetAlertLevel.CLOSE_TO_LIMIT -> R.string.project_alert_close_body
+                BudgetAlertLevel.OVER           -> R.string.project_alert_over_body
+            }
+            snackbarHostState.showSnackbar(resources.getString(bodyRes, notice.emoji, notice.projectName))
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -347,6 +362,7 @@ fun HomeScreen(
                     getAccountBalance = getAccountBalance,
                     listTransactions = listTransactions,
                     listSubcategories = listSubcategories,
+                    projects = projects,
                     onBack = { openedAccountUuid = null },
                     // Back to the list afterwards: that is where the account has just moved
                     // (into "Comptes archivés"), and an archived account gets no "+" button.
@@ -389,18 +405,33 @@ fun HomeScreen(
         {
             if (openedProjectId != null)
             {
-                ProjectDetailsScreen(
-                    projectId = openedProjectId,
-                    listProjects = listProjects,
-                    getProjectProgress = getProjectProgress,
-                    listTransactions = listTransactions,
-                    accounts = accounts + archivedAccounts,
-                    subcategories = subcategories,
-                    onBack = { openedProjectUuid = null },
-                    onEdit = projectsViewModel::openForEdit,
-                    onTransactionClick = openTransaction,
-                    modifier = Modifier.weight(1f),
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    ProjectDetailsScreen(
+                        projectId = openedProjectId,
+                        listProjects = listProjects,
+                        getProjectProgress = getProjectProgress,
+                        listTransactions = listTransactions,
+                        accounts = accounts + archivedAccounts,
+                        subcategories = subcategories,
+                        onBack = { openedProjectUuid = null },
+                        onEdit = projectsViewModel::openForEdit,
+                        onTransactionClick = openTransaction,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // The form opens already filed under this project.
+                    AddTransactionFab(
+                        onClick = {
+                            formViewModel.open(
+                                accounts,
+                                preselectedAccountId = null,
+                                project = projects.find { it.id == openedProjectId },
+                            )
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                    )
+                }
             } else
             {
                 ProjectsScreen(
@@ -480,6 +511,7 @@ fun HomeScreen(
                                 listArchivedAccounts,
                                 listTransactions,
                                 listSubcategories,
+                                projects = projects,
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )

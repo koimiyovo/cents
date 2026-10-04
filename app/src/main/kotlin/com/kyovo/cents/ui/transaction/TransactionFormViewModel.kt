@@ -18,6 +18,7 @@ import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -31,19 +32,23 @@ import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
+import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.ui.project.NewProjectDraft
+import com.kyovo.cents.ui.project.ProjectAlert
 import com.kyovo.cents.ui.project.ProjectFormError
 import com.kyovo.cents.ui.project.ProjectFormState
 import com.kyovo.cents.ui.project.ProjectSubmission
+import com.kyovo.cents.ui.project.newlyReachedLevel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -129,6 +134,7 @@ class TransactionFormViewModel(
     private val createRecurringTransaction: CreateRecurringTransactionUseCase,
     private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
     private val createProject: CreateProjectUseCase,
+    private val getProjectProgress: GetProjectProgressUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
@@ -147,6 +153,16 @@ class TransactionFormViewModel(
      */
     val budgetAlerts: Flow<BudgetAlert> = _budgetAlerts.receiveAsFlow()
 
+    // Same reasoning for a project brought close to its target, or over it, by the transaction just saved.
+    private val _projectAlerts = Channel<ProjectAlert>(Channel.UNLIMITED)
+
+    /**
+     * The project alerts a transaction saved from this form has just caused, for the screen to tell the user
+     * about at once. Worked out from where the project stood before the save and after it - nothing is
+     * remembered, and no background job is involved, since a transaction only reaches a project from here.
+     */
+    val projectAlerts: Flow<ProjectAlert> = _projectAlerts.receiveAsFlow()
+
     /** The transaction being edited, as it was when the edit began (what a deletion would erase). */
     private var editedTransaction: Transaction? = null
 
@@ -156,7 +172,7 @@ class TransactionFormViewModel(
     private var accountRequest: AccountRequest? = null
 
     /** Opens a fresh form. Called when the user asks for a new transaction, never on recomposition. */
-    fun open(accounts: List<Account>, preselectedAccountId: AccountId?)
+    fun open(accounts: List<Account>, preselectedAccountId: AccountId?, project: Project? = null)
     {
         editedTransaction = null
         accountRequest = null
@@ -167,6 +183,7 @@ class TransactionFormViewModel(
                 accounts = accounts,
                 preselectedAccountId = preselectedAccountId ?: onlyAccountId,
                 now = now(),
+                project = project,
             ),
         )
     }
@@ -317,7 +334,9 @@ class TransactionFormViewModel(
     /** Opens the "new project" dialog. Nothing to do for a transfer or a repeating transaction, which have no project. */
     fun askToCreateProject()
     {
-        if (_uiState.value.form?.canHaveProject != true) return
+        val form = _uiState.value.form ?: return
+        // Nothing to create where the project is fixed, or where there is none.
+        if (!form.canHaveProject || form.projectLocked) return
         _uiState.update { it.copy(newProject = NewProjectDraft()) }
     }
 
@@ -446,6 +465,9 @@ class TransactionFormViewModel(
     {
         val form = _uiState.value.form ?: return
         val submission = form.stampedAt(now(), zone).submit(zone)
+        // The project this save may bring up a band, and where it stood before: told about only if the save goes through.
+        val watched = form.project.takeIf { submission is FormSubmission.Record || submission is FormSubmission.Update }
+        val levelBefore = watched?.let { alertLevelOf(it) }
         try
         {
             when (submission)
@@ -514,7 +536,17 @@ class TransactionFormViewModel(
             else                     -> null
         }
         if (spentOn != null) reportBudgetAlerts(spentOn)
+
+        // A project is brought up a band by an expense or a smaller refund alike: the levels decide, not the kind.
+        if (watched != null)
+        {
+            newlyReachedLevel(levelBefore, alertLevelOf(watched))?.let { _projectAlerts.send(ProjectAlert(watched, it)) }
+        }
     }
+
+    /** Where the project stands against its target right now; null without a target, below 80 %, or unknown. */
+    private suspend fun alertLevelOf(project: Project): BudgetAlertLevel? =
+        getProjectProgress.observe(project.id).first()?.alertLevel()
 
     /** The screen has shown the rationale (or launched the system request): the ask is done. */
     fun dismissNotificationPermissionAsk()

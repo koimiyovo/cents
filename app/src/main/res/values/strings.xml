@@ -365,4 +365,6 @@
         <item quantity="other">« %1$s » sera supprimé. Les %2$d transactions qui y sont rangées sont conservées, sans projet.</item>
     </plurals>
     <string name="project_delete_confirm">Supprimer</string>
+    <string name="project_alert_close_body">%1$s %2$s approche de son objectif.</string>
+    <string name="project_alert_over_body">%1$s %2$s dépasse son objectif.</string>
 </resources>
