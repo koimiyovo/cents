@@ -1,8 +1,8 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 
@@ -24,6 +24,6 @@ fun SubcategoryEntity.toDomain(): Subcategory
         id = SubcategoryId(id),
         kind = kind,
         name = SubcategoryName(name),
-        emoji = emoji?.let { SubcategoryEmoji(it) },
+        emoji = emoji?.let { Emoji(it) },
     )
 }

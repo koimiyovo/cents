@@ -1,8 +1,8 @@
 package com.kyovo.cents.ui.subcategory
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import org.assertj.core.api.Assertions.assertThat
@@ -10,7 +10,11 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 private fun aRow(kind: RecordableTransactionCategory, emoji: String?) = SubcategoryRow(
-    Subcategory(SubcategoryId(UUID.randomUUID()), kind, SubcategoryName("Nom"), emoji?.let { SubcategoryEmoji(it) }),
+    Subcategory(
+        SubcategoryId(UUID.randomUUID()),
+        kind,
+        SubcategoryName("Nom"),
+        emoji?.let { Emoji(it) }),
     transactionCount = 0,
 )
 

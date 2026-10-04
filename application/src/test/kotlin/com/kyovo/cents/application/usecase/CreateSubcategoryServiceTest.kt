@@ -1,18 +1,17 @@
 package com.kyovo.cents.application.usecase
 
-import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
-import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedSubcategoryIdGenerator
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.aCreateSubcategoryCommand
 import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryName
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -27,25 +26,27 @@ class CreateSubcategoryServiceTest
     private val generatedId = aSubcategoryId()
     private val existingId = aSubcategoryId("11111111-1111-1111-1111-111111111111")
     private val repository = InMemorySubcategoryRepository()
-    private val service = CreateSubcategoryService(repository, FixedSubcategoryIdGenerator(generatedId))
+    private val service =
+        CreateSubcategoryService(repository, FixedSubcategoryIdGenerator(generatedId))
 
     @Test
-    fun `creates a subcategory with the given kind and name and a generated id, and saves it`() = runTest()
-    {
-        // WHEN
-        val result = service.create(aCreateSubcategoryCommand())
+    fun `creates a subcategory with the given kind and name and a generated id, and saves it`() =
+        runTest()
+        {
+            // WHEN
+            val result = service.create(aCreateSubcategoryCommand())
 
-        // THEN
-        val expected = aSubcategory(id = generatedId)
-        assertThat(result).isEqualTo(expected)
-        assertThat(repository.saved).containsExactly(expected)
-    }
+            // THEN
+            val expected = aSubcategory(id = generatedId)
+            assertThat(result).isEqualTo(expected)
+            assertThat(repository.saved).containsExactly(expected)
+        }
 
     @Test
     fun `keeps the emoji when one is given, and has none otherwise`() = runTest()
     {
         // GIVEN
-        val cart = SubcategoryEmoji("🛒")
+        val cart = Emoji("🛒")
 
         // WHEN
         val withEmoji = service.create(aCreateSubcategoryCommand(emoji = cart))
@@ -58,13 +59,23 @@ class CreateSubcategoryServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = ["Alimentation", "alimentation", "ALIMENTATION", "  Alimentation  "])
-    fun `throws when a subcategory of the same kind already has that name, whatever the case or spaces`(name: String) = runTest()
+    fun `throws when a subcategory of the same kind already has that name, whatever the case or spaces`(
+        name: String
+    ) = runTest()
     {
         // GIVEN
         repository.save(aSubcategory(id = existingId))
 
         // WHEN / THEN
-        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
+        assertThatThrownBySuspending {
+            service.create(
+                aCreateSubcategoryCommand(
+                    name = SubcategoryName(
+                        name
+                    )
+                )
+            )
+        }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 
@@ -92,7 +103,8 @@ class CreateSubcategoryServiceTest
         repository.save(aSubcategory(id = existingId, kind = RecordableTransactionCategory.INCOME))
 
         // WHEN
-        val created = service.create(aCreateSubcategoryCommand(kind = RecordableTransactionCategory.EXPENSE))
+        val created =
+            service.create(aCreateSubcategoryCommand(kind = RecordableTransactionCategory.EXPENSE))
 
         // THEN
         assertThat(repository.saved).hasSize(2)
@@ -102,15 +114,24 @@ class CreateSubcategoryServiceTest
     // Uniqueness ignores accents as well as case: "Education" and "Éducation" are the same name.
     @ParameterizedTest
     @ValueSource(strings = ["Education", "éducation", "EDUCATION", "E\u0301ducation"])
-    fun `throws when a subcategory of the same kind has the same name with other accents`(name: String) = runTest()
-    {
-        // GIVEN
-        repository.save(aSubcategory(id = existingId, name = SubcategoryName("Éducation")))
+    fun `throws when a subcategory of the same kind has the same name with other accents`(name: String) =
+        runTest()
+        {
+            // GIVEN
+            repository.save(aSubcategory(id = existingId, name = SubcategoryName("Éducation")))
 
-        // WHEN / THEN
-        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName(name))) }
-            .isInstanceOf(DuplicateSubcategoryNameException::class.java)
-    }
+            // WHEN / THEN
+            assertThatThrownBySuspending {
+                service.create(
+                    aCreateSubcategoryCommand(
+                        name = SubcategoryName(
+                            name
+                        )
+                    )
+                )
+            }
+                .isInstanceOf(DuplicateSubcategoryNameException::class.java)
+        }
 
     @Test
     fun `throws when the existing name has no accent and the new one has`() = runTest()
@@ -119,7 +140,15 @@ class CreateSubcategoryServiceTest
         repository.save(aSubcategory(id = existingId, name = SubcategoryName("Education")))
 
         // WHEN / THEN
-        assertThatThrownBySuspending { service.create(aCreateSubcategoryCommand(name = SubcategoryName("Éducation"))) }
+        assertThatThrownBySuspending {
+            service.create(
+                aCreateSubcategoryCommand(
+                    name = SubcategoryName(
+                        "Éducation"
+                    )
+                )
+            )
+        }
             .isInstanceOf(DuplicateSubcategoryNameException::class.java)
     }
 }

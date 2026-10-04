@@ -15,7 +15,7 @@ import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -59,7 +59,7 @@ class CentsMigrationsTest
         SubcategoryId(groceriesId),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName("Alimentation"),
-        SubcategoryEmoji("🛒"),
+        Emoji("🛒"),
     )
     private val september = YearMonth.of(2026, 9)
 

@@ -1,6 +1,5 @@
 package com.kyovo.cents.ui.subcategory
 
-import com.kyovo.cents.ui.common.NameAndEmojiField
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,8 +26,9 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryName
+import com.kyovo.cents.ui.common.EMOJIS
 import com.kyovo.cents.ui.common.ErrorText
-import com.kyovo.cents.ui.common.SUBCATEGORY_EMOJIS
+import com.kyovo.cents.ui.common.NameAndEmojiField
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.DestructiveButton
@@ -119,7 +119,7 @@ fun SubcategoryFormSheet(
                 placeholder = stringResource(R.string.new_subcategory_name_placeholder),
                 emoji = form.emoji,
                 onEmojiChange = { onFormChange(form.withEmoji(it)) },
-                emojis = SUBCATEGORY_EMOJIS,
+                emojis = EMOJIS,
                 emojiDescription = stringResource(R.string.new_subcategory_emoji_description),
                 focusRequester = nameFocus,
             )
@@ -128,13 +128,16 @@ fun SubcategoryFormSheet(
                     palette = palette,
                     text = when (error)
                     {
-                        SubcategoryFormError.NAME_REQUIRED     -> stringResource(R.string.new_subcategory_error_name_required)
-                        SubcategoryFormError.NAME_TOO_LONG     ->
-                            stringResource(R.string.subcategory_form_error_name_too_long, SubcategoryName.MAX_LENGTH)
+                        SubcategoryFormError.NAME_REQUIRED -> stringResource(R.string.new_subcategory_error_name_required)
+                        SubcategoryFormError.NAME_TOO_LONG ->
+                            stringResource(
+                                R.string.subcategory_form_error_name_too_long,
+                                SubcategoryName.MAX_LENGTH
+                            )
 
-                        SubcategoryFormError.EMOJI_INVALID     -> stringResource(R.string.new_subcategory_error_emoji_invalid)
-                        SubcategoryFormError.NAME_TAKEN        -> stringResource(R.string.new_subcategory_error_name_taken)
-                        SubcategoryFormError.SUBCATEGORY_GONE  -> stringResource(R.string.subcategory_form_error_gone)
+                        SubcategoryFormError.EMOJI_INVALID -> stringResource(R.string.new_subcategory_error_emoji_invalid)
+                        SubcategoryFormError.NAME_TAKEN -> stringResource(R.string.new_subcategory_error_name_taken)
+                        SubcategoryFormError.SUBCATEGORY_GONE -> stringResource(R.string.subcategory_form_error_gone)
                     },
                 )
             }
@@ -146,7 +149,11 @@ fun SubcategoryFormSheet(
             // Only for a subcategory that exists: there is nothing to delete in a new one.
             if (form.isEditing)
             {
-                DestructiveButton(palette, stringResource(R.string.subcategory_form_delete), onDelete)
+                DestructiveButton(
+                    palette,
+                    stringResource(R.string.subcategory_form_delete),
+                    onDelete
+                )
             }
         }
     }

@@ -1,9 +1,9 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
@@ -23,7 +23,7 @@ class SpendingBreakdownTest
         SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-%012d".format(id))),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName(name),
-        emoji?.let { SubcategoryEmoji(it) },
+        emoji?.let { Emoji(it) },
     )
 
     private val groceries = aSubcategory(1, "Alimentation", "🛒")
@@ -91,7 +91,11 @@ class SpendingBreakdownTest
         // THEN
         assertThat(breakdown.slices).containsExactly(
             SpendingSlice(SpendingSliceLabel.Named("Alimentation", "🛒"), Money(1_000), 2f / 3),
-            SpendingSlice(SpendingSliceLabel.Named("Transport", defaultSubcategoryEmojiFor(fuel)), Money(500), 1f / 3),
+            SpendingSlice(
+                SpendingSliceLabel.Named("Transport", defaultSubcategoryEmojiFor(fuel)),
+                Money(500),
+                1f / 3
+            ),
         )
     }
 
@@ -115,7 +119,8 @@ class SpendingBreakdownTest
         // GIVEN exactly six spending subcategories
         val subcategories = (1..6).map { aSubcategory(it, "Sub $it") }
         val spent: Map<SubcategoryId?, Money> =
-            subcategories.mapIndexed { index, subcategory -> subcategory.id to Money((600 - index * 100).toLong()) }.toMap()
+            subcategories.mapIndexed { index, subcategory -> subcategory.id to Money((600 - index * 100).toLong()) }
+                .toMap()
 
         // WHEN
         val breakdown = spendingBreakdown(subcategories, spent)
@@ -131,7 +136,8 @@ class SpendingBreakdownTest
         // GIVEN eight subcategories, spending strictly decreasing so the ranking is unambiguous
         val subcategories = (1..8).map { aSubcategory(it, "Sub $it") }
         val spent: Map<SubcategoryId?, Money> =
-            subcategories.mapIndexed { index, subcategory -> subcategory.id to Money((800 - index * 100).toLong()) }.toMap()
+            subcategories.mapIndexed { index, subcategory -> subcategory.id to Money((800 - index * 100).toLong()) }
+                .toMap()
 
         // WHEN
         val breakdown = spendingBreakdown(subcategories, spent)
@@ -156,5 +162,6 @@ class SpendingBreakdownTest
         assertThat(breakdown.slices).isEmpty()
     }
 
-    private fun defaultSubcategoryEmojiFor(subcategory: Subcategory) = defaultSubcategoryEmoji(subcategory.kind)
+    private fun defaultSubcategoryEmojiFor(subcategory: Subcategory) =
+        defaultSubcategoryEmoji(subcategory.kind)
 }

@@ -1,5 +1,6 @@
 package com.kyovo.cents.domain.model
 
+import com.kyovo.cents.domain.model.DefaultSubcategories.idOf
 import java.util.UUID
 
 /**
@@ -19,10 +20,20 @@ object DefaultSubcategories
     }
 
     private fun expense(key: String, name: String, emoji: String) =
-        Subcategory(idOf("expense:$key"), RecordableTransactionCategory.EXPENSE, SubcategoryName(name), SubcategoryEmoji(emoji))
+        Subcategory(
+            idOf("expense:$key"),
+            RecordableTransactionCategory.EXPENSE,
+            SubcategoryName(name),
+            Emoji(emoji)
+        )
 
     private fun income(key: String, name: String, emoji: String) =
-        Subcategory(idOf("income:$key"), RecordableTransactionCategory.INCOME, SubcategoryName(name), SubcategoryEmoji(emoji))
+        Subcategory(
+            idOf("income:$key"),
+            RecordableTransactionCategory.INCOME,
+            SubcategoryName(name),
+            Emoji(emoji)
+        )
 
     // The emojis are written as escapes so that the source does not depend on a file encoding.
     val ALL: List<Subcategory> = listOf(

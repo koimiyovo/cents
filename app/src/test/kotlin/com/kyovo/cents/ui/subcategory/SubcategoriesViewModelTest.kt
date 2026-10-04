@@ -1,12 +1,11 @@
 package com.kyovo.cents.ui.subcategory
 
-import org.junit.jupiter.api.extension.ExtendWith
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
@@ -16,6 +15,7 @@ import com.kyovo.cents.domain.port.input.UpdateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.util.UUID
 
 private const val CART = "🛒"
@@ -32,7 +32,12 @@ private class RecordingCreate : CreateSubcategoryUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return Subcategory(SubcategoryId(UUID.randomUUID()), command.kind, command.name, command.emoji)
+        return Subcategory(
+            SubcategoryId(UUID.randomUUID()),
+            command.kind,
+            command.name,
+            command.emoji
+        )
     }
 }
 
@@ -70,7 +75,7 @@ private fun aRow(
             SubcategoryId(UUID.randomUUID()),
             kind,
             SubcategoryName(name),
-            SubcategoryEmoji(CART)
+            Emoji(CART)
         ),
         count,
     )
@@ -157,7 +162,7 @@ class SubcategoriesViewModelTest
 
         // THEN
         assertThat(create.commands).containsExactly(
-            CreateSubcategoryCommand(INCOME, SubcategoryName("Primes"), SubcategoryEmoji(CART)),
+            CreateSubcategoryCommand(INCOME, SubcategoryName("Primes"), Emoji(CART)),
         )
         assertThat(state).isEqualTo(SubcategoriesUiState())
     }
@@ -223,7 +228,7 @@ class SubcategoriesViewModelTest
             UpdateSubcategoryCommand(
                 row.subcategory.id,
                 SubcategoryName("Courses"),
-                SubcategoryEmoji(CART)
+                Emoji(CART)
             ),
         )
         assertThat(create.commands).isEmpty()
