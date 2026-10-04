@@ -62,6 +62,9 @@ import kotlin.math.roundToInt
  * month, so a drift shows up before it becomes a habit). The account filter (same "no filter" convention as
  * Mouvements's own) narrows every one of them to a single account's spending. It only looks: the limits and
  * their thresholds are set from the settings.
+ *
+ * Above all of that, a switch between two sections: the month (everything described above) and the projects,
+ * which are not monthly and so have no month selector - [projectsTab] fills that second half.
  */
 @Composable
 fun BudgetScreen(
@@ -73,6 +76,11 @@ fun BudgetScreen(
     onSelectTab: (BudgetTab) -> Unit,
     onSelectAccount: (AccountId?) -> Unit,
     onOpenSettings: () -> Unit,
+    // Which half is shown is held by the caller, so it survives going to a project's page and coming back.
+    section: BudgetSection,
+    onSelectSection: (BudgetSection) -> Unit,
+    // The "Projets" half: not monthly, so it brings its own content and none of the month's controls.
+    projectsTab: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -88,60 +96,67 @@ fun BudgetScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         HomeTopBar(palette, stringResource(R.string.budget_title), onOpenSettings)
-        MonthSelectorRow(
-            palette = palette,
-            label = state.selector.label,
-            isCurrentMonth = state.isCurrentMonth,
-            onPrevious = onPreviousMonth,
-            onNext = onNextMonth,
-            onToday = onToday,
-        )
-        BudgetAccountFilter(palette, accounts, state.selectedAccountId, onSelectAccount)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+        BudgetSectionSwitch(palette, section, onSelectSection)
+        if (section == BudgetSection.PROJECTS)
         {
-            SubcategoryChip(stringResource(R.string.budget_tab_overview), state.tab == BudgetTab.OVERVIEW, palette) {
-                onSelectTab(BudgetTab.OVERVIEW)
-            }
-            SubcategoryChip(stringResource(R.string.budget_tab_budgets), state.tab == BudgetTab.BUDGETS, palette) {
-                onSelectTab(BudgetTab.BUDGETS)
-            }
-            SubcategoryChip(stringResource(R.string.budget_tab_trends), state.tab == BudgetTab.TRENDS, palette) {
-                onSelectTab(BudgetTab.TRENDS)
-            }
-        }
-
-        when (state.tab)
+            projectsTab()
+        } else
         {
-            BudgetTab.BUDGETS ->
+            MonthSelectorRow(
+                palette = palette,
+                label = state.selector.label,
+                isCurrentMonth = state.isCurrentMonth,
+                onPrevious = onPreviousMonth,
+                onNext = onNextMonth,
+                onToday = onToday,
+            )
+            BudgetAccountFilter(palette, accounts, state.selectedAccountId, onSelectAccount)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
             {
-                val summary = overview.summary
-                if (summary == null)
-                {
-                    Text(
-                        text = stringResource(R.string.budget_empty),
-                        color = palette.textMuted,
-                        fontSize = 14.sp,
-                    )
-                } else
-                {
-                    SummaryCard(palette, summary)
-                    overview.budgeted.forEach { row -> BudgetCard(palette, row) }
+                SubcategoryChip(stringResource(R.string.budget_tab_overview), state.tab == BudgetTab.OVERVIEW, palette) {
+                    onSelectTab(BudgetTab.OVERVIEW)
                 }
-
-                if (overview.unbudgeted.isNotEmpty())
-                {
-                    Text(
-                        text = stringResource(R.string.budget_unbudgeted_title),
-                        color = palette.textSecondary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    overview.unbudgeted.forEach { row -> UnbudgetedRow(palette, row) }
+                SubcategoryChip(stringResource(R.string.budget_tab_budgets), state.tab == BudgetTab.BUDGETS, palette) {
+                    onSelectTab(BudgetTab.BUDGETS)
+                }
+                SubcategoryChip(stringResource(R.string.budget_tab_trends), state.tab == BudgetTab.TRENDS, palette) {
+                    onSelectTab(BudgetTab.TRENDS)
                 }
             }
 
-            BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
-            BudgetTab.TRENDS -> BudgetTrendTab(palette, state.trend)
+            when (state.tab)
+            {
+                BudgetTab.BUDGETS ->
+                {
+                    val summary = overview.summary
+                    if (summary == null)
+                    {
+                        Text(
+                            text = stringResource(R.string.budget_empty),
+                            color = palette.textMuted,
+                            fontSize = 14.sp,
+                        )
+                    } else
+                    {
+                        SummaryCard(palette, summary)
+                        overview.budgeted.forEach { row -> BudgetCard(palette, row) }
+                    }
+
+                    if (overview.unbudgeted.isNotEmpty())
+                    {
+                        Text(
+                            text = stringResource(R.string.budget_unbudgeted_title),
+                            color = palette.textSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        overview.unbudgeted.forEach { row -> UnbudgetedRow(palette, row) }
+                    }
+                }
+
+                BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
+                BudgetTab.TRENDS -> BudgetTrendTab(palette, state.trend)
+            }
         }
     }
 }
@@ -425,7 +440,7 @@ private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreak
 /** A donut, most spent slice first from the top, clockwise, with a small gap between slices — and the
  * month's total in its centre. */
 @Composable
-private fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
+internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
 {
     val gapDegrees = if (breakdown.slices.size > 1) 3f else 0f
     Box(
@@ -466,7 +481,7 @@ private fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
 }
 
 @Composable
-private fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: SpendingSlice)
+internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: SpendingSlice)
 {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth())
     {

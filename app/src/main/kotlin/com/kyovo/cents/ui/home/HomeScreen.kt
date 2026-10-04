@@ -81,7 +81,9 @@ import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
+import com.kyovo.cents.ui.budget.BudgetSection
 import com.kyovo.cents.ui.project.DeleteProjectDialog
+import com.kyovo.cents.ui.project.ProjectAnalysisTab
 import com.kyovo.cents.ui.project.ProjectDetailsScreen
 import com.kyovo.cents.ui.project.ProjectFormSheet
 import com.kyovo.cents.ui.project.ProjectsScreen
@@ -158,11 +160,24 @@ fun HomeScreen(
     val projects by remember { listProjects.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The opened project is kept the same way, as its UUID string, to survive rotation.
     var openedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    // The Budget tab's own state, held here so it is still there when the user comes back from a project's page.
+    var budgetSection by rememberSaveable { mutableStateOf(BudgetSection.MONTH) }
+    var analysedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    // Set when the page was opened from the Budget tab: Back then returns there, not to the list of projects.
+    var projectOpenedFromTab by rememberSaveable { mutableStateOf(false) }
     val openedProjectId = openedProjectUuid?.let { ProjectId(UUID.fromString(it)) }
     // The opened account is kept as its UUID string: AccountId (a value class over java.util.UUID)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     var destination by rememberSaveable { mutableStateOf(HomeDestination.Tabs) }
+    val closeProjectPage = {
+        openedProjectUuid = null
+        if (projectOpenedFromTab)
+        {
+            projectOpenedFromTab = false
+            destination = HomeDestination.Tabs
+        }
+    }
     val openedAccountId = openedAccountUuid?.let { AccountId(UUID.fromString(it)) }
 
     // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
@@ -339,7 +354,7 @@ fun HomeScreen(
         destination.back()?.let { destination = it }
     }
     // Registered after the one above, so it wins: a project page goes back to the list of projects first.
-    BackHandler(enabled = openedProjectId != null) { openedProjectUuid = null }
+    BackHandler(enabled = openedProjectId != null) { closeProjectPage() }
 
     Column(
         modifier = modifier
@@ -413,7 +428,7 @@ fun HomeScreen(
                         listTransactions = listTransactions,
                         accounts = accounts + archivedAccounts,
                         subcategories = subcategories,
-                        onBack = { openedProjectUuid = null },
+                        onBack = closeProjectPage,
                         onEdit = projectsViewModel::openForEdit,
                         onTransactionClick = openTransaction,
                         modifier = Modifier.fillMaxSize(),
@@ -439,7 +454,10 @@ fun HomeScreen(
                     getProjectProgress = getProjectProgress,
                     onBack = { destination = HomeDestination.Settings },
                     onCreate = projectsViewModel::openCreate,
-                    onOpen = { openedProjectUuid = it.project.id.value.toString() },
+                    onOpen = {
+                        projectOpenedFromTab = false
+                        openedProjectUuid = it.project.id.value.toString()
+                    },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -526,6 +544,25 @@ fun HomeScreen(
                                 onSelectTab = budgetsViewModel::selectTab,
                                 onSelectAccount = budgetsViewModel::selectAccount,
                                 onOpenSettings = { destination = HomeDestination.Settings },
+                                section = budgetSection,
+                                onSelectSection = { budgetSection = it },
+                                projectsTab = {
+                                    ProjectAnalysisTab(
+                                        palette = palette,
+                                        listProjects = listProjects,
+                                        getProjectProgress = getProjectProgress,
+                                        listTransactions = listTransactions,
+                                        subcategories = subcategories,
+                                        chosenProjectUuid = analysedProjectUuid,
+                                        onChooseProject = { analysedProjectUuid = it.value.toString() },
+                                        // The project's page, then back to this tab rather than to the list of projects.
+                                        onOpenProject = { id ->
+                                            projectOpenedFromTab = true
+                                            openedProjectUuid = id.value.toString()
+                                            destination = HomeDestination.Projects
+                                        },
+                                    )
+                                },
                             )
                     }
                 }
