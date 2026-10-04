@@ -36,6 +36,14 @@ class ProjectTest
         assertThat(Project(id, name, null, null).emoji).isNull()
     }
 
+    @Test
+    fun `a project starts with the default alert threshold, and can have its own`()
+    {
+        assertThat(Project(id, name, null, null).alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
+        assertThat(Project(id, name, null, Money(100_000), AlertThreshold(60)).alertThreshold)
+            .isEqualTo(AlertThreshold(60))
+    }
+
     // A target of zero would be "over" at the first cent: it means nothing, as a budget limit of zero does.
     @Test
     fun `refuses a target of zero`()
