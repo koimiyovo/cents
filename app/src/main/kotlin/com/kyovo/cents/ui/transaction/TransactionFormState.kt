@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.transaction
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.Subcategory
@@ -79,6 +80,8 @@ data class TransactionFormState(
     val editingId: TransactionId? = null,
     /** The account the edited transaction sat on when the form was opened. */
     val originalAccountId: AccountId? = null,
+    /** The project of the edited transaction, kept as it is: saving must not drop it. */
+    val projectId: ProjectId? = null,
     /** Set when "Répéter" is on: saving then creates a recurring rule instead of recording one transaction. */
     val repeat: RepeatSettings? = null,
 )
@@ -115,6 +118,7 @@ data class TransactionFormState(
                 date = transaction.date,
                 editingId = transaction.id,
                 originalAccountId = transaction.accountId,
+                projectId = transaction.projectId,
             )
         }
 
@@ -178,6 +182,7 @@ data class TransactionFormState(
                     subcategoryId = subcategory?.id,
                     description = TransactionDescription.of(description),
                     date = date,
+                    projectId = projectId,
                 ),
             )
         }
