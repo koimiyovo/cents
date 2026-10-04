@@ -144,6 +144,7 @@ object CentsMigrations
                     "`name` TEXT NOT NULL, " +
                     "`emoji` TEXT, " +
                     "`targetCents` INTEGER, " +
+                    "`alertPercent` INTEGER NOT NULL, " +
                     "PRIMARY KEY(`id`))"
         )
         connection.execSQL(

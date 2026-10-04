@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "5c193f2a15342836a50b8361d626fabd",
+    "identityHash": "ad2200012b41c2ed01ec67a56d4409ac",
     "entities": [
       {
         "tableName": "subcategories",
@@ -454,7 +454,7 @@
       },
       {
         "tableName": "projects",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, `targetCents` INTEGER, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, `targetCents` INTEGER, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -477,6 +477,12 @@
             "fieldPath": "targetCents",
             "columnName": "targetCents",
             "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "alertPercent",
+            "columnName": "alertPercent",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -489,7 +495,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c193f2a15342836a50b8361d626fabd')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ad2200012b41c2ed01ec67a56d4409ac')"
     ]
   }
 }
