@@ -4,17 +4,20 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
+import com.kyovo.cents.domain.port.input.CreateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import com.kyovo.cents.ui.common.formatCentsForInput
 import com.kyovo.cents.ui.common.parseAmountToCents
+import com.kyovo.cents.ui.recurring.INTERVAL_INPUT_PATTERN
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -49,6 +52,16 @@ fun canEditTransaction(transaction: Transaction): Boolean
 }
 
 /**
+ * The pace asked for with "Répéter": the same choices as the recurring form (frequency, "every N" and an optional end
+ * date). The start date is the form's own date, so it is not here.
+ */
+data class RepeatSettings(
+    val frequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
+    val intervalText: String = "1",
+    val endDate: LocalDate? = null,
+)
+
+/**
  * What the user has typed so far, as raw text: validation and parsing happen in [submit], not while
  * typing, so a half-typed "12," is never treated as an error. Stricter than the domain in places
  * (see [parseAmountToCents]); whatever it lets through is still re-checked by the domain types.
@@ -66,12 +79,19 @@ data class TransactionFormState(
     val editingId: TransactionId? = null,
     /** The account the edited transaction sat on when the form was opened. */
     val originalAccountId: AccountId? = null,
+    /** Set when "Répéter" is on: saving then creates a recurring rule instead of recording one transaction. */
+    val repeat: RepeatSettings? = null,
 )
 {
     val isEditing: Boolean get() = editingId != null
 
-    /** Whether there is already something in what sits behind "Plus de détails" (subcategory, description). */
-    val hasDetails: Boolean get() = subcategory != null || description.isNotBlank()
+    /** Whether there is already something in what sits behind "Plus de détails" (the description). */
+    val hasDetails: Boolean get() = description.isNotBlank()
+
+    /** Only a new income or expense can repeat: an existing transaction is not turned into a rule, a transfer has none. */
+    val canRepeat: Boolean get() = !isEditing && type != TransactionFormType.TRANSFER
+
+    val isRepeating: Boolean get() = repeat != null && canRepeat
 
     companion object
     {
@@ -115,7 +135,7 @@ data class TransactionFormState(
         }
     }
 
-    fun submit(): FormSubmission
+    fun submit(zone: ZoneId = ZoneId.systemDefault()): FormSubmission
     {
         val errors = mutableSetOf<FormError>()
 
@@ -132,6 +152,14 @@ data class TransactionFormState(
         } else if (subcategory != null && subcategory.kind != category)
         {
             errors += FormError.SUBCATEGORY_MISMATCH
+        }
+
+        val repeat = repeat.takeIf { isRepeating }
+        val interval = repeat?.intervalText?.toIntOrNull()
+        if (repeat != null)
+        {
+            if (interval == null || interval < 1) errors += FormError.INTERVAL_INVALID
+            if (repeat.endDate != null && repeat.endDate.isBefore(day(zone))) errors += FormError.END_BEFORE_START
         }
 
         if (editingId != null)
@@ -162,6 +190,23 @@ data class TransactionFormState(
 
         val amount = Money(amountCents)
         val cleanTitle = TransactionTitle(title)
+        if (repeat != null && category != null && interval != null)
+        {
+            return FormSubmission.Repeat(
+                CreateRecurringTransactionCommand(
+                    accountId = accountId,
+                    category = category,
+                    amount = amount,
+                    title = cleanTitle,
+                    subcategoryId = subcategory?.id,
+                    description = TransactionDescription.of(description),
+                    frequency = repeat.frequency,
+                    interval = interval,
+                    startDate = day(zone),
+                    endDate = repeat.endDate,
+                ),
+            )
+        }
         if (category == null)
         {
             return FormSubmission.Transfer(
@@ -200,12 +245,37 @@ data class TransactionFormState(
         if (editingId != null)
         {
             // An edited transaction keeps its own time of day, so it stays where it was among that
-            // day's others — but never lands in the future, which the date picker doesn't allow either.
-            val moved = dateOnDay(day, date, zone)
-            return copy(date = if (moved.isAfter(now)) now else moved)
+            // day's others. The day may be one ahead: a transaction can be dated in the future.
+            return copy(date = dateOnDay(day, date, zone))
         }
-        return copy(date = dateOnDay(day, now, zone))
+        // A rule can't end before it starts: the end date follows the day when the day passes it.
+        val keptRepeat = repeat?.let { if (it.endDate != null && it.endDate.isBefore(day)) it.copy(endDate = day) else it }
+        return copy(date = dateOnDay(day, now, zone), repeat = keptRepeat)
     }
+
+    /** Turns "Répéter" on (monthly, every 1, no end) or off, forgetting the pace. Ignored where [canRepeat] is false. */
+    fun withRepeat(enabled: Boolean): TransactionFormState
+    {
+        if (!canRepeat) return this
+        return copy(repeat = if (enabled) RepeatSettings() else null)
+    }
+
+    /** Changing the unit does not reset the count: "every 2" stays "every 2" under the new unit. */
+    fun withFrequency(frequency: RecurrenceFrequency): TransactionFormState =
+        copy(repeat = repeat?.copy(frequency = frequency))
+
+    /** Digits only, and no edit that would leave more than three of them (like the recurring form). */
+    fun withInterval(text: String): TransactionFormState
+    {
+        if (!INTERVAL_INPUT_PATTERN.matches(text)) return this
+        return copy(repeat = repeat?.copy(intervalText = text))
+    }
+
+    /** An end date starts on the form's own day; switching it off forgets it. */
+    fun withEndDateEnabled(enabled: Boolean, zone: ZoneId = ZoneId.systemDefault()): TransactionFormState =
+        copy(repeat = repeat?.copy(endDate = if (enabled) day(zone) else null))
+
+    fun withEndDate(date: LocalDate): TransactionFormState = copy(repeat = repeat?.copy(endDate = date))
 
     /**
      * The form as it should be saved at [now]: when it is still dated today, the date is refreshed
@@ -233,7 +303,9 @@ data class TransactionFormState(
         val keptSubcategory = subcategory?.takeIf { category != null && it.kind == category }
         val keptDestination =
             toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
-        return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination)
+        // A transfer can't repeat: it forgets the repetition, which does not come back by itself.
+        val keptRepeat = repeat.takeUnless { type == TransactionFormType.TRANSFER }
+        return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination, repeat = keptRepeat)
     }
 
     /**

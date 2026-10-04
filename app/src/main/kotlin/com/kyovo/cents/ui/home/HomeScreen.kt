@@ -1,6 +1,11 @@
 package com.kyovo.cents.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -17,31 +22,38 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.exception.AccountAlreadyArchivedException
+import com.kyovo.cents.domain.exception.AccountNotArchivedException
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotDeleteAccountWithTransactionsException
-import com.kyovo.cents.domain.exception.AccountNotArchivedException
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
@@ -49,7 +61,7 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
-import com.kyovo.cents.domain.port.input.ListRecurringExpensesUseCase
+import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
@@ -60,20 +72,21 @@ import com.kyovo.cents.ui.budget.BudgetFormSheet
 import com.kyovo.cents.ui.budget.BudgetLimitsScreen
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
-import com.kyovo.cents.ui.recurring.DeleteRecurringExpenseDialog
-import com.kyovo.cents.ui.recurring.RecurringExpenseFormSheet
-import com.kyovo.cents.ui.recurring.RecurringExpensesScreen
-import com.kyovo.cents.ui.recurring.RecurringExpensesViewModel
-import com.kyovo.cents.ui.transaction.AddTransactionFab
-import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
+import com.kyovo.cents.ui.budget.budgetAlertNotice
+import com.kyovo.cents.ui.recurring.DeleteRecurringTransactionDialog
+import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
+import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
+import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
 import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
 import com.kyovo.cents.ui.subcategory.SubcategoryFormSheet
+import com.kyovo.cents.ui.transaction.AddTransactionFab
+import com.kyovo.cents.ui.transaction.DeleteTransactionDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormSheet
-import com.kyovo.cents.ui.transaction.NewSubcategoryDialog
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
+import com.kyovo.cents.ui.transaction.NewSubcategoryDialog
 import com.kyovo.cents.ui.transaction.TransactionFormSheet
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionTapTarget
@@ -81,7 +94,8 @@ import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-private enum class HomeTab { Accounts, Transactions, Budget }
+private enum class HomeTab
+{ Accounts, Transactions, Budget }
 
 
 /**
@@ -102,15 +116,16 @@ fun HomeScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
-    listRecurringExpenses: ListRecurringExpensesUseCase,
+    listRecurringTransactions: ListRecurringTransactionsUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
-    recurringExpensesViewModel: RecurringExpensesViewModel,
+    recurringTransactionsViewModel: RecurringTransactionsViewModel,
     modifier: Modifier = Modifier,
-) {
+)
+{
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
@@ -119,10 +134,14 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
-    val recurringExpensesState by recurringExpensesViewModel.uiState.collectAsStateWithLifecycle()
+    val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
-    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
-    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
+        initialValue = emptyList()
+    )
+    val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(
+        initialValue = emptyList()
+    )
     // The opened account is kept as its UUID string: AccountId (a value class over java.util.UUID)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -134,9 +153,15 @@ fun HomeScreen(
     val openTransaction: (Transaction) -> Unit = { transaction ->
         when (transactionTapTarget(transaction))
         {
-            TransactionTapTarget.INITIAL_DEPOSIT_FORM -> initialDepositFormViewModel.openForEdit(transaction)
+            TransactionTapTarget.INITIAL_DEPOSIT_FORM -> initialDepositFormViewModel.openForEdit(
+                transaction
+            )
+
             TransactionTapTarget.TRANSACTION_FORM     ->
-                formViewModel.openForEdit(transaction, subcategories.find { it.id == transaction.subcategoryId })
+                formViewModel.openForEdit(
+                    transaction,
+                    subcategories.find { it.id == transaction.subcategoryId })
+
             TransactionTapTarget.NONE                 -> Unit
         }
     }
@@ -199,6 +224,77 @@ fun HomeScreen(
         }
     }
 
+    // Both a saved budget and a created recurring transaction lead to a notification, so both end in the same
+    // ask; only its wording differs. Whichever raised it is the one to clear.
+    val dismissNotificationAsk = {
+        budgetsViewModel.dismissNotificationPermissionAsk()
+        recurringTransactionsViewModel.dismissNotificationPermissionAsk()
+        formViewModel.dismissNotificationPermissionAsk()
+    }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            dismissNotificationAsk()
+        }
+
+    if (budgetsState.askNotificationPermission || recurringTransactionsState.askNotificationPermission ||
+        formState.askNotificationPermission
+    )
+    {
+        // The system dialog never re-asks once granted, but this rationale dialog is ours: without
+        // this check it would reappear on every save even after the user already said yes.
+        val notificationContext = LocalContext.current
+        val notificationsAlreadyGranted = ContextCompat.checkSelfPermission(
+            notificationContext, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (notificationsAlreadyGranted)
+        {
+            LaunchedEffect(Unit) { dismissNotificationAsk() }
+        } else
+        {
+            val forBudgets = budgetsState.askNotificationPermission
+            NotificationPermissionDialog(
+                title = stringResource(
+                    if (forBudgets) R.string.budgets_notification_title else R.string.recurring_notification_title
+                ),
+                body = stringResource(
+                    if (forBudgets) R.string.budgets_notification_body else R.string.recurring_notification_body
+                ),
+                palette = palette,
+                onConfirm = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else
+                    {
+                        dismissNotificationAsk()
+                    }
+                },
+                onDismiss = dismissNotificationAsk
+            )
+        }
+    }
+
+    // A budget the expense just saved has newly reached a threshold: said right here, in a snackbar, since
+    // the user just did it. rememberUpdatedState: the collector below lives as long as the screen, but must
+    // read the subcategories as they are when an alert arrives, not as they were when it started.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    val latestSubcategories by rememberUpdatedState(subcategories)
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.budgetAlerts.collect { alert ->
+            val notice = budgetAlertNotice(alert, latestSubcategories) ?: return@collect
+            val bodyRes = when (notice.level)
+            {
+                BudgetAlertLevel.CLOSE_TO_LIMIT -> R.string.budget_alert_close_body
+                BudgetAlertLevel.OVER           -> R.string.budget_alert_over_body
+            }
+            // Suspends until this one is gone, so several alerts show one after the other.
+            snackbarHostState.showSnackbar(resources.getString(bodyRes, notice.emoji, notice.subcategoryName))
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -207,7 +303,9 @@ fun HomeScreen(
     // there is something to close.
     BackHandler(enabled = openedAccountId != null) { openedAccountUuid = null }
     // One level up at a time: the subcategories go back to the settings, the settings to the tabs.
-    BackHandler(enabled = destination.back() != null) { destination.back()?.let { destination = it } }
+    BackHandler(enabled = destination.back() != null) {
+        destination.back()?.let { destination = it }
+    }
 
     Column(
         modifier = modifier
@@ -264,22 +362,22 @@ fun HomeScreen(
                 onBack = { destination = HomeDestination.Tabs },
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
-                onOpenRecurringExpenses = { destination = HomeDestination.RecurringExpenses },
+                onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
                 modifier = Modifier.weight(1f),
             )
-        } else if (destination == HomeDestination.RecurringExpenses)
+        } else if (destination == HomeDestination.RecurringTransactions)
         {
-            RecurringExpensesScreen(
-                listRecurringExpenses = listRecurringExpenses,
+            RecurringTransactionsScreen(
+                listRecurringTransactions = listRecurringTransactions,
                 listAccounts = listAccounts,
                 listArchivedAccounts = listArchivedAccounts,
                 listSubcategories = listSubcategories,
                 onBack = { destination = HomeDestination.Settings },
-                onCreate = { recurringExpensesViewModel.openCreate(accounts.singleOrNull()?.id) },
+                onCreate = { recurringTransactionsViewModel.openCreate(accounts.singleOrNull()?.id) },
                 onEdit = { row ->
-                    recurringExpensesViewModel.openForEdit(
+                    recurringTransactionsViewModel.openForEdit(
                         row,
-                        subcategories.find { it.id == row.recurringExpense.subcategoryId },
+                        subcategories.find { it.id == row.recurringTransaction.subcategoryId },
                     )
                 },
                 modifier = Modifier.weight(1f),
@@ -312,7 +410,8 @@ fun HomeScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
-                    when (HomeTab.entries[page]) {
+                    when (HomeTab.entries[page])
+                    {
                         HomeTab.Accounts -> AccountsScreen(
                             listAccounts,
                             listArchivedAccounts,
@@ -327,6 +426,7 @@ fun HomeScreen(
                             onDeleteAccount = delete,
                             onOpenSettings = { destination = HomeDestination.Settings },
                         )
+
                         HomeTab.Transactions ->
                             TransactionsScreen(
                                 listAccounts,
@@ -336,6 +436,7 @@ fun HomeScreen(
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
+
                         HomeTab.Budget ->
                             BudgetScreen(
                                 state = budgetsState,
@@ -366,8 +467,23 @@ fun HomeScreen(
         }
     }
 
+    // Over whichever screen is shown, above the bottom bar when there is one (about its height).
+    Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing))
+    {
+        val bottomBarShown = openedAccountId == null && destination == HomeDestination.Tabs
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (bottomBarShown) 80.dp else 16.dp),
+        )
+    }
+
     unarchiveBlockedName?.let { name ->
-        UnarchiveBlockedDialog(palette = palette, accountName = name, onDismiss = { unarchiveBlockedName = null })
+        UnarchiveBlockedDialog(
+            palette = palette,
+            accountName = name,
+            onDismiss = { unarchiveBlockedName = null })
     }
 
     // Outside the Column: the sheet floats over whichever screen (tabs or account details) is shown.
@@ -451,24 +567,24 @@ fun HomeScreen(
             onDismiss = subcategoriesViewModel::dismissDelete,
         )
     }
-    recurringExpensesState.form?.let { form ->
-        RecurringExpenseFormSheet(
+    recurringTransactionsState.form?.let { form ->
+        RecurringTransactionFormSheet(
             accounts = accounts,
             subcategories = subcategories,
             form = form,
-            errors = recurringExpensesState.errors,
-            onFormChange = recurringExpensesViewModel::update,
-            onSubmit = recurringExpensesViewModel::submit,
-            onDelete = recurringExpensesViewModel::askToDelete,
-            onDismiss = recurringExpensesViewModel::close,
+            errors = recurringTransactionsState.errors,
+            onFormChange = recurringTransactionsViewModel::update,
+            onSubmit = recurringTransactionsViewModel::submit,
+            onDelete = recurringTransactionsViewModel::askToDelete,
+            onDismiss = recurringTransactionsViewModel::close,
         )
     }
-    recurringExpensesState.confirmingDelete?.let { rule ->
-        DeleteRecurringExpenseDialog(
+    recurringTransactionsState.confirmingDelete?.let { rule ->
+        DeleteRecurringTransactionDialog(
             palette = palette,
             rule = rule,
-            onConfirm = recurringExpensesViewModel::confirmDelete,
-            onDismiss = recurringExpensesViewModel::dismissDelete,
+            onConfirm = recurringTransactionsViewModel::confirmDelete,
+            onDismiss = recurringTransactionsViewModel::dismissDelete,
         )
     }
     accountFormState.form?.let { form ->
@@ -488,7 +604,8 @@ private fun BottomNavBar(
     palette: AccountsPalette,
     selected: HomeTab,
     onSelect: (HomeTab) -> Unit,
-) {
+)
+{
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -531,7 +648,8 @@ private fun BottomNavItem(
     palette: AccountsPalette,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-) {
+)
+{
     // Same solid-fill treatment as SubcategoryChip/SelectableOptionRow, so the current tab is
     // unambiguous rather than relying only on a label color change. The clickable area spans the
     // whole item (via the caller's weight(1f)), not just the tight bounds of the emoji + label.

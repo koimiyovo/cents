@@ -46,7 +46,6 @@
     <string name="accounts_greeting_day">Bonjour 👋</string>
     <string name="accounts_greeting_evening">Bonsoir 👋</string>
     <string name="accounts_greeting_subtitle">Données stockées sur cet appareil</string>
-    <string name="accounts_vault_badge">🔒 Sur l\'appareil</string>
     <string name="accounts_hero_label">SOLDE TOTAL CONSOLIDÉ</string>
     <string name="accounts_income_label">↓ Revenus</string>
     <string name="accounts_expense_label">↑ Dépenses</string>
@@ -55,6 +54,21 @@
     <string name="accounts_section_title">Mes Comptes</string>
     <string name="accounts_status_archived">Archivé</string>
     <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
+    <string name="budgets_notification_title">Autoriser la notification sur les budgets</string>
+    <string name="budgets_notification_body">Cents vous enverra des notifications à l\'approche et lors du dépassement de budget</string>
+    <string name="budgets_notification_confirm">Autoriser</string>
+    <string name="budgets_notification_delay">Plus tard</string>
+    <string name="budget_alert_channel_name">Alertes budgétaires</string>
+    <string name="budget_alert_title">Alerte budget</string>
+    <string name="budget_alert_close_body">%1$s %2$s approche de sa limite mensuelle.</string>
+    <string name="budget_alert_over_body">%1$s %2$s a dépassé sa limite mensuelle.</string>
+    <string name="recurring_notification_title">Autoriser les notifications des transactions récurrentes</string>
+    <string name="recurring_notification_body">Cents vous préviendra le jour où une transaction récurrente est enregistrée.</string>
+    <string name="recurring_channel_name">Transactions récurrentes</string>
+    <string name="recurring_expense_title">Dépense récurrente</string>
+    <string name="recurring_expense_body">🔁 %1$s (%2$s) est enregistrée aujourd\'hui.</string>
+    <string name="recurring_income_title">Revenu récurrent</string>
+    <string name="recurring_income_body">🔁 %1$s (%2$s) est enregistré aujourd\'hui.</string>
 
     <!-- Bottom navigation -->
     <string name="nav_accounts">Comptes</string>
@@ -63,24 +77,20 @@
 
     <!-- Transactions screen -->
     <string name="transactions_title">Transactions</string>
-    <string name="transactions_subtitle">Historique de vos dépenses &amp; revenus</string>
+    <string name="transactions_subtitle">Vos dépenses et revenus, passés et à venir</string>
     <string name="transactions_expense_label">↘ Dépenses</string>
     <string name="transactions_income_label">↗ Revenus</string>
     <string name="transactions_net_label">🐷 Solde net</string>
-    <string name="transactions_tab_history">Historique</string>
-    <string name="transactions_tab_insights">Analyse</string>
-    <string name="transactions_insights_empty">Aucune dépense sur cette période.</string>
-    <string name="transactions_top_expenses_title">Plus grosses dépenses</string>
-    <string name="transactions_weekday_title">Dépenses par jour de la semaine</string>
     <string name="transactions_search_placeholder">Rechercher une transaction…</string>
     <string name="transactions_all_accounts">Tous les comptes</string>
     <string name="transactions_all_subcategories">Toutes les sous-catégories</string>
-    <string name="transactions_period_7_days">7 derniers jours</string>
-    <string name="transactions_period_30_days">30 derniers jours</string>
-    <string name="transactions_period_all_time">Tout l\'historique</string>
+    <string name="transactions_period_7_days">Depuis 7 jours</string>
+    <string name="transactions_period_30_days">Depuis 30 jours</string>
+    <string name="transactions_period_all_time">Toutes les dates</string>
     <string name="transactions_period_custom">Personnalisée</string>
     <string name="transactions_today">Aujourd\'hui</string>
     <string name="transactions_yesterday">Hier</string>
+    <string name="transactions_upcoming">À venir</string>
     <string name="transactions_empty">Aucune transaction ne correspond à ces filtres.</string>
     <string name="transactions_privacy_footer">🛡 Stockage local • 0 donnée partagée</string>
 
@@ -140,6 +150,7 @@
     <string name="new_subcategory_error_name_taken">Une sous-catégorie de ce type porte déjà ce nom.</string>
     <string name="transaction_form_description_placeholder">Description (facultatif)</string>
     <string name="transaction_form_submit">Enregistrer</string>
+    <string name="transaction_form_submit_repeat">Enregistrer et répéter</string>
     <string name="transaction_form_error_amount">Saisissez un montant supérieur à 0 (2 décimales maximum).</string>
     <string name="transaction_form_error_title">Le titre est obligatoire.</string>
     <string name="transaction_form_error_account">Choisissez un compte.</string>
@@ -157,7 +168,7 @@
 
     <!-- Account form -->
     <string name="account_form_title">Nouveau compte</string>
-    <string name="account_form_name_placeholder">Nom du compte (ex. Livret A)</string>
+    <string name="account_form_name_placeholder">Nom du compte</string>
     <string name="account_form_type_label">Type de compte</string>
     <string name="account_form_initial_amount_label">Solde initial (facultatif)</string>
     <string name="account_form_description_placeholder">Description (facultatif)</string>
@@ -268,19 +279,21 @@
     <string name="budget_form_error_limit">Saisissez une limite supérieure à 0 (2 décimales maximum).</string>
     <string name="budget_form_error_unavailable">Cette sous-catégorie n\'existe plus ou n\'est plus une dépense.</string>
 
-    <!-- Recurring expenses -->
-    <string name="settings_recurring_expenses">Dépenses récurrentes</string>
-    <string name="settings_recurring_expenses_hint">Loyer, abonnements : à saisir une fois</string>
-    <string name="recurring_expenses_title">Dépenses récurrentes</string>
-    <string name="recurring_expenses_intro">Une dépense récurrente génère automatiquement ses transactions à chaque échéance. Touchez-en une pour la modifier ou la supprimer.</string>
-    <string name="recurring_expenses_new">Nouvelle dépense récurrente</string>
-    <string name="recurring_expenses_empty">Aucune dépense récurrente pour le moment.</string>
-    <string name="recurring_expenses_edit_action">Modifier</string>
-    <string name="recurring_form_title_new">Nouvelle dépense récurrente</string>
-    <string name="recurring_form_title_edit">Modifier la dépense récurrente</string>
+    <!-- Recurring transactions -->
+    <string name="settings_recurring_transactions">Transactions récurrentes</string>
+    <string name="settings_recurring_transactions_hint">Loyer, salaire, abonnements : à saisir une fois</string>
+    <string name="recurring_transactions_title">Transactions récurrentes</string>
+    <string name="recurring_transactions_intro">Chaque échéance génère automatiquement une transaction, dépense ou revenu. Touchez une ligne pour la modifier ou la supprimer.</string>
+    <string name="recurring_transactions_new">Nouvelle transaction récurrente</string>
+    <string name="recurring_transactions_empty">Aucune transaction récurrente pour le moment.</string>
+    <string name="recurring_transactions_edit_action">Modifier</string>
+    <string name="recurring_form_title_new">Nouvelle transaction récurrente</string>
+    <string name="recurring_form_title_edit">Modifier la transaction récurrente</string>
     <string name="recurring_form_account_label">Compte</string>
     <string name="recurring_form_account_placeholder">Choisir un compte</string>
-    <string name="recurring_form_title_placeholder">Ex. Loyer, Abonnement…</string>
+    <string name="recurring_form_title_placeholder">Ex. Loyer, Salaire, Abonnement…</string>
+    <string name="transaction_form_repeat_label">Répéter</string>
+    <string name="transaction_form_repeat_hint">Crée une transaction récurrente à partir de la date choisie.</string>
     <string name="recurring_form_frequency_label">Fréquence</string>
     <string name="recurring_form_frequency_weekly">Hebdomadaire</string>
     <string name="recurring_form_frequency_monthly">Mensuelle</string>
@@ -292,16 +305,16 @@
     <string name="recurring_form_end_date_label">Date de fin</string>
     <string name="recurring_form_end_date_none">Aucune : se répète indéfiniment.</string>
     <string name="recurring_form_submit">Enregistrer</string>
-    <string name="recurring_form_delete">Supprimer la dépense récurrente</string>
+    <string name="recurring_form_delete">Supprimer la transaction récurrente</string>
     <string name="recurring_form_error_account">Choisissez un compte.</string>
     <string name="recurring_form_error_amount">Saisissez un montant valide (2 décimales maximum).</string>
     <string name="recurring_form_error_title">Le titre est obligatoire.</string>
     <string name="recurring_form_error_interval">Saisissez un nombre valide, d\'au moins 1.</string>
     <string name="recurring_form_error_end_before_start">La date de fin ne peut pas précéder la première échéance.</string>
     <string name="recurring_form_error_account_gone">Ce compte n\'existe plus.</string>
-    <string name="recurring_form_error_subcategory_gone">Cette sous-catégorie n\'existe plus ou n\'est plus une dépense.</string>
-    <string name="recurring_form_error_rule_gone">Cette dépense récurrente n\'existe plus.</string>
-    <string name="recurring_delete_title">Supprimer cette dépense récurrente ?</string>
+    <string name="recurring_form_error_subcategory_gone">Cette sous-catégorie n\'existe plus ou n\'est plus du bon type.</string>
+    <string name="recurring_form_error_rule_gone">Cette transaction récurrente n\'existe plus.</string>
+    <string name="recurring_delete_title">Supprimer cette transaction récurrente ?</string>
     <string name="recurring_delete_body">« %1$s » sera supprimée. Les transactions déjà générées sont conservées.</string>
     <string name="recurring_delete_confirm">Supprimer</string>
 </resources>

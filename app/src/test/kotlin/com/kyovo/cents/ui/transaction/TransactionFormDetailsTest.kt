@@ -7,9 +7,8 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 
 /**
- * The subcategory and the description sit behind "Plus de détails". The form opens with them unfolded
- * when there is already something in them — an edited transaction that has a subcategory or a
- * description — so the user doesn't have to hunt for what the transaction already says.
+ * The description sits behind "Plus de détails". The form opens with it unfolded when there is
+ * already one — an edited transaction — so the user doesn't have to hunt for what it already says.
  */
 class TransactionFormDetailsTest
 {
@@ -26,9 +25,9 @@ class TransactionFormDetailsTest
     }
 
     @Test
-    fun `a subcategory is a detail`()
+    fun `a subcategory is not a detail, it has its own field`()
     {
-        assertThat(empty.copy(subcategory = GROCERIES_SUBCATEGORY).hasDetails).isTrue()
+        assertThat(empty.copy(subcategory = GROCERIES_SUBCATEGORY).hasDetails).isFalse()
     }
 
     @Test
@@ -42,14 +41,6 @@ class TransactionFormDetailsTest
     fun `a blank description is not`(description: String)
     {
         assertThat(empty.copy(description = description).hasDetails).isFalse()
-    }
-
-    @Test
-    fun `both together are details too`()
-    {
-        val form = empty.copy(subcategory = GROCERIES_SUBCATEGORY, description = "Marché")
-
-        assertThat(form.hasDetails).isTrue()
     }
 
     @Test

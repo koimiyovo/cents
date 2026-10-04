@@ -3,7 +3,7 @@ package com.kyovo.cents.ui.home
 /**
  * Where the user is, besides an opened account: on the tabs, in the settings, or one level below
  * them, on the screen managing the subcategories, the one setting the budget limits, or the one
- * managing the recurring expenses.
+ * managing the recurring transactions.
  */
 internal enum class HomeDestination
 {
@@ -11,7 +11,7 @@ internal enum class HomeDestination
     Settings,
     Subcategories,
     Budgets,
-    RecurringExpenses;
+    RecurringTransactions;
 
     /**
      * Where Back leads from here — one level up at a time — or null on the tabs, where Back is left to
@@ -23,6 +23,6 @@ internal enum class HomeDestination
         Settings         -> Tabs
         Subcategories    -> Settings
         Budgets          -> Settings
-        RecurringExpenses -> Settings
+        RecurringTransactions -> Settings
     }
 }

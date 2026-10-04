@@ -16,7 +16,7 @@ import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
-import com.kyovo.cents.ui.recurring.RecurringExpensesViewModel
+import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionFormViewModel
@@ -40,6 +40,9 @@ class MainActivity : ComponentActivity() {
                     updateTransaction = appContainer.updateTransaction,
                     deleteTransaction = appContainer.deleteTransaction,
                     createSubcategory = appContainer.createSubcategory,
+                    checkBudgetAlerts = appContainer.checkBudgetAlerts,
+                    createRecurringTransaction = appContainer.createRecurringTransaction,
+                    generateRecurringTransactions = appContainer.generateRecurringTransactions,
                 )
             }
         }
@@ -83,13 +86,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val recurringExpensesViewModel: RecurringExpensesViewModel by viewModels {
+    private val recurringTransactionsViewModel: RecurringTransactionsViewModel by viewModels {
         viewModelFactory {
             initializer {
-                RecurringExpensesViewModel(
-                    createRecurringExpense = appContainer.createRecurringExpense,
-                    updateRecurringExpense = appContainer.updateRecurringExpense,
-                    deleteRecurringExpense = appContainer.deleteRecurringExpense,
+                RecurringTransactionsViewModel(
+                    createRecurringTransaction = appContainer.createRecurringTransaction,
+                    updateRecurringTransaction = appContainer.updateRecurringTransaction,
+                    deleteRecurringTransaction = appContainer.deleteRecurringTransaction,
+                    generateRecurringTransactions = appContainer.generateRecurringTransactions,
                 )
             }
         }
@@ -128,13 +132,13 @@ class MainActivity : ComponentActivity() {
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
                     listSubcategories = appContainer.listSubcategories,
-                    listRecurringExpenses = appContainer.listRecurringExpenses,
+                    listRecurringTransactions = appContainer.listRecurringTransactions,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
                     subcategoriesViewModel = subcategoriesViewModel,
                     budgetsViewModel = budgetsViewModel,
-                    recurringExpensesViewModel = recurringExpensesViewModel,
+                    recurringTransactionsViewModel = recurringTransactionsViewModel,
                 )
             }
         }
