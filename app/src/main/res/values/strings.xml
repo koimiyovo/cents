@@ -348,6 +348,8 @@
     <string name="project_form_emoji_description">Choisir un emoji</string>
     <string name="project_form_target_label">Objectif (facultatif)</string>
     <string name="project_form_target_hint">Ce que le projet doit coûter au total, remboursements déduits.</string>
+    <string name="project_form_threshold_label">Alerte à %1$d&#160;%%</string>
+    <string name="project_form_threshold_hint">Vous êtes prévenu quand le projet atteint %1$d&#160;%% de son objectif.</string>
     <string name="project_form_create">Créer</string>
     <string name="project_form_delete">Supprimer le projet</string>
     <string name="project_form_error_name_required">Donnez un nom au projet.</string>

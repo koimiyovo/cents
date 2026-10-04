@@ -1,6 +1,7 @@
 package com.kyovo.cents.ui.project
 
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
@@ -8,6 +9,9 @@ import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.port.input.CreateProjectCommand
 import com.kyovo.cents.domain.port.input.UpdateProjectCommand
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_MAX_PERCENT
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_MIN_PERCENT
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_STEP_PERCENT
 import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.common.formatCentsForInput
 import com.kyovo.cents.ui.common.limitNameInput
@@ -41,12 +45,14 @@ sealed interface ProjectSubmission
  * The form to create or edit a project, as raw text: what is typed is parsed in [submit], like the
  * other forms. The target is typed like an amount (at most two decimals) and may be left blank: a project
  * without a target is only followed, not measured. An edit carries the whole new state, so blanking the
- * target or taking the emoji away removes it.
+ * target or taking the emoji away removes it. The alert threshold, in percent, is moved with the same slider as a
+ * budget's (from half the target to the target itself, in steps of five) and only means something with a target.
  */
 data class ProjectFormState(
     val name: String = "",
     val emoji: String? = null,
     val targetText: String = "",
+    val thresholdPercent: Int = AlertThreshold.DEFAULT.percent,
     /** Set when an existing project is being edited instead of a new one created. */
     val editingId: ProjectId? = null,
 )
@@ -61,6 +67,7 @@ data class ProjectFormState(
             name = project.name.value,
             emoji = project.emoji?.value,
             targetText = project.target?.let { formatCentsForInput(it.value) }.orEmpty(),
+            thresholdPercent = project.alertThreshold.percent,
             editingId = project.id,
         )
     }
@@ -76,6 +83,17 @@ data class ProjectFormState(
     {
         if (!acceptsAmountInput(text)) return this
         return copy(targetText = text)
+    }
+
+    /**
+     * The slider moved to [percent]: brought to the nearest step of the slider and kept within its range, so
+     * the form only ever holds a position the slider can show.
+     */
+    fun withThreshold(percent: Int): ProjectFormState
+    {
+        val step = THRESHOLD_SLIDER_STEP_PERCENT
+        val snapped = Math.round(percent.toDouble() / step).toInt() * step
+        return copy(thresholdPercent = snapped.coerceIn(THRESHOLD_SLIDER_MIN_PERCENT, THRESHOLD_SLIDER_MAX_PERCENT))
     }
 
     fun submit(): ProjectSubmission
@@ -103,12 +121,13 @@ data class ProjectFormState(
 
         val projectName = ProjectName(trimmed)
         val target = parsedTarget?.let { Money(it) }
+        val threshold = AlertThreshold(thresholdPercent)
         return if (editingId != null)
         {
-            ProjectSubmission.Update(UpdateProjectCommand(editingId, projectName, parsedEmoji, target))
+            ProjectSubmission.Update(UpdateProjectCommand(editingId, projectName, parsedEmoji, target, threshold))
         } else
         {
-            ProjectSubmission.Create(CreateProjectCommand(projectName, parsedEmoji, target))
+            ProjectSubmission.Create(CreateProjectCommand(projectName, parsedEmoji, target, threshold))
         }
     }
 }

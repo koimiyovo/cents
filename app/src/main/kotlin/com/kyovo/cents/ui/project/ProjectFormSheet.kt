@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -23,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.ProjectName
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_MAX_PERCENT
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_MIN_PERCENT
+import com.kyovo.cents.ui.budget.THRESHOLD_SLIDER_STEPS
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.EMOJIS
 import com.kyovo.cents.ui.common.ErrorText
@@ -32,6 +37,7 @@ import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.LightAccountsPalette
+import kotlin.math.roundToInt
 
 /**
  * Bottom sheet to create or edit a project: a name, an optional emoji and an optional target. An edit also
@@ -101,6 +107,32 @@ fun ProjectFormSheet(
                     color = palette.textMuted,
                     fontSize = 13.sp,
                 )
+            }
+            // The threshold means something only against a target: the slider appears once there is one.
+            if (form.targetText.isNotBlank())
+            {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionLabel(palette, stringResource(R.string.project_form_threshold_label, form.thresholdPercent))
+                    Slider(
+                        value = form.thresholdPercent.toFloat(),
+                        // The form snaps what the slider reports to its steps, so the thumb never rests between two.
+                        onValueChange = { onFormChange(form.withThreshold(it.roundToInt())) },
+                        valueRange = THRESHOLD_SLIDER_MIN_PERCENT.toFloat()..THRESHOLD_SLIDER_MAX_PERCENT.toFloat(),
+                        steps = THRESHOLD_SLIDER_STEPS,
+                        colors = SliderDefaults.colors(
+                            thumbColor = palette.iconToneGreen,
+                            activeTrackColor = palette.iconToneGreen,
+                            inactiveTrackColor = palette.divider,
+                            activeTickColor = palette.heroOnCardPrimary,
+                            inactiveTickColor = palette.textMuted,
+                        ),
+                    )
+                    Text(
+                        text = stringResource(R.string.project_form_threshold_hint, form.thresholdPercent),
+                        color = palette.textMuted,
+                        fontSize = 13.sp,
+                    )
+                }
             }
             errors.forEach { error ->
                 ErrorText(

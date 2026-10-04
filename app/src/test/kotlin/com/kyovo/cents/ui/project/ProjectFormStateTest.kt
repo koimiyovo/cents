@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
@@ -10,6 +11,7 @@ import com.kyovo.cents.domain.port.input.UpdateProjectCommand
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
@@ -23,7 +25,7 @@ private const val PLANE = "✈️"
 class ProjectFormStateTest
 {
     private val id = ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661"))
-    private val japan = Project(id, ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050))
+    private val japan = Project(id, ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050), AlertThreshold(70))
 
     // ------------------------------------------------------------------ opening
 
@@ -36,6 +38,7 @@ class ProjectFormStateTest
         assertThat(form.name).isEmpty()
         assertThat(form.emoji).isNull()
         assertThat(form.targetText).isEmpty()
+        assertThat(form.thresholdPercent).isEqualTo(AlertThreshold.DEFAULT.percent)
         assertThat(form.isEditing).isFalse()
     }
 
@@ -47,6 +50,7 @@ class ProjectFormStateTest
         assertThat(form.name).isEqualTo("Voyage au Japon")
         assertThat(form.emoji).isEqualTo(PLANE)
         assertThat(form.targetText).isEqualTo("3000,50")
+        assertThat(form.thresholdPercent).isEqualTo(70)
         assertThat(form.editingId).isEqualTo(id)
         assertThat(form.isEditing).isTrue()
     }
@@ -68,6 +72,14 @@ class ProjectFormStateTest
         val form = ProjectFormState.creating().withName("x".repeat(ProjectName.MAX_LENGTH + 10))
 
         assertThat(form.name).hasSize(ProjectName.MAX_LENGTH)
+    }
+
+    // The slider offers 50 to 100 in steps of 5, like a budget's: the form only ever holds a position it can show.
+    @ParameterizedTest
+    @CsvSource("50,50", "52,50", "53,55", "60,60", "97,95", "98,100", "100,100", "10,50", "0,50", "150,100")
+    fun `the threshold snaps to the slider's steps and stays within its range`(typed: Int, expected: Int)
+    {
+        assertThat(ProjectFormState.creating().withThreshold(typed).thresholdPercent).isEqualTo(expected)
     }
 
     @Test
@@ -103,7 +115,9 @@ class ProjectFormStateTest
         val form = ProjectFormState.creating().withName("  Voyage au Japon  ").withEmoji(PLANE).withTarget("3000,50")
 
         assertThat(form.submit()).isEqualTo(
-            ProjectSubmission.Create(CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050)))
+            ProjectSubmission.Create(
+                CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050), AlertThreshold.DEFAULT)
+            )
         )
     }
 
@@ -113,7 +127,7 @@ class ProjectFormStateTest
         val form = ProjectFormState.creating().withName("Travaux cuisine")
 
         assertThat(form.submit()).isEqualTo(
-            ProjectSubmission.Create(CreateProjectCommand(ProjectName("Travaux cuisine"), null, null))
+            ProjectSubmission.Create(CreateProjectCommand(ProjectName("Travaux cuisine"), null, null, AlertThreshold.DEFAULT))
         )
     }
 
@@ -127,12 +141,20 @@ class ProjectFormStateTest
     }
 
     @Test
+    fun `the threshold chosen with the slider goes into the command`()
+    {
+        val form = ProjectFormState.creating().withName("Voyage").withTarget("1000").withThreshold(60)
+
+        assertThat((form.submit() as ProjectSubmission.Create).command.alertThreshold).isEqualTo(AlertThreshold(60))
+    }
+
+    @Test
     fun `an edit becomes an update command that carries the whole new state`()
     {
         val form = ProjectFormState.editing(japan).withName("Japon 2027").withEmoji(null).withTarget("")
 
         assertThat(form.submit()).isEqualTo(
-            ProjectSubmission.Update(UpdateProjectCommand(id, ProjectName("Japon 2027"), null, null))
+            ProjectSubmission.Update(UpdateProjectCommand(id, ProjectName("Japon 2027"), null, null, AlertThreshold(70)))
         )
     }
 
@@ -140,8 +162,16 @@ class ProjectFormStateTest
     fun `an edit that changes nothing sends the project as it was`()
     {
         assertThat(ProjectFormState.editing(japan).submit()).isEqualTo(
-            ProjectSubmission.Update(UpdateProjectCommand(id, japan.name, japan.emoji, japan.target))
+            ProjectSubmission.Update(UpdateProjectCommand(id, japan.name, japan.emoji, japan.target, japan.alertThreshold))
         )
+    }
+
+    @Test
+    fun `an edit can change the threshold alone`()
+    {
+        val form = ProjectFormState.editing(japan).withThreshold(95)
+
+        assertThat((form.submit() as ProjectSubmission.Update).command.alertThreshold).isEqualTo(AlertThreshold(95))
     }
 
     @ParameterizedTest
