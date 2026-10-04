@@ -102,6 +102,7 @@ class TransactionFormNewSubcategoryTest
         unusedCheck,
         createRecurring,
         FakeGenerateRecurring(createRecurring),
+        FakeCreateProject(),
         now = { MOMENT },
     )
 

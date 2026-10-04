@@ -166,6 +166,7 @@ class TransactionFormViewModelTest
         NoAlerts,
         createRecurring,
         FakeGenerateRecurring(createRecurring),
+        FakeCreateProject(),
         now = { NOW },
     )
 

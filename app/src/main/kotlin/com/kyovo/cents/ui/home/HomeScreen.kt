@@ -78,6 +78,14 @@ import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
+import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.input.ListProjectsUseCase
+import com.kyovo.cents.ui.project.DeleteProjectDialog
+import com.kyovo.cents.ui.project.ProjectDetailsScreen
+import com.kyovo.cents.ui.project.ProjectFormSheet
+import com.kyovo.cents.ui.project.ProjectsScreen
+import com.kyovo.cents.ui.project.ProjectsViewModel
 import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
 import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
@@ -117,12 +125,15 @@ fun HomeScreen(
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     listRecurringTransactions: ListRecurringTransactionsUseCase,
+    listProjects: ListProjectsUseCase,
+    getProjectProgress: GetProjectProgressUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
+    projectsViewModel: ProjectsViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -135,6 +146,7 @@ fun HomeScreen(
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
+    val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -142,6 +154,10 @@ fun HomeScreen(
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
     )
+    val projects by remember { listProjects.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    // The opened project is kept the same way, as its UUID string, to survive rotation.
+    var openedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    val openedProjectId = openedProjectUuid?.let { ProjectId(UUID.fromString(it)) }
     // The opened account is kept as its UUID string: AccountId (a value class over java.util.UUID)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -160,7 +176,8 @@ fun HomeScreen(
             TransactionTapTarget.TRANSACTION_FORM     ->
                 formViewModel.openForEdit(
                     transaction,
-                    subcategories.find { it.id == transaction.subcategoryId })
+                    subcategories.find { it.id == transaction.subcategoryId },
+                    projects.find { it.id == transaction.projectId })
 
             TransactionTapTarget.NONE                 -> Unit
         }
@@ -306,6 +323,8 @@ fun HomeScreen(
     BackHandler(enabled = destination.back() != null) {
         destination.back()?.let { destination = it }
     }
+    // Registered after the one above, so it wins: a project page goes back to the list of projects first.
+    BackHandler(enabled = openedProjectId != null) { openedProjectUuid = null }
 
     Column(
         modifier = modifier
@@ -363,8 +382,36 @@ fun HomeScreen(
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
                 onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
+                onOpenProjects = { destination = HomeDestination.Projects },
                 modifier = Modifier.weight(1f),
             )
+        } else if (destination == HomeDestination.Projects)
+        {
+            if (openedProjectId != null)
+            {
+                ProjectDetailsScreen(
+                    projectId = openedProjectId,
+                    listProjects = listProjects,
+                    getProjectProgress = getProjectProgress,
+                    listTransactions = listTransactions,
+                    accounts = accounts + archivedAccounts,
+                    subcategories = subcategories,
+                    onBack = { openedProjectUuid = null },
+                    onEdit = projectsViewModel::openForEdit,
+                    onTransactionClick = openTransaction,
+                    modifier = Modifier.weight(1f),
+                )
+            } else
+            {
+                ProjectsScreen(
+                    listProjects = listProjects,
+                    getProjectProgress = getProjectProgress,
+                    onBack = { destination = HomeDestination.Settings },
+                    onCreate = projectsViewModel::openCreate,
+                    onOpen = { openedProjectUuid = it.project.id.value.toString() },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         } else if (destination == HomeDestination.RecurringTransactions)
         {
             RecurringTransactionsScreen(
@@ -492,6 +539,7 @@ fun HomeScreen(
             // Archived ones too: an edited transaction may sit on one (the form decides which are offered).
             accounts = accounts + archivedAccounts,
             subcategories = subcategories,
+            projects = projects,
             form = form,
             showErrors = formState.showErrors,
             failure = formState.failure,
@@ -499,6 +547,7 @@ fun HomeScreen(
             onSubmit = formViewModel::submit,
             onDelete = formViewModel::askToDelete,
             onCreateSubcategory = formViewModel::askToCreateSubcategory,
+            onCreateProject = formViewModel::askToCreateProject,
             onCreateAccount = { field ->
                 // Remember which accounts exist, to recognise the new one and choose it for that field.
                 formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
@@ -519,6 +568,16 @@ fun HomeScreen(
                 onDismiss = formViewModel::dismissNewSubcategory,
             )
         }
+    }
+    // The "new project" form of the transaction form, over it; the same sheet as the projects screen.
+    formState.newProject?.let { draft ->
+        ProjectFormSheet(
+            form = draft.form,
+            errors = draft.errors,
+            onFormChange = formViewModel::updateNewProject,
+            onSubmit = formViewModel::confirmNewProject,
+            onDismiss = formViewModel::dismissNewProject,
+        )
     }
     formState.confirmingDelete?.let { transaction ->
         DeleteTransactionDialog(
@@ -565,6 +624,24 @@ fun HomeScreen(
             subcategory = subcategory,
             onConfirm = subcategoriesViewModel::confirmDelete,
             onDismiss = subcategoriesViewModel::dismissDelete,
+        )
+    }
+    projectsState.form?.let { form ->
+        ProjectFormSheet(
+            form = form,
+            errors = projectsState.errors,
+            onFormChange = projectsViewModel::update,
+            onSubmit = projectsViewModel::submit,
+            onDismiss = projectsViewModel::close,
+            onDelete = if (form.isEditing) projectsViewModel::askToDelete else null,
+        )
+    }
+    projectsState.confirmingDelete?.let { project ->
+        DeleteProjectDialog(
+            palette = palette,
+            project = project,
+            onConfirm = projectsViewModel::confirmDelete,
+            onDismiss = projectsViewModel::dismissDelete,
         )
     }
     recurringTransactionsState.form?.let { form ->

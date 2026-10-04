@@ -40,7 +40,7 @@ internal fun subcategoryFor(id: SubcategoryId?): Subcategory? = ALL_TEST_SUBCATE
  * silently drop it); tests that don't care resolve it from the transaction like the screen does.
  */
 internal fun TransactionFormState.Companion.editing(transaction: Transaction): TransactionFormState =
-    editing(transaction, subcategoryFor(transaction.subcategoryId))
+    editing(transaction, subcategoryFor(transaction.subcategoryId), projectFor(transaction.projectId))
 
 internal fun TransactionFormViewModel.openForEdit(transaction: Transaction) =
-    openForEdit(transaction, subcategoryFor(transaction.subcategoryId))
+    openForEdit(transaction, subcategoryFor(transaction.subcategoryId), projectFor(transaction.projectId))

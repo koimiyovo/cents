@@ -3,7 +3,7 @@ package com.kyovo.cents.ui.transaction
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
-import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.Subcategory
@@ -80,8 +80,11 @@ data class TransactionFormState(
     val editingId: TransactionId? = null,
     /** The account the edited transaction sat on when the form was opened. */
     val originalAccountId: AccountId? = null,
-    /** The project of the edited transaction, kept as it is: saving must not drop it. */
-    val projectId: ProjectId? = null,
+    /**
+     * The project the transaction is filed under, next to its subcategory. Only an income or an expense
+     * that does not repeat can have one (see [canHaveProject]); the others forget it.
+     */
+    val project: Project? = null,
     /** Set when "Répéter" is on: saving then creates a recurring rule instead of recording one transaction. */
     val repeat: RepeatSettings? = null,
 )
@@ -96,15 +99,18 @@ data class TransactionFormState(
 
     val isRepeating: Boolean get() = repeat != null && canRepeat
 
+    /** A transfer has no project, and a rule is not tied to one: neither the form of a transfer nor a repeating one offers it. */
+    val canHaveProject: Boolean get() = type != TransactionFormType.TRANSFER && !isRepeating
+
     companion object
     {
         /**
          * A form pre-filled with [transaction]'s values, saving as an update. The account is
          * pre-selected but can be changed: the transaction is then moved to the other one.
-         * [subcategory] is the one the transaction points to (null when it has none). It is a required
-         * argument, not a default: forgetting it would silently drop the subcategory on saving.
+         * [subcategory] and [project] are the ones the transaction points to (null when it has none). They are
+         * required arguments, not defaults: forgetting one would silently drop it on saving.
          */
-        fun editing(transaction: Transaction, subcategory: Subcategory?): TransactionFormState
+        fun editing(transaction: Transaction, subcategory: Subcategory?, project: Project?): TransactionFormState
         {
             require(canEditTransaction(transaction)) { "Only an income or an expense can be edited" }
             return TransactionFormState(
@@ -118,7 +124,7 @@ data class TransactionFormState(
                 date = transaction.date,
                 editingId = transaction.id,
                 originalAccountId = transaction.accountId,
-                projectId = transaction.projectId,
+                project = project,
             )
         }
 
@@ -182,7 +188,7 @@ data class TransactionFormState(
                     subcategoryId = subcategory?.id,
                     description = TransactionDescription.of(description),
                     date = date,
-                    projectId = projectId,
+                    projectId = project?.id,
                 ),
             )
         }
@@ -233,6 +239,7 @@ data class TransactionFormState(
                 subcategoryId = subcategory?.id,
                 description = TransactionDescription.of(description),
                 date = date,
+                projectId = project?.id,
             ),
         )
     }
@@ -262,8 +269,19 @@ data class TransactionFormState(
     fun withRepeat(enabled: Boolean): TransactionFormState
     {
         if (!canRepeat) return this
-        return copy(repeat = if (enabled) RepeatSettings() else null)
+        // A rule is not tied to a project: turning repeat on forgets it, turning it off does not bring it back.
+        return if (enabled) copy(repeat = RepeatSettings(), project = null) else copy(repeat = null)
     }
+
+    /** The project the transaction is filed under; null takes it out of any. Ignored where [canHaveProject] is false. */
+    fun withProject(project: Project?): TransactionFormState
+    {
+        if (!canHaveProject) return this
+        return copy(project = project)
+    }
+
+    /** The projects this form offers: all of them, or none when it cannot have one. */
+    fun projectChoices(projects: List<Project>): List<Project> = if (canHaveProject) projects else emptyList()
 
     /** Changing the unit does not reset the count: "every 2" stays "every 2" under the new unit. */
     fun withFrequency(frequency: RecurrenceFrequency): TransactionFormState =
@@ -310,7 +328,15 @@ data class TransactionFormState(
             toAccountId?.takeUnless { type == TransactionFormType.TRANSFER && it == accountId }
         // A transfer can't repeat: it forgets the repetition, which does not come back by itself.
         val keptRepeat = repeat.takeUnless { type == TransactionFormType.TRANSFER }
-        return copy(type = type, subcategory = keptSubcategory, toAccountId = keptDestination, repeat = keptRepeat)
+        // Nor does a transfer have a project.
+        val keptProject = project.takeUnless { type == TransactionFormType.TRANSFER }
+        return copy(
+            type = type,
+            subcategory = keptSubcategory,
+            toAccountId = keptDestination,
+            repeat = keptRepeat,
+            project = keptProject,
+        )
     }
 
     /**
