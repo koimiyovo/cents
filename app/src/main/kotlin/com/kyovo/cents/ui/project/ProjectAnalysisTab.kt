@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,8 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -43,9 +48,11 @@ import java.util.UUID
 
 /**
  * The "Projets" half of the Budget screen: one project at a time, chosen from a dropdown (the project of the latest
- * transaction at first, then the user's choice), with its card, where its money went, and its biggest expenses. Its children go straight into the parent column. Nothing is month-bound,
- * so none of the month's controls apply.
+ * transaction at first, then the user's choice), with its card, where its money went, and its biggest expenses.
+ * A link creates a project, which the tab then shows (it has no transaction yet, so it would never be the default).
+ * Its children go straight into the parent column. Nothing is month-bound, so none of the month's controls apply.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProjectAnalysisTab(
     palette: AccountsPalette,
@@ -58,6 +65,7 @@ fun ProjectAnalysisTab(
     chosenProjectUuid: String?,
     onChooseProject: (ProjectId) -> Unit,
     onOpenProject: (ProjectId) -> Unit,
+    onCreateProject: () -> Unit,
 )
 {
     // Null while the first list is on its way: that is "not loaded yet", not "no project".
@@ -65,10 +73,25 @@ fun ProjectAnalysisTab(
     val progress by remember { getProjectProgress.observeAll() }.collectAsStateWithLifecycle(initialValue = emptyMap())
     val allTransactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
 
+    // The projects that existed when the user asked to create one: the new one is the one that is not among them.
+    // Kept here, not saved: leaving the tab forgets it, so a project created from elsewhere later is not picked.
+    var idsWhenAsked by remember { mutableStateOf<Set<ProjectId>?>(null) }
+    LaunchedEffect(projects) {
+        val asked = idsWhenAsked ?: return@LaunchedEffect
+        val created = newlyCreatedProject(asked, projects ?: return@LaunchedEffect) ?: return@LaunchedEffect
+        onChooseProject(created.id)
+        idsWhenAsked = null
+    }
+    val createProject = {
+        idsWhenAsked = projects.orEmpty().map { it.id }.toSet()
+        onCreateProject()
+    }
+
     val loaded = projects ?: return
     if (loaded.isEmpty())
     {
         Text(text = stringResource(R.string.project_analysis_no_project), color = palette.textMuted, fontSize = 14.sp)
+        LinkPill(palette, "+ " + stringResource(R.string.projects_new), createProject)
         return
     }
 
@@ -78,17 +101,11 @@ fun ProjectAnalysisTab(
 
     ProjectPicker(palette, loaded, selected) { onChooseProject(it.id) }
     ProjectCardView(palette, projectCards(listOf(selected), progress).single())
-    Text(
-        text = stringResource(R.string.project_analysis_open),
-        color = palette.kicker,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(palette.surface)
-            .clickable { onOpenProject(selected.id) }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    )
+    // Side by side when they fit, one under the other on a narrow screen.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LinkPill(palette, stringResource(R.string.project_analysis_open)) { onOpenProject(selected.id) }
+        LinkPill(palette, "+ " + stringResource(R.string.projects_new), createProject)
+    }
 
     if (transactions.isEmpty())
     {
@@ -98,6 +115,23 @@ fun ProjectAnalysisTab(
 
     BreakdownSection(palette, projectBreakdown(transactions, subcategories))
     TopExpensesSection(palette, topExpenses(transactions))
+}
+
+/** A small rounded link: an action that is not the main content of the screen. */
+@Composable
+private fun LinkPill(palette: AccountsPalette, text: String, onClick: () -> Unit)
+{
+    Text(
+        text = text,
+        color = palette.kicker,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(palette.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
 }
 
 @Composable

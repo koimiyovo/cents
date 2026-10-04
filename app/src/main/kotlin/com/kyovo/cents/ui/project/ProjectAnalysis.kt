@@ -32,6 +32,14 @@ fun resolveSelectedProject(chosen: ProjectId?, projects: List<Project>, transact
     projects.find { it.id == chosen } ?: initialProjectChoice(projects, transactions)
 
 /**
+ * The project that was not among [knownIds] - the ones that existed when the user asked to create one - or null if
+ * there is none or more than one (then it was not just this creation, and nothing is guessed). A new project has no
+ * transaction, so the default choice would never land on it: this is how the tab comes to show it.
+ */
+fun newlyCreatedProject(knownIds: Set<ProjectId>, projects: List<Project>): Project? =
+    projects.filter { it.id !in knownIds }.singleOrNull()
+
+/**
  * Where a project's money went: its expenses split by subcategory (the budget pie's own rules - most spent first,
  * the smallest folded into "other"), and the [refunds] apart. Refunds are not netted into the pie: a refund carries
  * an income subcategory, or none, never the expense subcategory it pays back, so there is nothing to take it off.

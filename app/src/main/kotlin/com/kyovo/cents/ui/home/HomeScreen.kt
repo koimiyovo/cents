@@ -555,6 +555,7 @@ fun HomeScreen(
                                         subcategories = subcategories,
                                         chosenProjectUuid = analysedProjectUuid,
                                         onChooseProject = { analysedProjectUuid = it.value.toString() },
+                                        onCreateProject = projectsViewModel::openCreate,
                                         // The project's page, then back to this tab rather than to the list of projects.
                                         onOpenProject = { id ->
                                             projectOpenedFromTab = true
