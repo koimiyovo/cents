@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
                     deleteTransaction = appContainer.deleteTransaction,
                     createSubcategory = appContainer.createSubcategory,
                     checkBudgetAlerts = appContainer.checkBudgetAlerts,
+                    createRecurringTransaction = appContainer.createRecurringTransaction,
+                    generateRecurringTransactions = appContainer.generateRecurringTransactions,
                 )
             }
         }

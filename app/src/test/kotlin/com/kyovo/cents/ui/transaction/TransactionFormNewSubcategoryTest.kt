@@ -92,6 +92,7 @@ private val unusedCheck = object : CheckBudgetAlertsUseCase
 class TransactionFormNewSubcategoryTest
 {
     private val create = RecordingCreateSubcategory()
+    private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         unusedRecord,
         unusedTransfer,
@@ -99,6 +100,8 @@ class TransactionFormNewSubcategoryTest
         unusedDelete,
         create,
         unusedCheck,
+        createRecurring,
+        FakeGenerateRecurring(createRecurring),
         now = { MOMENT },
     )
 

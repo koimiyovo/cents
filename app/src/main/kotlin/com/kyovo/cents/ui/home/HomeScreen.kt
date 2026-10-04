@@ -229,13 +229,16 @@ fun HomeScreen(
     val dismissNotificationAsk = {
         budgetsViewModel.dismissNotificationPermissionAsk()
         recurringTransactionsViewModel.dismissNotificationPermissionAsk()
+        formViewModel.dismissNotificationPermissionAsk()
     }
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             dismissNotificationAsk()
         }
 
-    if (budgetsState.askNotificationPermission || recurringTransactionsState.askNotificationPermission)
+    if (budgetsState.askNotificationPermission || recurringTransactionsState.askNotificationPermission ||
+        formState.askNotificationPermission
+    )
     {
         // The system dialog never re-asks once granted, but this rationale dialog is ours: without
         // this check it would reappear on every save even after the user already said yes.

@@ -150,6 +150,7 @@
     <string name="new_subcategory_error_name_taken">Une sous-catégorie de ce type porte déjà ce nom.</string>
     <string name="transaction_form_description_placeholder">Description (facultatif)</string>
     <string name="transaction_form_submit">Enregistrer</string>
+    <string name="transaction_form_submit_repeat">Enregistrer et répéter</string>
     <string name="transaction_form_error_amount">Saisissez un montant supérieur à 0 (2 décimales maximum).</string>
     <string name="transaction_form_error_title">Le titre est obligatoire.</string>
     <string name="transaction_form_error_account">Choisissez un compte.</string>
@@ -291,6 +292,8 @@
     <string name="recurring_form_account_label">Compte</string>
     <string name="recurring_form_account_placeholder">Choisir un compte</string>
     <string name="recurring_form_title_placeholder">Ex. Loyer, Salaire, Abonnement…</string>
+    <string name="transaction_form_repeat_label">Répéter</string>
+    <string name="transaction_form_repeat_hint">Crée une transaction récurrente à partir de la date choisie.</string>
     <string name="recurring_form_frequency_label">Fréquence</string>
     <string name="recurring_form_frequency_weekly">Hebdomadaire</string>
     <string name="recurring_form_frequency_monthly">Mensuelle</string>
