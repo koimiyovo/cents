@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.fakes
 
 import com.kyovo.cents.domain.model.Emoji
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.ProjectId
@@ -22,29 +23,32 @@ fun aProject(
     id: ProjectId = aProjectId(),
     name: ProjectName = ProjectName("Voyage au Japon"),
     emoji: Emoji? = null,
-    target: Money? = null
+    target: Money? = null,
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
 ): Project
 {
-    return Project(id, name, emoji, target)
+    return Project(id, name, emoji, target, alertThreshold)
 }
 
 fun aCreateProjectCommand(
     name: ProjectName = ProjectName("Voyage au Japon"),
     emoji: Emoji? = null,
-    target: Money? = null
+    target: Money? = null,
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
 ): CreateProjectCommand
 {
-    return CreateProjectCommand(name, emoji, target)
+    return CreateProjectCommand(name, emoji, target, alertThreshold)
 }
 
 fun anUpdateProjectCommand(
     id: ProjectId = aProjectId(),
     name: ProjectName = ProjectName("Voyage au Japon"),
     emoji: Emoji? = null,
-    target: Money? = null
+    target: Money? = null,
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
 ): UpdateProjectCommand
 {
-    return UpdateProjectCommand(id, name, emoji, target)
+    return UpdateProjectCommand(id, name, emoji, target, alertThreshold)
 }
 
 class FixedProjectIdGenerator(private val id: ProjectId) : ProjectIdGenerator

@@ -9,6 +9,7 @@ import com.kyovo.cents.application.fakes.aProjectId
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.model.Emoji
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.ProjectName
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -49,6 +50,18 @@ class CreateProjectServiceTest
         // THEN
         assertThat(withTarget.target).isEqualTo(aMoney(300_000))
         assertThat(without.target).isNull()
+    }
+
+    @Test
+    fun `keeps the alert threshold when one is given, and uses the default otherwise`() = runTest()
+    {
+        // WHEN
+        val own = service.create(aCreateProjectCommand(target = aMoney(100_000), alertThreshold = AlertThreshold(60)))
+        val default = service.create(aCreateProjectCommand(name = ProjectName("Travaux cuisine")))
+
+        // THEN
+        assertThat(own.alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(default.alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
     }
 
     @Test

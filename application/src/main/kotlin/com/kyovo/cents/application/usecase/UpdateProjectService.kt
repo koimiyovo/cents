@@ -21,7 +21,12 @@ class UpdateProjectService(private val projectRepository: ProjectRepository) : U
         }
 
         val updatedProject =
-            existingProject.copy(name = command.name, emoji = command.emoji, target = command.target)
+            existingProject.copy(
+                name = command.name,
+                emoji = command.emoji,
+                target = command.target,
+                alertThreshold = command.alertThreshold
+            )
 
         projectRepository.save(updatedProject)
 

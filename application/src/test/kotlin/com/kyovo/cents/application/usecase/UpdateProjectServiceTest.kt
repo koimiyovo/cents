@@ -8,6 +8,7 @@ import com.kyovo.cents.application.fakes.anUpdateProjectCommand
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.exception.ProjectNotFoundException
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.model.Emoji
 import kotlinx.coroutines.test.runTest
@@ -52,6 +53,21 @@ class UpdateProjectServiceTest
         // WHEN / THEN
         assertThat(service.update(anUpdateProjectCommand(id = id, emoji = plane)).emoji).isEqualTo(plane)
         assertThat(service.update(anUpdateProjectCommand(id = id, emoji = null)).emoji).isNull()
+    }
+
+    // The threshold is not optional: an update carries the whole new state, so it is always given.
+    @Test
+    fun `changes the alert threshold`() = runTest()
+    {
+        // GIVEN
+        repository.save(aProject(id = id, target = aMoney(100_000), alertThreshold = AlertThreshold(80)))
+
+        // WHEN
+        val result = service.update(anUpdateProjectCommand(id = id, target = aMoney(100_000), alertThreshold = AlertThreshold(60)))
+
+        // THEN
+        assertThat(result.alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(repository.saved.single().alertThreshold).isEqualTo(AlertThreshold(60))
     }
 
     @Test

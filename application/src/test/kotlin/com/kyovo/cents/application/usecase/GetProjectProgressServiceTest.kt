@@ -8,6 +8,7 @@ import com.kyovo.cents.application.fakes.aProjectId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.ProjectProgress
 import com.kyovo.cents.domain.model.Transaction
@@ -61,6 +62,27 @@ class GetProjectProgressServiceTest
         assertThat(progress).isEqualTo(
             ProjectProgress(aMoney(300_000), expenses = aMoney(125_000), incomes = aMoney(0), transactionCount = 2)
         )
+    }
+
+    // The alert level is the progress's to work out, with the threshold of the project it is about.
+    @Test
+    fun `carries the alert threshold of the project`() = runTest()
+    {
+        // GIVEN
+        projectRepository.save(aProject(id = japanId, target = aMoney(100_000), alertThreshold = AlertThreshold(60)))
+        projectRepository.save(aProject(id = kitchenId, target = aMoney(100_000)))
+        transactionRepository.save(aTransactionOf(1, 65_000))
+        transactionRepository.save(aTransactionOf(2, 65_000, projectId = kitchenId))
+
+        // WHEN
+        val all = service.observeAll().first()
+
+        // THEN 65 % is close for the 60 % project and not yet for the 80 % one
+        assertThat(all.getValue(japanId).alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(all.getValue(japanId).alertLevel()).isEqualTo(com.kyovo.cents.domain.model.BudgetAlertLevel.CLOSE_TO_LIMIT)
+        assertThat(all.getValue(kitchenId).alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
+        assertThat(all.getValue(kitchenId).alertLevel()).isNull()
+        assertThat(service.observe(japanId).first()!!.alertThreshold).isEqualTo(AlertThreshold(60))
     }
 
     @Test
