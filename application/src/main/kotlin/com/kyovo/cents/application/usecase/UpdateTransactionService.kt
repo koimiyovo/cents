@@ -4,6 +4,7 @@ import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
 import com.kyovo.cents.domain.exception.CannotUpdateTransferException
+import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.model.Transaction
@@ -11,13 +12,15 @@ import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.ProjectRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 
 class UpdateTransactionService(
     private val accountRepository: AccountRepository,
     private val transactionRepository: TransactionRepository,
-    private val subcategoryRepository: SubcategoryRepository
+    private val subcategoryRepository: SubcategoryRepository,
+    private val projectRepository: ProjectRepository
 ) : UpdateTransactionUseCase
 {
     override suspend fun update(command: UpdateTransactionCommand): Transaction
@@ -50,6 +53,8 @@ class UpdateTransactionService(
         val subcategory = command.subcategoryId?.let {
             subcategoryRepository.findById(it) ?: throw SubcategoryNotFoundException()
         }
+
+        command.projectId?.let { projectRepository.findById(it) ?: throw ProjectNotFoundException() }
 
         val updated = command.toTransaction(existing, subcategory)
         transactionRepository.save(updated)

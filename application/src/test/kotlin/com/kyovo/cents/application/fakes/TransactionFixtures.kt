@@ -2,6 +2,7 @@ package com.kyovo.cents.application.fakes
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -38,7 +39,8 @@ fun aTransaction(
     category: TransactionCategory = TransactionCategory.INITIAL_DEPOSIT,
     title: TransactionTitle = aTransactionTitle(),
     subcategoryId: SubcategoryId? = null,
-    description: TransactionDescription? = null
+    description: TransactionDescription? = null,
+    projectId: ProjectId? = null
 ): Transaction
 {
     return when (category)
@@ -55,7 +57,8 @@ fun aTransaction(
                 RecordableTransactionCategory.EXPENSE,
                 subcategoryId?.let { aSubcategory(id = it, kind = RecordableTransactionCategory.EXPENSE) },
                 description,
-                date
+                date,
+                projectId
             )
 
         TransactionCategory.INCOME          ->
@@ -67,7 +70,8 @@ fun aTransaction(
                 RecordableTransactionCategory.INCOME,
                 subcategoryId?.let { aSubcategory(id = it, kind = RecordableTransactionCategory.INCOME) },
                 description,
-                date
+                date,
+                projectId
             )
 
         TransactionCategory.TRANSFER_OUT    ->
@@ -85,10 +89,11 @@ fun aRecordTransactionCommand(
     category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     date: Instant = anInstant(),
     subcategoryId: SubcategoryId? = null,
-    description: TransactionDescription? = null
+    description: TransactionDescription? = null,
+    projectId: ProjectId? = null
 ): RecordTransactionCommand
 {
-    return RecordTransactionCommand(accountId, amount, title, category, subcategoryId, description, date)
+    return RecordTransactionCommand(accountId, amount, title, category, subcategoryId, description, date, projectId)
 }
 
 fun aRecordTransferCommand(
@@ -110,8 +115,9 @@ fun anUpdateTransactionCommand(
     category: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     date: Instant = anInstant(),
     subcategoryId: SubcategoryId? = null,
-    description: TransactionDescription? = null
+    description: TransactionDescription? = null,
+    projectId: ProjectId? = null
 ): UpdateTransactionCommand
 {
-    return UpdateTransactionCommand(id, accountId, amount, title, category, subcategoryId, description, date)
+    return UpdateTransactionCommand(id, accountId, amount, title, category, subcategoryId, description, date, projectId)
 }

@@ -3,6 +3,7 @@ package com.kyovo.cents.application.usecase
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryBudgetAlertRepository
 import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
+import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
@@ -62,7 +63,8 @@ class SubcategoryScenariosTest
         SequentialTransactionIdGenerator(
             List(4) { aTransactionId("33333333-3333-3333-3333-33333333333$it") },
         ),
-        subcategoryRepository,
+        InMemoryProjectRepository(),
+        subcategoryRepository
     )
     private val listTransactions = ListTransactionsService(transactionRepository)
     private val getBalance = GetAccountBalanceService(accountRepository, transactionRepository)
