@@ -365,6 +365,14 @@
         <item quantity="other">« %1$s » sera supprimé. Les %2$d transactions qui y sont rangées sont conservées, sans projet.</item>
     </plurals>
     <string name="project_delete_confirm">Supprimer</string>
+    <string name="budget_section_month">Mois</string>
+    <string name="budget_section_projects">Projets</string>
+    <string name="project_analysis_no_project">Aucun projet pour l\'instant. Créez-en un dans Réglages pour suivre un voyage, des travaux…</string>
+    <string name="project_analysis_open">Voir la page du projet</string>
+    <string name="project_analysis_breakdown_title">Répartition</string>
+    <string name="project_analysis_breakdown_empty">Aucune dépense dans ce projet.</string>
+    <string name="project_analysis_refunds">Remboursements : −%1$s</string>
+    <string name="project_analysis_top_title">Plus grosses dépenses</string>
     <string name="project_alert_close_body">%1$s %2$s approche de son objectif.</string>
     <string name="project_alert_over_body">%1$s %2$s dépasse son objectif.</string>
 </resources>
