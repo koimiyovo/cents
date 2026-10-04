@@ -51,6 +51,10 @@ class SchemaGuardTest
             .isEqualTo(V1_IDENTITY_HASH)
     }
 
+    // Version 6 (the projects) is deliberately not pinned yet: it has not been released, so its table is still
+    // being shaped - the alert threshold of a project was folded into it rather than made a version 7.
+    // Pin its hash here, next to version 5's, as soon as it is installed anywhere that matters.
+
     // Version 5 is installed on the phone too (it migrated from 4 there): a promise from now on.
     @Test
     fun `version 5 of the schema is still the one that was installed`()

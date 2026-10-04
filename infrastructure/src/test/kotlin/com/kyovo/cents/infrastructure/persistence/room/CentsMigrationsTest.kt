@@ -698,6 +698,33 @@ class CentsMigrationsTest
     }
 
     @Test
+    fun `a project of the migrated database keeps its own alert threshold, also after reopening the file`() = realTime()
+    {
+        // GIVEN a version 5 file, migrated, with a project that has a threshold of its own
+        createVersion5File()
+        val strict = japan.copy(alertThreshold = com.kyovo.cents.domain.model.AlertThreshold(60))
+        val first = openMigrated()
+        try
+        {
+            RoomProjectRepository(first.projectDao()).save(strict)
+        } finally
+        {
+            first.close()
+        }
+
+        // WHEN it is opened again
+        val second = openMigrated()
+        try
+        {
+            // THEN
+            assertThat(RoomProjectRepository(second.projectDao()).findAll()).containsExactly(strict)
+        } finally
+        {
+            second.close()
+        }
+    }
+
+    @Test
     fun `a transaction of the migrated database can join a project, and the project must exist`() = realTime()
     {
         // GIVEN a version 5 file, migrated

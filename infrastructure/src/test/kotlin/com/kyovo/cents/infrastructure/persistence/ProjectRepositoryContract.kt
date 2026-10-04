@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
@@ -58,6 +59,37 @@ abstract class ProjectRepositoryContract
 
         // WHEN / THEN
         assertThat(repository.findById(japan.id)).isEqualTo(japan)
+    }
+
+    @Test
+    fun `keeps the alert threshold of each project, the default included`() = realTime()
+    {
+        // GIVEN
+        val own = aProject(4, "Seuil 60", null, 100_000).copy(alertThreshold = AlertThreshold(60))
+        val strict = aProject(5, "Seuil 100", null, 100_000).copy(alertThreshold = AlertThreshold(100))
+
+        // WHEN
+        repository.save(own)
+        repository.save(strict)
+        repository.save(japan)
+
+        // THEN
+        assertThat(repository.findById(own.id)?.alertThreshold).isEqualTo(AlertThreshold(60))
+        assertThat(repository.findById(strict.id)?.alertThreshold).isEqualTo(AlertThreshold(100))
+        assertThat(repository.findById(japan.id)?.alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
+    }
+
+    @Test
+    fun `saving a project again replaces its alert threshold`() = realTime()
+    {
+        // GIVEN
+        repository.save(japan)
+
+        // WHEN
+        repository.save(japan.copy(alertThreshold = AlertThreshold(50)))
+
+        // THEN
+        assertThat(repository.findById(japan.id)?.alertThreshold).isEqualTo(AlertThreshold(50))
     }
 
     @Test
