@@ -20,6 +20,7 @@ class RoomTransactionRepositoryContractTest : TransactionRepositoryContract()
             RoomAccountRepository(database.accountDao()),
             RoomSubcategoryRepository(database.subcategoryDao()),
             RoomTransactionRepository(database.transactionDao()),
+            RoomProjectRepository(database.projectDao()),
         )
     }
 

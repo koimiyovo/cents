@@ -6,6 +6,9 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.Project
+import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -15,6 +18,7 @@ import com.kyovo.cents.domain.model.TransactionDescription
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.ProjectRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import kotlinx.coroutines.cancelChildren
@@ -30,14 +34,15 @@ import java.util.Currency
 import java.util.UUID
 
 /**
- * The three repositories of one storage, built together: a transaction points to an account and to a
- * subcategory, and a database (unlike a list) checks that what it points to exists. So the contract
- * saves the accounts and subcategories it needs through the same storage.
+ * The repositories of one storage, built together: a transaction points to an account, to a
+ * subcategory and to a project, and a database (unlike a list) checks that what it points to exists.
+ * So the contract saves the accounts, subcategories and projects it needs through the same storage.
  */
 class Stores(
     val accounts: AccountRepository,
     val subcategories: SubcategoryRepository,
     val transactions: TransactionRepository,
+    val projects: ProjectRepository,
 )
 
 /**
@@ -57,6 +62,9 @@ abstract class TransactionRepositoryContract
     private val groceries = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555551")), RecordableTransactionCategory.EXPENSE, SubcategoryName("Alimentation"), null)
     private val salaryCategory = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555552")), RecordableTransactionCategory.INCOME, SubcategoryName("Salaire"), null)
 
+    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
+    private val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), null, null)
+
     @BeforeEach
     fun createTheStores()
     {
@@ -67,6 +75,8 @@ abstract class TransactionRepositoryContract
             stores.accounts.save(accountB)
             stores.subcategories.save(groceries)
             stores.subcategories.save(salaryCategory)
+            stores.projects.save(japan)
+            stores.projects.save(kitchen)
         }
     }
 
@@ -92,9 +102,10 @@ abstract class TransactionRepositoryContract
         subcategory: Subcategory? = groceries,
         description: String? = null,
         at: Instant = date,
+        project: Project? = null,
     ) = Transaction.recorded(
         transactionId(suffix), account.id, Money(cents), TransactionTitle(title),
-        RecordableTransactionCategory.EXPENSE, subcategory, TransactionDescription.of(description), at,
+        RecordableTransactionCategory.EXPENSE, subcategory, TransactionDescription.of(description), at, project?.id,
     )
 
     // ------------------------------------------------------------------ reading what was saved
@@ -129,7 +140,7 @@ abstract class TransactionRepositoryContract
         val deposit = Transaction.openingDeposit(transactionId(1), accountA.id, Money(100_000), date)
         val income = Transaction.recorded(
             transactionId(2), accountA.id, Money(250_000), TransactionTitle("Salaire de septembre"),
-            RecordableTransactionCategory.INCOME, salaryCategory, TransactionDescription.of("Virement\nde l'employeur 💶"), date,
+            RecordableTransactionCategory.INCOME, salaryCategory, TransactionDescription.of("Virement\nde l'employeur 💶"), date, null,
         )
         val expense = anExpense(3, subcategory = null)
         val transferOut = Transaction.transferOut(transactionId(4), accountA.id, Money(5_000), TransactionTitle("Retrait espèces"), date)
@@ -138,6 +149,82 @@ abstract class TransactionRepositoryContract
 
         // WHEN / THEN
         assertThat(repository.findAll()).containsExactly(deposit, income, expense, transferOut, transferIn)
+    }
+
+    // ------------------------------------------------------------------ the project
+
+    @Test
+    fun `gives back the project of an expense, next to its subcategory`() = realTime()
+    {
+        // GIVEN
+        val expense = anExpense(1, subcategory = groceries, project = japan)
+
+        // WHEN
+        repository.save(expense)
+
+        // THEN
+        val found = repository.findById(expense.id)
+        assertThat(found).isEqualTo(expense)
+        assertThat(found?.projectId).isEqualTo(japan.id)
+        assertThat(found?.subcategoryId).isEqualTo(groceries.id)
+    }
+
+    // A refund attached to a project is an income like any other.
+    @Test
+    fun `gives back the project of an income`() = realTime()
+    {
+        // GIVEN
+        val refund = Transaction.recorded(
+            transactionId(1), accountA.id, Money(20_000), TransactionTitle("Remboursement assurance"),
+            RecordableTransactionCategory.INCOME, null, null, date, japan.id,
+        )
+
+        // WHEN
+        repository.save(refund)
+
+        // THEN
+        assertThat(repository.findById(refund.id)?.projectId).isEqualTo(japan.id)
+    }
+
+    @Test
+    fun `a transaction without a project comes back without one`() = realTime()
+    {
+        // GIVEN
+        val expense = anExpense(1)
+
+        // WHEN
+        repository.save(expense)
+
+        // THEN
+        assertThat(repository.findById(expense.id)?.projectId).isNull()
+    }
+
+    @Test
+    fun `a transaction can change project, or leave its project, when it is saved again`() = realTime()
+    {
+        // GIVEN
+        repository.save(anExpense(1, project = japan))
+
+        // WHEN / THEN it moves to another project
+        repository.save(anExpense(1, project = kitchen))
+        assertThat(repository.findById(transactionId(1))?.projectId).isEqualTo(kitchen.id)
+
+        // WHEN / THEN it leaves its project
+        repository.save(anExpense(1, project = null))
+        assertThat(repository.findById(transactionId(1))?.projectId).isNull()
+    }
+
+    @Test
+    fun `several transactions can share a project`() = realTime()
+    {
+        // GIVEN
+        repository.save(anExpense(1, project = japan))
+        repository.save(anExpense(2, project = japan))
+        repository.save(anExpense(3, project = kitchen))
+
+        // WHEN / THEN
+        assertThat(repository.findAll().filter { it.projectId == japan.id }.map { it.id })
+            .containsExactly(transactionId(1), transactionId(2))
     }
 
     @Test

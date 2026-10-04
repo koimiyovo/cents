@@ -128,5 +128,33 @@ object CentsMigrations
         )
     }
 
-    val ALL: List<Migration> = listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    /**
+     * Version 6 adds the projects: a new, empty `projects` table (the SQL is the one Room exported for
+     * version 6, `schemas/.../6.json`, word for word), and a `projectId` column on `transactions` that
+     * points to it. Nothing existing is rewritten: every transaction gets a null `projectId`, which is
+     * "no project". `ALTER TABLE ... ADD COLUMN` is enough because SQLite accepts a column with a
+     * `REFERENCES` clause when it defaults to NULL, and the foreign key (`SET NULL`: deleting a project
+     * keeps its transactions) is then part of the table, which Room checks when the file is opened.
+     */
+    val MIGRATION_5_6 = Migration(5, 6)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `projects` (" +
+                    "`id` BLOB NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`emoji` TEXT, " +
+                    "`targetCents` INTEGER, " +
+                    "PRIMARY KEY(`id`))"
+        )
+        connection.execSQL(
+            "ALTER TABLE `transactions` ADD COLUMN `projectId` BLOB " +
+                    "REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_transactions_projectId` ON `transactions` (`projectId`)"
+        )
+    }
+
+    val ALL: List<Migration> =
+        listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }

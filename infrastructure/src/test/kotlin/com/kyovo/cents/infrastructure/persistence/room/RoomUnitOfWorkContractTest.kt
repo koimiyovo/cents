@@ -22,6 +22,7 @@ class RoomUnitOfWorkContractTest : UnitOfWorkContract()
                 RoomAccountRepository(database.accountDao()),
                 RoomSubcategoryRepository(database.subcategoryDao()),
                 RoomTransactionRepository(database.transactionDao()),
+                RoomProjectRepository(database.projectDao()),
             ),
             RoomUnitOfWork(database),
         )
