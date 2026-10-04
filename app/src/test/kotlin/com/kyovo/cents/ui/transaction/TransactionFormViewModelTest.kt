@@ -156,6 +156,7 @@ class TransactionFormViewModelTest
     private val updateTransaction = FakeUpdateTransaction()
     private val deleteTransaction = FakeDeleteTransaction()
     private val createSubcategory = FakeCreateSubcategory()
+    private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         recordTransaction,
         recordTransfer,
@@ -163,6 +164,8 @@ class TransactionFormViewModelTest
         deleteTransaction,
         createSubcategory,
         NoAlerts,
+        createRecurring,
+        FakeGenerateRecurring(createRecurring),
         now = { NOW },
     )
 

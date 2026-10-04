@@ -316,7 +316,7 @@ private fun SubcategoryPickerField(
 }
 
 @Composable
-private fun FrequencyField(
+internal fun FrequencyField(
     palette: AccountsPalette,
     selected: RecurrenceFrequency,
     onSelect: (RecurrenceFrequency) -> Unit,
@@ -345,7 +345,7 @@ private fun FrequencyField(
 }
 
 @Composable
-private fun IntervalField(
+internal fun IntervalField(
     palette: AccountsPalette,
     frequency: RecurrenceFrequency,
     text: String,
@@ -399,7 +399,7 @@ private fun DateField(
 }
 
 @Composable
-private fun EndDateField(
+internal fun EndDateField(
     palette: AccountsPalette,
     hasEndDate: Boolean,
     endDate: LocalDate,

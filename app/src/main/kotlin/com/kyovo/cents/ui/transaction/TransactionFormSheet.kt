@@ -19,6 +19,8 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -30,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -60,6 +63,9 @@ import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.datePickerColorScheme
 import com.kyovo.cents.ui.home.toEpochMillisUtc
 import com.kyovo.cents.ui.home.toLocalDateUtc
+import com.kyovo.cents.ui.recurring.EndDateField
+import com.kyovo.cents.ui.recurring.FrequencyField
+import com.kyovo.cents.ui.recurring.IntervalField
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -96,6 +102,8 @@ fun TransactionFormSheet(
     // Opens straight on the details when the edited transaction already has some.
     var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showEndDatePicker by rememberSaveable { mutableStateOf(false) }
+    val endDateFormatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     val errors = if (showErrors)
     {
         (form.submit() as? FormSubmission.Invalid)?.errors.orEmpty()
@@ -271,6 +279,19 @@ fun TransactionFormSheet(
                 }
             }
 
+            // Only for a new income or expense: it becomes a recurring rule starting on the date chosen above.
+            if (form.canRepeat)
+            {
+                RepeatSection(
+                    palette = palette,
+                    form = form,
+                    errors = errors,
+                    endDateFormatter = endDateFormatter,
+                    onFormChange = onFormChange,
+                    onPickEndDate = { showEndDatePicker = true },
+                )
+            }
+
             failure?.let {
                 ErrorText(
                     palette = palette,
@@ -286,7 +307,13 @@ fun TransactionFormSheet(
                 )
             }
 
-            SubmitButton(palette, stringResource(R.string.transaction_form_submit), onSubmit)
+            SubmitButton(
+                palette,
+                stringResource(
+                    if (form.isRepeating) R.string.transaction_form_submit_repeat else R.string.transaction_form_submit,
+                ),
+                onSubmit,
+            )
             // Only for a transaction that exists: there is nothing to delete in a new one.
             if (form.isEditing)
             {
@@ -297,6 +324,20 @@ fun TransactionFormSheet(
                 )
             }
         }
+    }
+
+    val endDate = form.repeat?.endDate
+    if (showEndDatePicker && endDate != null)
+    {
+        SingleDatePickerDialog(
+            palette = palette,
+            initialDay = endDate,
+            onDismiss = { showEndDatePicker = false },
+            onConfirm = { day ->
+                showEndDatePicker = false
+                onFormChange(form.withEndDate(day))
+            },
+        )
     }
 
     if (showDatePicker)
@@ -310,6 +351,57 @@ fun TransactionFormSheet(
                 onFormChange(form.withDay(day, Instant.now()))
             },
         )
+    }
+}
+
+/** The "Répéter" switch and, once on, the recurring form's own pace fields. */
+@Composable
+private fun RepeatSection(
+    palette: AccountsPalette,
+    form: TransactionFormState,
+    errors: Set<FormError>,
+    endDateFormatter: DateTimeFormatter,
+    onFormChange: (TransactionFormState) -> Unit,
+    onPickEndDate: () -> Unit,
+)
+{
+    val repeat = form.repeat
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                SectionLabel(palette, stringResource(R.string.transaction_form_repeat_label))
+                Text(
+                    text = stringResource(R.string.transaction_form_repeat_hint),
+                    color = palette.textMuted,
+                    fontSize = 13.sp,
+                )
+            }
+            Switch(
+                checked = repeat != null,
+                onCheckedChange = { onFormChange(form.withRepeat(it)) },
+                colors = SwitchDefaults.colors(checkedTrackColor = palette.iconToneGreen),
+            )
+        }
+        if (repeat != null)
+        {
+            FrequencyField(palette, repeat.frequency, onSelect = { onFormChange(form.withFrequency(it)) })
+            IntervalField(
+                palette = palette,
+                frequency = repeat.frequency,
+                text = repeat.intervalText,
+                onValueChange = { onFormChange(form.withInterval(it)) },
+            )
+            FieldError(palette, FormError.INTERVAL_INVALID in errors, FormError.INTERVAL_INVALID)
+            EndDateField(
+                palette = palette,
+                hasEndDate = repeat.endDate != null,
+                endDate = repeat.endDate ?: form.day(),
+                formatter = endDateFormatter,
+                onToggle = { onFormChange(form.withEndDateEnabled(it)) },
+                onClick = onPickEndDate,
+            )
+            FieldError(palette, FormError.END_BEFORE_START in errors, FormError.END_BEFORE_START)
+        }
     }
 }
 
@@ -423,6 +515,8 @@ private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormEr
                 FormError.DESTINATION_ACCOUNT_REQUIRED -> R.string.transaction_form_error_destination
                 FormError.SAME_ACCOUNT                 -> R.string.transaction_form_error_same_account
                 FormError.SUBCATEGORY_MISMATCH         -> R.string.transaction_form_error_subcategory
+                FormError.INTERVAL_INVALID             -> R.string.recurring_form_error_interval
+                FormError.END_BEFORE_START             -> R.string.recurring_form_error_end_before_start
             },
         ),
     )

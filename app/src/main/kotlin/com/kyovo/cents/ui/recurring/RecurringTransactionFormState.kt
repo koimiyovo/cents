@@ -36,7 +36,7 @@ sealed interface RecurringTransactionSubmission
     data class Invalid(val errors: Set<RecurringTransactionFormError>) : RecurringTransactionSubmission
 }
 
-private val INTERVAL_INPUT_PATTERN = Regex("""\d{0,3}""")
+internal val INTERVAL_INPUT_PATTERN = Regex("""\d{0,3}""")
 
 /**
  * What the user has typed so far for a recurring rule: whether it is an expense or an income ([category]), an

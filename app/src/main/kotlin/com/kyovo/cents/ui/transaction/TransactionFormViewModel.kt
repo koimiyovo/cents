@@ -23,9 +23,11 @@ import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
+import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
+import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
@@ -84,6 +86,8 @@ data class NewSubcategoryDraft(
  * [form] is null while the sheet is closed, so "is the sheet open" and its content can't disagree.
  * [confirmingDelete] is set while the user is being asked whether to delete the edited transaction.
  * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up.
+ * [askNotificationPermission] is raised once a repeating form has created its rule, for the screen to ask for the
+ * permission the rule's notification needs (see [TransactionFormViewModel.dismissNotificationPermissionAsk]).
  */
 data class TransactionFormUiState(
     val form: TransactionFormState? = null,
@@ -91,6 +95,7 @@ data class TransactionFormUiState(
     val failure: SubmitFailure? = null,
     val confirmingDelete: TransactionToDelete? = null,
     val newSubcategory: NewSubcategoryDraft? = null,
+    val askNotificationPermission: Boolean = false,
 )
 
 /**
@@ -108,6 +113,8 @@ class TransactionFormViewModel(
     private val deleteTransaction: DeleteTransactionUseCase,
     private val createSubcategory: CreateSubcategoryUseCase,
     private val checkBudgetAlerts: CheckBudgetAlertsUseCase,
+    private val createRecurringTransaction: CreateRecurringTransactionUseCase,
+    private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
@@ -332,7 +339,7 @@ class TransactionFormViewModel(
     private suspend fun save()
     {
         val form = _uiState.value.form ?: return
-        val submission = form.stampedAt(now(), zone).submit()
+        val submission = form.stampedAt(now(), zone).submit(zone)
         try
         {
             when (submission)
@@ -344,6 +351,7 @@ class TransactionFormViewModel(
                 }
 
                 is FormSubmission.Record   -> recordTransaction.record(submission.command)
+                is FormSubmission.Repeat   -> createRecurringTransaction.create(submission.command)
                 is FormSubmission.Transfer -> recordTransfer.record(submission.command)
                 is FormSubmission.Update   -> updateTransaction.update(submission.command)
             }
@@ -377,6 +385,17 @@ class TransactionFormViewModel(
         // Close only once the write went through.
         close()
 
+        if (submission is FormSubmission.Repeat)
+        {
+            // The rule will notify the user the day it falls, which needs the permission: ask now, while they have
+            // just asked for it. Then record what is already due (a rule starting today has its first transaction
+            // now; one starting later waits for its month): generation otherwise runs only at launch and once a day.
+            // The sheet is already closed, so none of this keeps the user waiting.
+            _uiState.update { it.copy(askNotificationPermission = true) }
+            generateRecurringTransactions.generate()
+            return
+        }
+
         // Only spending can cross a budget: an income or a transfer cannot.
         val spentOn = when (submission)
         {
@@ -385,6 +404,12 @@ class TransactionFormViewModel(
             else                     -> null
         }
         if (spentOn != null) reportBudgetAlerts(spentOn)
+    }
+
+    /** The screen has shown the rationale (or launched the system request): the ask is done. */
+    fun dismissNotificationPermissionAsk()
+    {
+        _uiState.update { it.copy(askNotificationPermission = false) }
     }
 
     /** Runs the alert check for the month [date] falls in and hands each new alert to the screen. */

@@ -108,6 +108,7 @@ class TransactionFormBudgetAlertTest
 {
     private val record = RecordingRecord()
     private val check = FakeCheckBudgetAlerts()
+    private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         record,
         RecordingTransfer(),
@@ -115,6 +116,8 @@ class TransactionFormBudgetAlertTest
         RecordingDelete(),
         UnusedCreateSubcategory,
         check,
+        createRecurring,
+        FakeGenerateRecurring(createRecurring),
         now = { NOW },
         zone = PARIS,
     )
