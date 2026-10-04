@@ -317,4 +317,50 @@
     <string name="recurring_delete_title">Supprimer cette transaction récurrente ?</string>
     <string name="recurring_delete_body">« %1$s » sera supprimée. Les transactions déjà générées sont conservées.</string>
     <string name="recurring_delete_confirm">Supprimer</string>
+
+    <!-- Projects -->
+    <string name="transaction_form_project_label">Projet</string>
+    <string name="transaction_form_project_none">Aucun</string>
+    <string name="transaction_form_project_create">+ Nouveau projet</string>
+    <string name="transaction_form_failure_project_gone">Ce projet n\'existe plus : choisissez-en un autre.</string>
+    <string name="settings_projects">Projets</string>
+    <string name="settings_projects_hint">Suivre un voyage, des travaux…</string>
+    <string name="projects_title">Projets</string>
+    <string name="projects_intro">Un projet rassemble les transactions d\'un voyage, de travaux…, quelle que soit leur sous-catégorie. Touchez-en un pour voir ses transactions.</string>
+    <string name="projects_empty">Aucun projet pour l\'instant.</string>
+    <string name="projects_new">Nouveau projet</string>
+    <string name="projects_card_cost">Coût : %1$s</string>
+    <string name="projects_card_target">sur %1$s</string>
+    <string name="projects_card_left">Il reste %1$s</string>
+    <string name="projects_card_over">Dépassé de %1$s</string>
+    <string name="projects_transactions_none">Aucune transaction</string>
+    <plurals name="projects_transactions">
+        <item quantity="one">%d transaction</item>
+        <item quantity="other">%d transactions</item>
+    </plurals>
+    <string name="project_details_not_found">Ce projet n\'existe plus.</string>
+    <string name="project_details_edit">Modifier</string>
+    <string name="project_details_transactions_title">Transactions du projet</string>
+    <string name="project_details_empty">Aucune transaction dans ce projet pour l\'instant.</string>
+    <string name="project_form_title_new">Nouveau projet</string>
+    <string name="project_form_title_edit">Modifier le projet</string>
+    <string name="project_form_name_placeholder">Nom (ex. Voyage au Japon)</string>
+    <string name="project_form_emoji_description">Choisir un emoji</string>
+    <string name="project_form_target_label">Objectif (facultatif)</string>
+    <string name="project_form_target_hint">Ce que le projet doit coûter au total, remboursements déduits.</string>
+    <string name="project_form_create">Créer</string>
+    <string name="project_form_delete">Supprimer le projet</string>
+    <string name="project_form_error_name_required">Donnez un nom au projet.</string>
+    <string name="project_form_error_name_too_long">Ce nom est trop long (%1$d caractères au maximum).</string>
+    <string name="project_form_error_emoji_invalid">Cet emoji n\'est pas valide.</string>
+    <string name="project_form_error_target_invalid">Saisissez un montant supérieur à 0, ou laissez vide.</string>
+    <string name="project_form_error_name_taken">Un projet porte déjà ce nom.</string>
+    <string name="project_form_error_gone">Ce projet n\'existe plus.</string>
+    <string name="project_delete_title">Supprimer ce projet ?</string>
+    <string name="project_delete_body_unused">« %1$s » sera supprimé.</string>
+    <plurals name="project_delete_body_used">
+        <item quantity="one">« %1$s » sera supprimé. La transaction qui y est rangée est conservée, sans projet.</item>
+        <item quantity="other">« %1$s » sera supprimé. Les %2$d transactions qui y sont rangées sont conservées, sans projet.</item>
+    </plurals>
+    <string name="project_delete_confirm">Supprimer</string>
 </resources>

@@ -43,6 +43,7 @@ fun SettingsScreen(
     onOpenSubcategories: () -> Unit,
     onOpenBudgets: () -> Unit,
     onOpenRecurringTransactions: () -> Unit,
+    onOpenProjects: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -86,6 +87,13 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_recurring_transactions),
                 subtitle = stringResource(R.string.settings_recurring_transactions_hint),
                 onClick = onOpenRecurringTransactions,
+            )
+            SettingsEntry(
+                palette = palette,
+                emoji = "\uD83D\uDCC1",
+                title = stringResource(R.string.settings_projects),
+                subtitle = stringResource(R.string.settings_projects_hint),
+                onClick = onOpenProjects,
             )
         }
     }

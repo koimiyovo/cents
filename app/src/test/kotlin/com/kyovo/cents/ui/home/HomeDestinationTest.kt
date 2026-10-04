@@ -28,6 +28,12 @@ class HomeDestinationTest
     }
 
     @Test
+    fun `back from the projects goes to the settings`()
+    {
+        assertThat(HomeDestination.Projects.back()).isEqualTo(HomeDestination.Settings)
+    }
+
+    @Test
     fun `back from the settings goes to the tabs`()
     {
         assertThat(HomeDestination.Settings.back()).isEqualTo(HomeDestination.Tabs)
@@ -67,6 +73,7 @@ class HomeDestinationTest
             HomeDestination.Subcategories,
             HomeDestination.Budgets,
             HomeDestination.RecurringTransactions,
+            HomeDestination.Projects,
         )
     }
 }

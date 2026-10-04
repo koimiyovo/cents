@@ -8,21 +8,25 @@ import com.kyovo.cents.domain.exception.CannotDeleteTransferException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
 import com.kyovo.cents.domain.exception.CannotUpdateTransferException
+import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryNameException
+import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.Emoji
+import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
+import com.kyovo.cents.domain.port.input.CreateProjectUseCase
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
@@ -31,6 +35,10 @@ import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
+import com.kyovo.cents.ui.project.NewProjectDraft
+import com.kyovo.cents.ui.project.ProjectFormError
+import com.kyovo.cents.ui.project.ProjectFormState
+import com.kyovo.cents.ui.project.ProjectSubmission
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +60,9 @@ enum class SubmitFailure
 
     /** Editing: the transaction is gone, or is one the domain won't let be changed. */
     TRANSACTION_UNAVAILABLE,
+
+    /** The project chosen was deleted since the form was opened. */
+    PROJECT_NOT_FOUND,
 }
 
 /**
@@ -85,7 +96,8 @@ data class NewSubcategoryDraft(
 /**
  * [form] is null while the sheet is closed, so "is the sheet open" and its content can't disagree.
  * [confirmingDelete] is set while the user is being asked whether to delete the edited transaction.
- * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up.
+ * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up, and
+ * [newProject] while the one to create a project is.
  * [askNotificationPermission] is raised once a repeating form has created its rule, for the screen to ask for the
  * permission the rule's notification needs (see [TransactionFormViewModel.dismissNotificationPermissionAsk]).
  */
@@ -95,6 +107,7 @@ data class TransactionFormUiState(
     val failure: SubmitFailure? = null,
     val confirmingDelete: TransactionToDelete? = null,
     val newSubcategory: NewSubcategoryDraft? = null,
+    val newProject: NewProjectDraft? = null,
     val askNotificationPermission: Boolean = false,
 )
 
@@ -115,6 +128,7 @@ class TransactionFormViewModel(
     private val checkBudgetAlerts: CheckBudgetAlertsUseCase,
     private val createRecurringTransaction: CreateRecurringTransactionUseCase,
     private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
+    private val createProject: CreateProjectUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
@@ -158,17 +172,17 @@ class TransactionFormViewModel(
     }
 
     /**
-     * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] is the one
-     * it points to (null when it has none).
+     * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] and [project] are
+     * the ones it points to (null when it has none).
      */
-    fun openForEdit(transaction: Transaction, subcategory: Subcategory?)
+    fun openForEdit(transaction: Transaction, subcategory: Subcategory?, project: Project?)
     {
         // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
         accountRequest = null
         _uiState.value =
-            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
+            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory, project))
     }
 
     /**
@@ -300,6 +314,60 @@ class TransactionFormViewModel(
         }
     }
 
+    /** Opens the "new project" dialog. Nothing to do for a transfer or a repeating transaction, which have no project. */
+    fun askToCreateProject()
+    {
+        if (_uiState.value.form?.canHaveProject != true) return
+        _uiState.update { it.copy(newProject = NewProjectDraft()) }
+    }
+
+    /** Replaces the form of the dialog (an edit of a field); what was reported about the last attempt is stale. */
+    fun updateNewProject(form: ProjectFormState)
+    {
+        _uiState.update { state -> state.copy(newProject = state.newProject?.copy(form = form, errors = emptySet())) }
+    }
+
+    fun dismissNewProject()
+    {
+        _uiState.update { it.copy(newProject = null) }
+    }
+
+    /**
+     * Creates the project and selects it in the form. A blank name, a bad target or an already-used name
+     * leaves the dialog open and says why; on success the new project shows up in every dropdown (they
+     * observe the list).
+     */
+    fun confirmNewProject()
+    {
+        viewModelScope.launch { createNewProject() }
+    }
+
+    private suspend fun createNewProject()
+    {
+        val draft = _uiState.value.newProject ?: return
+        val created = try
+        {
+            when (val submission = draft.form.submit())
+            {
+                is ProjectSubmission.Invalid ->
+                {
+                    _uiState.update { it.copy(newProject = draft.copy(errors = submission.errors)) }
+                    return
+                }
+
+                is ProjectSubmission.Create  -> createProject.create(submission.command)
+                // The dialog only creates: an update never comes out of a form that was not an edit.
+                is ProjectSubmission.Update  -> return
+            }
+        } catch (_: DuplicateProjectNameException)
+        {
+            _uiState.update { it.copy(newProject = draft.copy(errors = setOf(ProjectFormError.NAME_TAKEN))) }
+            return
+        }
+
+        _uiState.update { it.copy(form = it.form?.withProject(created), newProject = null) }
+    }
+
     /** Asks for confirmation before deleting the edited transaction. Does nothing on a new one. */
     fun askToDelete()
     {
@@ -404,6 +472,10 @@ class TransactionFormViewModel(
         } catch (_: TransferToSameAccountException)
         {
             _uiState.update { it.copy(failure = SubmitFailure.SAME_ACCOUNT) }
+            return
+        } catch (_: ProjectNotFoundException)
+        {
+            _uiState.update { it.copy(failure = SubmitFailure.PROJECT_NOT_FOUND) }
             return
         } catch (_: TransactionNotFoundException)
         {

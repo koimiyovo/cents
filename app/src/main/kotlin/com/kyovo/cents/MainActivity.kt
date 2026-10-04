@@ -16,6 +16,7 @@ import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
+import com.kyovo.cents.ui.project.ProjectsViewModel
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
 import com.kyovo.cents.ui.transaction.InitialDepositFormViewModel
@@ -43,6 +44,19 @@ class MainActivity : ComponentActivity() {
                     checkBudgetAlerts = appContainer.checkBudgetAlerts,
                     createRecurringTransaction = appContainer.createRecurringTransaction,
                     generateRecurringTransactions = appContainer.generateRecurringTransactions,
+                    createProject = appContainer.createProject,
+                )
+            }
+        }
+    }
+
+    private val projectsViewModel: ProjectsViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                ProjectsViewModel(
+                    createProject = appContainer.createProject,
+                    updateProject = appContainer.updateProject,
+                    deleteProject = appContainer.deleteProject,
                 )
             }
         }
@@ -133,12 +147,15 @@ class MainActivity : ComponentActivity() {
                     listTransactions = appContainer.listTransactions,
                     listSubcategories = appContainer.listSubcategories,
                     listRecurringTransactions = appContainer.listRecurringTransactions,
+                    listProjects = appContainer.listProjects,
+                    getProjectProgress = appContainer.getProjectProgress,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,
                     subcategoriesViewModel = subcategoriesViewModel,
                     budgetsViewModel = budgetsViewModel,
                     recurringTransactionsViewModel = recurringTransactionsViewModel,
+                    projectsViewModel = projectsViewModel,
                 )
             }
         }
