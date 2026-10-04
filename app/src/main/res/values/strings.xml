@@ -46,7 +46,6 @@
     <string name="accounts_greeting_day">Bonjour 👋</string>
     <string name="accounts_greeting_evening">Bonsoir 👋</string>
     <string name="accounts_greeting_subtitle">Données stockées sur cet appareil</string>
-    <string name="accounts_vault_badge">🔒 Sur l\'appareil</string>
     <string name="accounts_hero_label">SOLDE TOTAL CONSOLIDÉ</string>
     <string name="accounts_income_label">↓ Revenus</string>
     <string name="accounts_expense_label">↑ Dépenses</string>
@@ -168,7 +167,7 @@
 
     <!-- Account form -->
     <string name="account_form_title">Nouveau compte</string>
-    <string name="account_form_name_placeholder">Nom du compte (ex. Livret A)</string>
+    <string name="account_form_name_placeholder">Nom du compte</string>
     <string name="account_form_type_label">Type de compte</string>
     <string name="account_form_initial_amount_label">Solde initial (facultatif)</string>
     <string name="account_form_description_placeholder">Description (facultatif)</string>
