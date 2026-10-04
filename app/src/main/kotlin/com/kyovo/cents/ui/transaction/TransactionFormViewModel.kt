@@ -16,9 +16,9 @@ import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -167,7 +167,8 @@ class TransactionFormViewModel(
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
         accountRequest = null
-        _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
+        _uiState.value =
+            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
     }
 
     /**
@@ -225,13 +226,27 @@ class TransactionFormViewModel(
 
     fun updateNewSubcategoryName(name: String)
     {
-        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(name = name, error = null)) }
+        _uiState.update { state ->
+            state.copy(
+                newSubcategory = state.newSubcategory?.copy(
+                    name = name,
+                    error = null
+                )
+            )
+        }
     }
 
     /** Picks the emoji of the subcategory being created; null removes the one picked. */
     fun selectNewSubcategoryEmoji(emoji: String?)
     {
-        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(emoji = emoji, error = null)) }
+        _uiState.update { state ->
+            state.copy(
+                newSubcategory = state.newSubcategory?.copy(
+                    emoji = emoji,
+                    error = null
+                )
+            )
+        }
     }
 
     fun dismissNewSubcategory()
@@ -258,7 +273,10 @@ class TransactionFormViewModel(
         val created = try
         {
             createSubcategory.create(
-                CreateSubcategoryCommand(kind, SubcategoryName(draft.name), draft.emoji?.let { SubcategoryEmoji(it) }),
+                CreateSubcategoryCommand(
+                    kind,
+                    SubcategoryName(draft.name),
+                    draft.emoji?.let { Emoji(it) }),
             )
         } catch (_: InvalidSubcategoryNameException)
         {
@@ -274,7 +292,12 @@ class TransactionFormViewModel(
             return
         }
 
-        _uiState.update { it.copy(form = it.form?.copy(subcategory = created), newSubcategory = null) }
+        _uiState.update {
+            it.copy(
+                form = it.form?.copy(subcategory = created),
+                newSubcategory = null
+            )
+        }
     }
 
     /** Asks for confirmation before deleting the edited transaction. Does nothing on a new one. */
@@ -283,7 +306,12 @@ class TransactionFormViewModel(
         val original = editedTransaction ?: return
         if (_uiState.value.form?.editingId != original.id) return
         _uiState.update {
-            it.copy(confirmingDelete = TransactionToDelete(original.title.value, original.signedAmount))
+            it.copy(
+                confirmingDelete = TransactionToDelete(
+                    original.title.value,
+                    original.signedAmount
+                )
+            )
         }
     }
 
@@ -310,13 +338,23 @@ class TransactionFormViewModel(
             deleteTransaction.delete(id)
         } catch (_: CannotDeleteInitialDepositException)
         {
-            _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
+            _uiState.update {
+                it.copy(
+                    confirmingDelete = null,
+                    failure = SubmitFailure.TRANSACTION_UNAVAILABLE
+                )
+            }
             return
         } catch (_: CannotDeleteTransferException)
         {
             // Not reachable from this form (it only opens incomes and expenses), but the domain
             // says no to a transfer leg, and that must be an answer on screen, not a crash.
-            _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
+            _uiState.update {
+                it.copy(
+                    confirmingDelete = null,
+                    failure = SubmitFailure.TRANSACTION_UNAVAILABLE
+                )
+            }
             return
         }
         close()
@@ -344,16 +382,16 @@ class TransactionFormViewModel(
         {
             when (submission)
             {
-                is FormSubmission.Invalid  ->
+                is FormSubmission.Invalid ->
                 {
                     _uiState.update { it.copy(showErrors = true) }
                     return
                 }
 
-                is FormSubmission.Record   -> recordTransaction.record(submission.command)
-                is FormSubmission.Repeat   -> createRecurringTransaction.create(submission.command)
+                is FormSubmission.Record -> recordTransaction.record(submission.command)
+                is FormSubmission.Repeat -> createRecurringTransaction.create(submission.command)
                 is FormSubmission.Transfer -> recordTransfer.record(submission.command)
-                is FormSubmission.Update   -> updateTransaction.update(submission.command)
+                is FormSubmission.Update -> updateTransaction.update(submission.command)
             }
         } catch (_: AccountNotFoundException)
         {
@@ -415,6 +453,7 @@ class TransactionFormViewModel(
     /** Runs the alert check for the month [date] falls in and hands each new alert to the screen. */
     private suspend fun reportBudgetAlerts(date: Instant)
     {
-        checkBudgetAlerts.check(YearMonth.from(date.atZone(zone))).forEach { _budgetAlerts.send(it) }
+        checkBudgetAlerts.check(YearMonth.from(date.atZone(zone)))
+            .forEach { _budgetAlerts.send(it) }
     }
 }

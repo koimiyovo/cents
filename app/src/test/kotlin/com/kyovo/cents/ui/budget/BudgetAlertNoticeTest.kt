@@ -2,9 +2,9 @@ package com.kyovo.cents.ui.budget
 
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
@@ -17,7 +17,7 @@ private fun aSubcategory(name: String, emoji: String?) = Subcategory(
     SubcategoryId(UUID.randomUUID()),
     RecordableTransactionCategory.EXPENSE,
     SubcategoryName(name),
-    emoji?.let { SubcategoryEmoji(it) },
+    emoji?.let { Emoji(it) },
 )
 
 private fun alertOn(subcategory: Subcategory, level: BudgetAlertLevel) =
@@ -32,9 +32,18 @@ class BudgetAlertNoticeTest
     @Test
     fun `carries the subcategory's own emoji, its name and the level`()
     {
-        val notice = budgetAlertNotice(alertOn(groceries, BudgetAlertLevel.CLOSE_TO_LIMIT), listOf(plain, groceries))
+        val notice = budgetAlertNotice(
+            alertOn(groceries, BudgetAlertLevel.CLOSE_TO_LIMIT),
+            listOf(plain, groceries)
+        )
 
-        assertThat(notice).isEqualTo(BudgetAlertNotice("🛒", "Alimentation", BudgetAlertLevel.CLOSE_TO_LIMIT))
+        assertThat(notice).isEqualTo(
+            BudgetAlertNotice(
+                "🛒",
+                "Alimentation",
+                BudgetAlertLevel.CLOSE_TO_LIMIT
+            )
+        )
     }
 
     @Test
@@ -49,6 +58,11 @@ class BudgetAlertNoticeTest
     @Test
     fun `an alert whose subcategory is gone says nothing`()
     {
-        assertThat(budgetAlertNotice(alertOn(groceries, BudgetAlertLevel.OVER), listOf(plain))).isNull()
+        assertThat(
+            budgetAlertNotice(
+                alertOn(groceries, BudgetAlertLevel.OVER),
+                listOf(plain)
+            )
+        ).isNull()
     }
 }

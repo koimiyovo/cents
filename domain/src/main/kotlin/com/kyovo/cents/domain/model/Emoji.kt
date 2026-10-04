@@ -8,7 +8,7 @@ import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
  * refuses what can't be one — nothing, or far more text than any emoji needs.
  */
 @JvmInline
-value class SubcategoryEmoji private constructor(val value: String)
+value class Emoji private constructor(val value: String)
 {
     init
     {
@@ -20,9 +20,9 @@ value class SubcategoryEmoji private constructor(val value: String)
         /** A family of four is 11 chars (four people joined by zero-width joiners). */
         private const val MAX_LENGTH = 16
 
-        operator fun invoke(value: String): SubcategoryEmoji
+        operator fun invoke(value: String): Emoji
         {
-            return SubcategoryEmoji(value.trim())
+            return Emoji(value.trim())
         }
     }
 }

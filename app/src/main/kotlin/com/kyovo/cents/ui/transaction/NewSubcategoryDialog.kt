@@ -1,6 +1,5 @@
 package com.kyovo.cents.ui.transaction
 
-import com.kyovo.cents.ui.common.NameAndEmojiField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,8 +23,9 @@ import androidx.compose.ui.window.Dialog
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryName
+import com.kyovo.cents.ui.common.EMOJIS
 import com.kyovo.cents.ui.common.ErrorText
-import com.kyovo.cents.ui.common.SUBCATEGORY_EMOJIS
+import com.kyovo.cents.ui.common.NameAndEmojiField
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.home.AccountsPalette
@@ -80,7 +80,7 @@ internal fun NewSubcategoryDialog(
                 placeholder = stringResource(R.string.new_subcategory_name_placeholder),
                 emoji = draft.emoji,
                 onEmojiChange = onEmojiChange,
-                emojis = SUBCATEGORY_EMOJIS,
+                emojis = EMOJIS,
                 emojiDescription = stringResource(R.string.new_subcategory_emoji_description),
                 focusRequester = focus,
             )

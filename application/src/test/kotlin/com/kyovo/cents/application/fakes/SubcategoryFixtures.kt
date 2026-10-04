@@ -1,16 +1,16 @@
 package com.kyovo.cents.application.fakes
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.Flow
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.UpdateSubcategoryCommand
 import com.kyovo.cents.domain.port.output.SubcategoryIdGenerator
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.UUID
 
 fun aSubcategoryId(value: String = "55555555-5555-5555-5555-555555555555"): SubcategoryId
@@ -22,7 +22,7 @@ fun aSubcategory(
     id: SubcategoryId = aSubcategoryId(),
     kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     name: SubcategoryName = SubcategoryName("Alimentation"),
-    emoji: SubcategoryEmoji? = null
+    emoji: Emoji? = null
 ): Subcategory
 {
     return Subcategory(id, kind, name, emoji)
@@ -31,7 +31,7 @@ fun aSubcategory(
 fun aCreateSubcategoryCommand(
     kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE,
     name: SubcategoryName = SubcategoryName("Alimentation"),
-    emoji: SubcategoryEmoji? = null
+    emoji: Emoji? = null
 ): CreateSubcategoryCommand
 {
     return CreateSubcategoryCommand(kind, name, emoji)
@@ -40,7 +40,7 @@ fun aCreateSubcategoryCommand(
 fun anUpdateSubcategoryCommand(
     id: SubcategoryId = aSubcategoryId(),
     name: SubcategoryName = SubcategoryName("Alimentation"),
-    emoji: SubcategoryEmoji? = null
+    emoji: Emoji? = null
 ): UpdateSubcategoryCommand
 {
     return UpdateSubcategoryCommand(id, name, emoji)
@@ -62,7 +62,8 @@ class InMemorySubcategoryRepository : SubcategoryRepository
     {
         val current = state.value
         val index = current.indexOfFirst { it.id == subcategory.id }
-        state.value = if (index >= 0) current.toMutableList().also { it[index] = subcategory } else current + subcategory
+        state.value = if (index >= 0) current.toMutableList()
+            .also { it[index] = subcategory } else current + subcategory
     }
 
     override suspend fun findById(id: SubcategoryId): Subcategory?
@@ -86,7 +87,8 @@ class InMemorySubcategoryRepository : SubcategoryRepository
     }
 }
 
-class SequentialSubcategoryIdGenerator(private val ids: List<SubcategoryId>) : SubcategoryIdGenerator
+class SequentialSubcategoryIdGenerator(private val ids: List<SubcategoryId>) :
+    SubcategoryIdGenerator
 {
     private var index = 0
 
