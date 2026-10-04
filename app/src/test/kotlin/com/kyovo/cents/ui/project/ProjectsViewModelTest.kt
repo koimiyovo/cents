@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.project
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.exception.ProjectNotFoundException
+import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
@@ -45,7 +46,7 @@ private class RecordingUpdate : UpdateProjectUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return Project(command.id, command.name, command.emoji, command.target)
+        return Project(command.id, command.name, command.emoji, command.target, command.alertThreshold)
     }
 }
 
@@ -145,9 +146,20 @@ class ProjectsViewModelTest
         viewModel.submit()
 
         assertThat(create.commands).containsExactly(
-            CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_000))
+            CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_000), AlertThreshold.DEFAULT)
         )
         assertThat(state.form).isNull()
+    }
+
+    @Test
+    fun `the threshold of the slider is saved with the project`()
+    {
+        viewModel.openCreate()
+        viewModel.update(state.form!!.withName("Voyage").withTarget("1000").withThreshold(60))
+
+        viewModel.submit()
+
+        assertThat(create.commands.single().alertThreshold).isEqualTo(AlertThreshold(60))
     }
 
     @Test
@@ -185,7 +197,7 @@ class ProjectsViewModelTest
         viewModel.submit()
 
         assertThat(update.commands).containsExactly(
-            UpdateProjectCommand(card.project.id, ProjectName("Japon 2027"), card.project.emoji, null)
+            UpdateProjectCommand(card.project.id, ProjectName("Japon 2027"), card.project.emoji, null, AlertThreshold.DEFAULT)
         )
         assertThat(create.commands).isEmpty()
         assertThat(state.form).isNull()
