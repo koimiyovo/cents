@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -134,14 +133,20 @@ fun TransactionFormSheet(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
             )
-            val archivedOriginal = remember(accounts, form.originalAccountId) { form.archivedOriginalAccount(accounts) }
+            val archivedOriginal = remember(
+                accounts,
+                form.originalAccountId
+            ) { form.archivedOriginalAccount(accounts) }
             if (archivedOriginal != null)
             {
                 ArchivedAccountNotice(palette, archivedOriginal.name.value)
             }
             TypeSelector(
                 palette = palette,
-                types = if (form.isEditing) listOf(TransactionFormType.EXPENSE, TransactionFormType.INCOME)
+                types = if (form.isEditing) listOf(
+                    TransactionFormType.EXPENSE,
+                    TransactionFormType.INCOME
+                )
                 else TransactionFormType.entries,
                 selected = form.type,
             ) { onFormChange(form.withType(it)) }
@@ -204,7 +209,11 @@ fun TransactionFormSheet(
                     onSelect = { onFormChange(form.copy(accountId = it)) },
                     onCreate = { onCreateAccount(AccountField.SOURCE) },
                 )
-                FieldError(palette, FormError.ACCOUNT_REQUIRED in errors, FormError.ACCOUNT_REQUIRED)
+                FieldError(
+                    palette,
+                    FormError.ACCOUNT_REQUIRED in errors,
+                    FormError.ACCOUNT_REQUIRED
+                )
                 if (isTransfer)
                 {
                     AccountPicker(
@@ -227,6 +236,18 @@ fun TransactionFormSheet(
             // A transfer has no subcategory or description (its command carries neither).
             if (form.type != TransactionFormType.TRANSFER)
             {
+                SubcategoryPicker(
+                    palette = palette,
+                    subcategories = form.subcategoryChoices(subcategories),
+                    selected = form.subcategory,
+                    onSelect = { onFormChange(form.copy(subcategory = it)) },
+                    onCreate = onCreateSubcategory,
+                )
+                FieldError(
+                    palette,
+                    FormError.SUBCATEGORY_MISMATCH in errors,
+                    FormError.SUBCATEGORY_MISMATCH,
+                )
                 Text(
                     text = stringResource(
                         if (showDetails) R.string.transaction_form_less_details
@@ -239,18 +260,6 @@ fun TransactionFormSheet(
                 )
                 if (showDetails)
                 {
-                    SubcategoryPicker(
-                        palette = palette,
-                        subcategories = form.subcategoryChoices(subcategories),
-                        selected = form.subcategory,
-                        onSelect = { onFormChange(form.copy(subcategory = it)) },
-                        onCreate = onCreateSubcategory,
-                    )
-                    FieldError(
-                        palette,
-                        FormError.SUBCATEGORY_MISMATCH in errors,
-                        FormError.SUBCATEGORY_MISMATCH,
-                    )
                     FormTextField(
                         palette = palette,
                         value = form.description,
@@ -270,9 +279,9 @@ fun TransactionFormSheet(
                     text = stringResource(
                         when (it)
                         {
-                            SubmitFailure.ACCOUNT_NOT_FOUND -> R.string.transaction_form_failure_account_not_found
-                            SubmitFailure.ARCHIVED_ACCOUNT  -> R.string.transaction_form_failure_archived
-                            SubmitFailure.SAME_ACCOUNT      -> R.string.transaction_form_error_same_account
+                            SubmitFailure.ACCOUNT_NOT_FOUND       -> R.string.transaction_form_failure_account_not_found
+                            SubmitFailure.ARCHIVED_ACCOUNT        -> R.string.transaction_form_failure_archived
+                            SubmitFailure.SAME_ACCOUNT            -> R.string.transaction_form_error_same_account
                             SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
                         },
                     ),
@@ -283,7 +292,11 @@ fun TransactionFormSheet(
             // Only for a transaction that exists: there is nothing to delete in a new one.
             if (form.isEditing)
             {
-                DestructiveButton(palette, stringResource(R.string.transaction_form_delete), onDelete)
+                DestructiveButton(
+                    palette,
+                    stringResource(R.string.transaction_form_delete),
+                    onDelete
+                )
             }
         }
     }
@@ -387,7 +400,7 @@ private fun SubcategoryPicker(
         SelectDropdown(
             palette = palette,
             options = listOf(SelectOption<Subcategory?>(null, noneLabel)) +
-                subcategories.map { SelectOption<Subcategory?>(it, it.name.value) },
+                    subcategories.map { SelectOption<Subcategory?>(it, it.name.value) },
             selected = selected,
             onSelect = onSelect,
             fillWidth = true,
@@ -406,12 +419,12 @@ private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormEr
         text = stringResource(
             when (error)
             {
-                FormError.AMOUNT_INVALID                -> R.string.transaction_form_error_amount
-                FormError.TITLE_REQUIRED                -> R.string.transaction_form_error_title
-                FormError.ACCOUNT_REQUIRED              -> R.string.transaction_form_error_account
-                FormError.DESTINATION_ACCOUNT_REQUIRED  -> R.string.transaction_form_error_destination
-                FormError.SAME_ACCOUNT                  -> R.string.transaction_form_error_same_account
-                FormError.SUBCATEGORY_MISMATCH          -> R.string.transaction_form_error_subcategory
+                FormError.AMOUNT_INVALID               -> R.string.transaction_form_error_amount
+                FormError.TITLE_REQUIRED               -> R.string.transaction_form_error_title
+                FormError.ACCOUNT_REQUIRED             -> R.string.transaction_form_error_account
+                FormError.DESTINATION_ACCOUNT_REQUIRED -> R.string.transaction_form_error_destination
+                FormError.SAME_ACCOUNT                 -> R.string.transaction_form_error_same_account
+                FormError.SUBCATEGORY_MISMATCH         -> R.string.transaction_form_error_subcategory
             },
         ),
     )
@@ -503,7 +516,8 @@ internal fun SingleDatePickerDialog(
                 // sized for a full-screen dialog and isn't French.
                 headline = {
                     Text(
-                        text = state.selectedDateMillis?.toLocalDateUtc()?.format(formatter).orEmpty(),
+                        text = state.selectedDateMillis?.toLocalDateUtc()?.format(formatter)
+                            .orEmpty(),
                         fontSize = 16.sp,
                         modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
                     )

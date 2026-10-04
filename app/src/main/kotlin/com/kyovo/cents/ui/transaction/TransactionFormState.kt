@@ -70,8 +70,8 @@ data class TransactionFormState(
 {
     val isEditing: Boolean get() = editingId != null
 
-    /** Whether there is already something in what sits behind "Plus de détails" (subcategory, description). */
-    val hasDetails: Boolean get() = subcategory != null || description.isNotBlank()
+    /** Whether there is already something in what sits behind "Plus de détails" (the description). */
+    val hasDetails: Boolean get() = description.isNotBlank()
 
     companion object
     {
