@@ -8,6 +8,9 @@ import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.Project
+import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -84,6 +87,33 @@ class RoomPersistenceTest
 
         // THEN the rollback undid the write made through the repository
         assertThat(persistence.accounts.findAll()).containsExactly(anAccount(1))
+    }
+
+    // Unlike the subcategories, no project comes with the app: they are the user's from the start.
+    @Test
+    fun `starts without any project`() = realTime()
+    {
+        assertThat(persistence.projects.findAll()).isEmpty()
+    }
+
+    @Test
+    fun `the projects share the database with the unit of work`() = realTime()
+    {
+        // GIVEN a project saved through the repository
+        val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
+        val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), null, null)
+        persistence.projects.save(japan)
+
+        // WHEN a unit of work adds another one through the same repository, and fails
+        runCatching {
+            persistence.unitOfWork.execute {
+                persistence.projects.save(kitchen)
+                error("boom")
+            }
+        }
+
+        // THEN the rollback undid the write
+        assertThat(persistence.projects.findAll()).containsExactly(japan)
     }
 
     // ------------------------------------------------------------------ a file, and its version

@@ -2,6 +2,7 @@ package com.kyovo.cents.infrastructure.persistence.room
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -44,8 +45,48 @@ class TransactionEntityMapperTest
                 subcategoryId = subcategory,
                 description = "Marché",
                 date = date.toEpochNanos(),
+                projectId = null,
             ),
         )
+    }
+
+    private val projectUuid = UUID.fromString("66666666-6666-6666-6666-666666666661")
+
+    @Test
+    fun `the project of a transaction goes to its row and comes back`()
+    {
+        // GIVEN an expense of a project, and an income (a refund) of the same project
+        val inProject = Transaction.recorded(
+            TransactionId(id), AccountId(account), Money(80_000), TransactionTitle("Billets"),
+            RecordableTransactionCategory.EXPENSE, groceries, null, date, ProjectId(projectUuid),
+        )
+        val refund = Transaction.recorded(
+            TransactionId(id), AccountId(account), Money(5_000), TransactionTitle("Remboursement"),
+            RecordableTransactionCategory.INCOME, null, null, date, ProjectId(projectUuid),
+        )
+
+        // WHEN / THEN
+        assertThat(inProject.toEntity().projectId).isEqualTo(projectUuid)
+        assertThat(inProject.toEntity().toDomain()).isEqualTo(inProject)
+        assertThat(refund.toEntity().projectId).isEqualTo(projectUuid)
+        assertThat(refund.toEntity().toDomain()).isEqualTo(refund)
+    }
+
+    @Test
+    fun `a row without a project becomes a transaction without a project`()
+    {
+        assertThat(expense.toEntity().toDomain().projectId).isNull()
+    }
+
+    @Test
+    fun `a row that links a project to anything but an income or an expense is refused`()
+    {
+        // GIVEN a transfer row that carries a project
+        val transfer = Transaction.transferOut(TransactionId(id), AccountId(account), Money(300), TransactionTitle("Retrait"), date).toEntity()
+
+        // WHEN / THEN
+        assertThatThrownBy { transfer.copy(projectId = projectUuid).toDomain() }
+            .isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test

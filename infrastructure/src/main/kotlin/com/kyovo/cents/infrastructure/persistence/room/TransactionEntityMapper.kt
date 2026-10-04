@@ -3,6 +3,7 @@ package com.kyovo.cents.infrastructure.persistence.room
 import com.kyovo.cents.domain.exception.InvalidRestoredTransactionException
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -21,6 +22,7 @@ fun Transaction.toEntity(): TransactionEntity
         subcategoryId = subcategoryId?.value,
         description = description?.value,
         date = date.toEpochNanos(),
+        projectId = projectId?.value
     )
 }
 
@@ -39,10 +41,14 @@ fun TransactionEntity.toDomain(): Transaction
             subcategoryId = subcategoryId?.let { SubcategoryId(it) },
             description = TransactionDescription.of(description),
             date = date.toInstantFromEpochNanos(),
+            projectId = projectId?.let { ProjectId(it) }
         )
     } catch (e: InvalidRestoredTransactionException)
     {
         // The domain's message is generic; say which row is wrong. (Both are IllegalStateExceptions.)
-        throw IllegalStateException("Inconsistent transaction row in the database: $id ($category)", e)
+        throw IllegalStateException(
+            "Inconsistent transaction row in the database: $id ($category)",
+            e
+        )
     }
 }

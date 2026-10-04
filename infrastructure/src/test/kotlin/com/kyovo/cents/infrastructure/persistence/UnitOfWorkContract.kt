@@ -6,6 +6,9 @@ import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.Project
+import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -21,7 +24,7 @@ import java.time.Instant
 import java.util.Currency
 import java.util.UUID
 
-/** One storage: its three repositories, and the unit of work that makes writes across them all-or-nothing. */
+/** One storage: its repositories, and the unit of work that makes writes across them all-or-nothing. */
 class Storage(val stores: Stores, val unitOfWork: UnitOfWork)
 
 /**
@@ -37,6 +40,7 @@ abstract class UnitOfWorkContract
     private val accounts get() = storage.stores.accounts
     private val subcategories get() = storage.stores.subcategories
     private val transactions get() = storage.stores.transactions
+    private val projects get() = storage.stores.projects
     private val unitOfWork get() = storage.unitOfWork
 
     @BeforeEach
@@ -54,9 +58,11 @@ abstract class UnitOfWorkContract
 
     private val groceries = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555551")), RecordableTransactionCategory.EXPENSE, SubcategoryName("Alimentation"), null)
 
-    private fun anExpense(suffix: Int, on: Account, subcategory: Subcategory? = null) = Transaction.recorded(
+    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
+
+    private fun anExpense(suffix: Int, on: Account, subcategory: Subcategory? = null, project: Project? = null) = Transaction.recorded(
         TransactionId(UUID.fromString("33333333-3333-3333-3333-33333333333$suffix")), on.id, Money(1_250),
-        TransactionTitle("Courses"), RecordableTransactionCategory.EXPENSE, subcategory, null, Instant.parse("2026-09-22T10:00:00Z"),
+        TransactionTitle("Courses"), RecordableTransactionCategory.EXPENSE, subcategory, null, Instant.parse("2026-09-22T10:00:00Z"), project?.id,
     )
 
     /** Runs the block in a unit of work that is made to fail at its end; gives back what was thrown. */
@@ -225,6 +231,47 @@ abstract class UnitOfWorkContract
         // THEN
         assertThat(accounts.findAll()).isEmpty()
         assertThat(transactions.findAll()).isEmpty()
+    }
+
+    // The deletion of a project is two writes: its transactions lose it, then it goes.
+    @Test
+    fun `a failed deletion of a project with its transactions leaves both as they were`() = realTime()
+    {
+        // GIVEN a project and a transaction that belongs to it
+        val account = anAccount(1)
+        accounts.save(account)
+        projects.save(japan)
+        transactions.save(anExpense(1, account, project = japan))
+
+        // WHEN the transaction is detached, then the project deleted, and something fails afterwards
+        failing {
+            transactions.save(anExpense(1, account))
+            projects.deleteById(japan.id)
+        }
+
+        // THEN the project is back, and so is the link
+        assertThat(projects.findAll()).containsExactly(japan)
+        assertThat(transactions.findAll()).containsExactly(anExpense(1, account, project = japan))
+    }
+
+    @Test
+    fun `a completed deletion of a project leaves its transactions, without the project`() = realTime()
+    {
+        // GIVEN
+        val account = anAccount(1)
+        accounts.save(account)
+        projects.save(japan)
+        transactions.save(anExpense(1, account, project = japan))
+
+        // WHEN
+        unitOfWork.execute {
+            transactions.save(anExpense(1, account))
+            projects.deleteById(japan.id)
+        }
+
+        // THEN
+        assertThat(projects.findAll()).isEmpty()
+        assertThat(transactions.findAll()).containsExactly(anExpense(1, account))
     }
 
     @Test
