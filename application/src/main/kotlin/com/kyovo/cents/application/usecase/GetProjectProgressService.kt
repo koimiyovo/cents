@@ -43,6 +43,7 @@ class GetProjectProgressService(
             expenses = total(TransactionCategory.EXPENSE),
             incomes = total(TransactionCategory.INCOME),
             transactionCount = transactions.size,
+            alertThreshold = project.alertThreshold,
         )
     }
 }
