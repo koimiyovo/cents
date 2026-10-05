@@ -156,6 +156,28 @@ object CentsMigrations
         )
     }
 
+    /**
+     * Version 7 adds the budget calendar: where each budget cycle starts. Two new, empty tables, so nothing
+     * existing is touched and every user keeps calendar months until they choose otherwise (no row in
+     * `budget_settings` means the default start day of 1). The SQL is the one Room exported for version 7
+     * (`schemas/.../7.json`), word for word.
+     */
+    val MIGRATION_6_7 = Migration(6, 7)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `budget_cycle_starts` (" +
+                    "`month` INTEGER NOT NULL, " +
+                    "`startEpochDay` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`month`))"
+        )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `budget_settings` (" +
+                    "`id` INTEGER NOT NULL, " +
+                    "`defaultStartDay` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`))"
+        )
+    }
+
     val ALL: List<Migration> =
-        listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 }
