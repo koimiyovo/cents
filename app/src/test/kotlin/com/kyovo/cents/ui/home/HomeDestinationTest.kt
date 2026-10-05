@@ -22,6 +22,12 @@ class HomeDestinationTest
     }
 
     @Test
+    fun `back from the budget cycle settings goes to the budgets, which hold the entry`()
+    {
+        assertThat(HomeDestination.BudgetCycle.back()).isEqualTo(HomeDestination.Budgets)
+    }
+
+    @Test
     fun `back from the recurring expenses goes to the settings`()
     {
         assertThat(HomeDestination.RecurringTransactions.back()).isEqualTo(HomeDestination.Settings)
@@ -72,6 +78,7 @@ class HomeDestinationTest
             HomeDestination.Settings,
             HomeDestination.Subcategories,
             HomeDestination.Budgets,
+            HomeDestination.BudgetCycle,
             HomeDestination.RecurringTransactions,
             HomeDestination.Projects,
         )

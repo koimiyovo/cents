@@ -11,6 +11,7 @@ internal enum class HomeDestination
     Settings,
     Subcategories,
     Budgets,
+    BudgetCycle,
     RecurringTransactions,
     Projects;
 
@@ -24,6 +25,7 @@ internal enum class HomeDestination
         Settings         -> Tabs
         Subcategories    -> Settings
         Budgets          -> Settings
+        BudgetCycle      -> Budgets
         RecurringTransactions -> Settings
         Projects              -> Settings
     }
