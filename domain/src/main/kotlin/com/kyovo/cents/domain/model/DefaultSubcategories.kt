@@ -13,6 +13,9 @@ import java.util.UUID
  */
 object DefaultSubcategories
 {
+    /** The default "Salaire" income subcategory: the pay that may open a budget cycle is recognised by it. */
+    val SALARY_ID: SubcategoryId get() = idOf("income:salary")
+
     /** The id of the default subcategory with this key: always the same for the same key. */
     fun idOf(key: String): SubcategoryId
     {
