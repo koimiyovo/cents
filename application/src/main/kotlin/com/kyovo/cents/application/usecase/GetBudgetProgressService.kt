@@ -6,6 +6,7 @@ import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.output.BudgetCalendarRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ import java.time.ZoneId
 class GetBudgetProgressService(
     private val budgetRepository: BudgetRepository,
     private val transactionRepository: TransactionRepository,
+    private val calendarRepository: BudgetCalendarRepository,
     private val zone: ZoneId
 ) : GetBudgetProgressUseCase
 {
@@ -35,12 +37,17 @@ class GetBudgetProgressService(
     // and when an expense is added, edited or deleted.
     override fun observeAll(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId, BudgetProgress>>
     {
-        // A month runs from midnight on its 1st to midnight on the next month's 1st, where the user lives.
-        val start = month.atDay(1).atStartOfDay(zone).toInstant()
-        val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
+        return combine(
+            budgetRepository.observeAll(),
+            transactionRepository.observeAll(),
+            calendarRepository.observe()
+        )
+        { budgets, transactions, calendar ->
+            // A month is a cycle of the calendar: from midnight on its start day to midnight on the next
+            // cycle's start day, where the user lives.
+            val start = calendar.startOf(month).atStartOfDay(zone).toInstant()
+            val end = calendar.endOf(month).atStartOfDay(zone).toInstant()
 
-        return combine(budgetRepository.observeAll(), transactionRepository.observeAll())
-        { budgets, transactions ->
             val spentBySubcategory = transactions
                 .filter {
                     it.category == TransactionCategory.EXPENSE &&

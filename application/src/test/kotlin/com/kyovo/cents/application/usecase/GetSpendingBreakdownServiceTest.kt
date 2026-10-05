@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryBudgetCalendarRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.anAccountId
@@ -35,7 +36,7 @@ class GetSpendingBreakdownServiceTest
 
     private val transactionRepository = InMemoryTransactionRepository()
 
-    private fun aServiceIn(zone: ZoneId) = GetSpendingBreakdownService(transactionRepository, zone)
+    private fun aServiceIn(zone: ZoneId) = GetSpendingBreakdownService(transactionRepository, InMemoryBudgetCalendarRepository(), zone)
 
     private fun anExpense(
         suffix: Int,

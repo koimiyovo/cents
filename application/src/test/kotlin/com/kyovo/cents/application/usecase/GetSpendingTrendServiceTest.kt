@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryBudgetCalendarRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.anAccountId
@@ -33,7 +34,7 @@ class GetSpendingTrendServiceTest
 
     private val transactionRepository = InMemoryTransactionRepository()
 
-    private fun aServiceIn(zone: ZoneId) = GetSpendingTrendService(transactionRepository, zone)
+    private fun aServiceIn(zone: ZoneId) = GetSpendingTrendService(transactionRepository, InMemoryBudgetCalendarRepository(), zone)
 
     private fun anExpense(suffix: Int, cents: Long, date: String, accountId: AccountId = anAccountId()): Transaction =
         aTransaction(
