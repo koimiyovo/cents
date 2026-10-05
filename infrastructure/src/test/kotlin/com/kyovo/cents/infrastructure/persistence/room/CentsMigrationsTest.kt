@@ -3,12 +3,14 @@ package com.kyovo.cents.infrastructure.persistence.room
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import com.kyovo.cents.domain.model.BudgetStartDay
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
@@ -221,6 +223,48 @@ class CentsMigrationsTest
         }
     }
 
+    /**
+     * A version 6 file as the released app leaves it: the tables and indices of `6.json` (a frozen copy -
+     * version 6 is installed on a phone, so it never changes, and `SchemaGuardTest` pins its hash), Room's
+     * bookkeeping (its identity hash and `user_version` = 6), and some real-looking data: a subcategory, an
+     * account, a project, an expense of that account in that subcategory *and* in that project, and a
+     * monthly budget on the subcategory.
+     */
+    private fun createVersion6File()
+    {
+        val at = Instant.parse("2026-09-01T10:00:00Z").toEpochNanos()
+        val connection = BundledSQLiteDriver().open(path)
+        try
+        {
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `subcategories` (`id` BLOB NOT NULL, `kind` TEXT NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `accounts` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `currency` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `archivedAt` INTEGER, `description` TEXT, `position` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_accounts_position` ON `accounts` (`position`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `projects` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, `targetCents` INTEGER, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `transactions` (`id` BLOB NOT NULL, `accountId` BLOB NOT NULL, `amount` INTEGER NOT NULL, `title` TEXT NOT NULL, `category` TEXT NOT NULL, `subcategoryId` BLOB, `description` TEXT, `date` INTEGER NOT NULL, `projectId` BLOB, PRIMARY KEY(`id`), FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_accountId` ON `transactions` (`accountId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_subcategoryId` ON `transactions` (`subcategoryId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_projectId` ON `transactions` (`projectId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_date` ON `transactions` (`date`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budgets` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `limitCents` INTEGER NOT NULL, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`subcategoryId`, `month`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `recurring_transactions` (`id` BLOB NOT NULL, `accountId` BLOB NOT NULL, `category` TEXT NOT NULL, `amount` INTEGER NOT NULL, `title` TEXT NOT NULL, `subcategoryId` BLOB, `description` TEXT, `frequency` TEXT NOT NULL, `interval` INTEGER NOT NULL, `startDate` INTEGER NOT NULL, `endDate` INTEGER, `lastGeneratedDate` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_transactions_accountId` ON `recurring_transactions` (`accountId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_transactions_subcategoryId` ON `recurring_transactions` (`subcategoryId`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budget_alerts` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `level` TEXT NOT NULL, PRIMARY KEY(`subcategoryId`, `month`, `level`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
+            connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ad2200012b41c2ed01ec67a56d4409ac')")
+            connection.execSQL("PRAGMA user_version = 6")
+
+            connection.execSQL("INSERT INTO subcategories (id, kind, name, emoji) VALUES (${blob(groceriesId)}, 'EXPENSE', 'Alimentation', '🛒')")
+            connection.execSQL("INSERT INTO accounts (id, name, type, currency, createdAt, archivedAt, description, position) VALUES (${blob(accountId)}, 'Compte courant', 'CHECKING', 'EUR', $at, NULL, NULL, 0)")
+            connection.execSQL("INSERT INTO projects (id, name, emoji, targetCents, alertPercent) VALUES (${blob(japanId)}, 'Voyage au Japon', '✈️', 300000, 80)")
+            connection.execSQL("INSERT INTO transactions (id, accountId, amount, title, category, subcategoryId, description, date, projectId) VALUES (${blob(expenseId)}, ${blob(accountId)}, 1250, 'Courses', 'EXPENSE', ${blob(groceriesId)}, NULL, $at, ${blob(japanId)})")
+            connection.execSQL("INSERT INTO budgets (subcategoryId, month, limitCents, alertPercent) VALUES (${blob(groceriesId)}, 202609, 30000, 80)")
+        } finally
+        {
+            connection.close()
+        }
+    }
+
     /** The courses of a version 5 file, as the domain sees them, in [projectId] (none by default). */
     private fun coursesIn(projectId: ProjectId?) = Transaction.recorded(
         TransactionId(expenseId), AccountId(accountId), Money(1_250), TransactionTitle("Courses"),
@@ -384,7 +428,7 @@ class CentsMigrationsTest
             {
                 first.close()
             }
-            assertThat(userVersionOfTheFile()).isEqualTo(6)
+            assertThat(userVersionOfTheFile()).isEqualTo(7)
 
             // WHEN it is opened again (the migrations must not run a second time, nor fail)
             val second = openMigrated()
@@ -567,7 +611,7 @@ class CentsMigrationsTest
                 assertThat(rent.startDate).isEqualTo(LocalDate.of(2026, 9, 5))
                 assertThat(rent.endDate).isNull()
                 assertThat(rent.lastGeneratedDate).isEqualTo(LocalDate.of(2026, 12, 5))
-                assertThat(userVersionOfTheFile()).isEqualTo(6)
+                assertThat(userVersionOfTheFile()).isEqualTo(7)
             } finally
             {
                 database.close()
@@ -668,7 +712,7 @@ class CentsMigrationsTest
                     .containsExactly(groceries)
                 assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
                     .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
-                assertThat(userVersionOfTheFile()).isEqualTo(6)
+                assertThat(userVersionOfTheFile()).isEqualTo(7)
             } finally
             {
                 database.close()
@@ -824,7 +868,102 @@ class CentsMigrationsTest
             // THEN
             assertThat(RoomProjectRepository(second.projectDao()).findAll()).containsExactly(japan)
             assertThat(RoomTransactionRepository(second.transactionDao()).findAll()).containsExactly(inTheProject)
-            assertThat(userVersionOfTheFile()).isEqualTo(6)
+            assertThat(userVersionOfTheFile()).isEqualTo(7)
+        } finally
+        {
+            second.close()
+        }
+    }
+
+    // ------------------------------------------------------------------ 6 -> 7: the budget calendar
+
+    @Test
+    fun `a version 6 file keeps its transactions, projects and budgets`() = realTime()
+    {
+        // GIVEN a phone whose app of version 6 had an expense in a subcategory and in a project, and a budget
+        createVersion6File()
+
+        // WHEN the app of version 7 opens it
+        val database = openMigrated()
+        try
+        {
+            // THEN nothing was lost
+            assertThat(RoomTransactionRepository(database.transactionDao()).findAll())
+                .containsExactly(coursesIn(japan.id))
+            assertThat(RoomProjectRepository(database.projectDao()).findAll()).containsExactly(japan)
+            assertThat(RoomSubcategoryRepository(database.subcategoryDao()).findAll()).containsExactly(groceries)
+            assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
+                .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
+            assertThat(userVersionOfTheFile()).isEqualTo(7)
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    // Nobody chose a start day: they keep calendar months, as before the calendar existed.
+    @Test
+    fun `a migrated file starts with calendar months, and the calendar tables work`() = realTime()
+    {
+        // GIVEN a version 6 file, migrated
+        createVersion6File()
+        val database = openMigrated()
+        try
+        {
+            val calendar = RoomBudgetCalendarRepository(database.budgetCalendarDao())
+
+            // WHEN / THEN it starts as plain calendar months
+            assertThat(calendar.observe().first()).isEqualTo(BudgetCalendar())
+
+            // AND works: a default day and a declared start can be saved and read back
+            calendar.saveDefaultStartDay(BudgetStartDay(25))
+            calendar.saveCycleStart(LocalDate.of(2026, 9, 28))
+            assertThat(calendar.observe().first())
+                .isEqualTo(BudgetCalendar(BudgetStartDay(25), setOf(LocalDate.of(2026, 9, 28))))
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `the migrated file has the two calendar tables`() = realTime()
+    {
+        // GIVEN a version 6 file, migrated
+        createVersion6File()
+        val database = openMigrated()
+        RoomBudgetCalendarRepository(database.budgetCalendarDao()).observe().first() // Room opens the file at the first query
+        database.close()
+
+        // WHEN / THEN
+        assertThat(namesInTheFile("table")).contains("budget_cycle_starts", "budget_settings")
+    }
+
+    @Test
+    fun `a calendar saved in a migrated file survives reopening it`() = realTime()
+    {
+        // GIVEN a version 6 file, migrated, with a default day and two declared starts
+        createVersion6File()
+        val expected = BudgetCalendar(BudgetStartDay(25), setOf(LocalDate.of(2026, 9, 28), LocalDate.of(2026, 10, 27)))
+        val first = openMigrated()
+        try
+        {
+            val calendar = RoomBudgetCalendarRepository(first.budgetCalendarDao())
+            calendar.saveDefaultStartDay(BudgetStartDay(25))
+            calendar.saveCycleStart(LocalDate.of(2026, 9, 28))
+            calendar.saveCycleStart(LocalDate.of(2026, 10, 27))
+        } finally
+        {
+            first.close()
+        }
+
+        // WHEN it is opened again (the migration must not run a second time, nor fail)
+        val second = openMigrated()
+        try
+        {
+            // THEN
+            assertThat(RoomBudgetCalendarRepository(second.budgetCalendarDao()).observe().first()).isEqualTo(expected)
+            assertThat(userVersionOfTheFile()).isEqualTo(7)
         } finally
         {
             second.close()
