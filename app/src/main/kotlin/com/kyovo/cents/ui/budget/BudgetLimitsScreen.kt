@@ -48,6 +48,7 @@ fun BudgetLimitsScreen(
     onNextMonth: () -> Unit,
     onToday: () -> Unit,
     onEdit: (BudgetRow) -> Unit,
+    onOpenCycle: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -66,6 +67,7 @@ fun BudgetLimitsScreen(
             Spacer(Modifier.width(12.dp))
             HomeTopBar(palette, stringResource(R.string.budget_limits_title))
         }
+        CycleEntry(palette, onOpenCycle)
         MonthSelectorRow(
             palette = palette,
             label = state.selector.label,
@@ -88,6 +90,40 @@ fun BudgetLimitsScreen(
         ) {
             state.rows.forEach { row -> LimitRow(palette, row, onClick = { onEdit(row) }) }
         }
+    }
+}
+
+/** Where the budget month starts: a month is not always the calendar one, so it is set from the budgets. */
+@Composable
+private fun CycleEntry(palette: AccountsPalette, onClick: () -> Unit)
+{
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(palette.surface)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = "📅", fontSize = 22.sp)
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_budget_cycle),
+                color = palette.textPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.settings_budget_cycle_hint),
+                color = palette.textMuted,
+                fontSize = 13.sp,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        // A chevron pointing right: "this leads somewhere".
+        ChevronDownIcon(tint = palette.textSecondary, modifier = Modifier.size(14.dp).rotate(-90f))
     }
 }
 

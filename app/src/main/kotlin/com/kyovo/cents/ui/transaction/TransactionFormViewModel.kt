@@ -19,6 +19,7 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -38,6 +39,8 @@ import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
+import com.kyovo.cents.ui.budget.CycleStartSuggestion
+import com.kyovo.cents.ui.budget.cycleStartSuggestion
 import com.kyovo.cents.ui.project.NewProjectDraft
 import com.kyovo.cents.ui.project.ProjectAlert
 import com.kyovo.cents.ui.project.ProjectFormError
@@ -164,6 +167,13 @@ class TransactionFormViewModel(
      * remembered, and no background job is involved, since a transaction only reaches a project from here.
      */
     val projectAlerts: Flow<ProjectAlert> = _projectAlerts.receiveAsFlow()
+
+    // An income recorded close to where a budget cycle usually starts may be the pay that opens it: the form says so
+    // once, as an event, and the screen offers to move the start (see [cycleStartSuggestion]).
+    private val _cycleStartSuggestions = Channel<CycleStartSuggestion>(Channel.UNLIMITED)
+
+    /** The proposals to start a budget cycle on the day of an income just recorded here, each delivered once. */
+    val cycleStartSuggestions: Flow<CycleStartSuggestion> = _cycleStartSuggestions.receiveAsFlow()
 
     /** The transaction being edited, as it was when the edit began (what a deletion would erase). */
     private var editedTransaction: Transaction? = null
@@ -538,6 +548,16 @@ class TransactionFormViewModel(
             else                     -> null
         }
         if (spentOn != null) reportBudgetAlerts(spentOn)
+
+        // A new salary may be the pay that opens a budget cycle. Only the salary, for now: any income close to a
+        // cycle's start would ask too often.
+        if (submission is FormSubmission.Record && submission.command.category == RecordableTransactionCategory.INCOME &&
+            submission.command.subcategoryId == DefaultSubcategories.SALARY_ID)
+        {
+            val calendar = getBudgetCalendar.observe().first()
+            cycleStartSuggestion(submission.command.date.atZone(zone).toLocalDate(), calendar)
+                ?.let { _cycleStartSuggestions.send(it) }
+        }
 
         // A project is brought up a band by an expense or a smaller refund alike: the levels decide, not the kind.
         if (watched != null)

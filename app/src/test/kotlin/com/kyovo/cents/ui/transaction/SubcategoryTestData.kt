@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -24,7 +25,7 @@ internal val FUEL_SUBCATEGORY = Subcategory(
 )
 
 internal val SALARY_SUBCATEGORY = Subcategory(
-    SubcategoryId(UUID.fromString("bbbbbbbb-0000-0000-0000-000000000001")),
+    DefaultSubcategories.SALARY_ID,
     RecordableTransactionCategory.INCOME,
     SubcategoryName("Salaire"),
     null,

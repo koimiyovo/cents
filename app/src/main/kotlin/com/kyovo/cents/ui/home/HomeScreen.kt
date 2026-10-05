@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,7 +71,10 @@ import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetFormSheet
+import com.kyovo.cents.ui.budget.BudgetCycleScreen
+import com.kyovo.cents.ui.budget.BudgetCycleViewModel
 import com.kyovo.cents.ui.budget.BudgetLimitsScreen
+import com.kyovo.cents.ui.budget.MonthSelector
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.budget.budgetAlertNotice
@@ -103,6 +108,8 @@ import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionTapTarget
 import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 private enum class HomeTab
@@ -135,6 +142,7 @@ fun HomeScreen(
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
+    budgetCycleViewModel: BudgetCycleViewModel,
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
     projectsViewModel: ProjectsViewModel,
     modifier: Modifier = Modifier,
@@ -148,6 +156,7 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
+    val budgetCycleState by budgetCycleViewModel.uiState.collectAsStateWithLifecycle()
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -328,6 +337,24 @@ fun HomeScreen(
         }
     }
 
+    // An income recorded close to where a budget cycle usually starts may be the pay that opens it: one question,
+    // with the answer one touch away. Ignoring it leaves the cycles as they are.
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.cycleStartSuggestions.collect { suggestion ->
+            val result = snackbarHostState.showSnackbar(
+                message = resources.getString(
+                    R.string.budget_cycle_suggestion,
+                    MonthSelector(suggestion.month).label,
+                    suggestion.date.format(DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH)),
+                ),
+                actionLabel = resources.getString(R.string.budget_cycle_suggestion_action),
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) budgetCycleViewModel.declareStart(suggestion.date)
+        }
+    }
+
     // A project that the transaction just saved has brought close to its target, or over it: same snackbar.
     LaunchedEffect(formViewModel)
     {
@@ -478,6 +505,16 @@ fun HomeScreen(
                 },
                 modifier = Modifier.weight(1f),
             )
+        } else if (destination == HomeDestination.BudgetCycle)
+        {
+            BudgetCycleScreen(
+                state = budgetCycleState,
+                onBack = { destination = HomeDestination.Budgets },
+                onChangeDefaultDay = budgetCycleViewModel::changeDefaultStartDay,
+                onDeclare = budgetCycleViewModel::declareStart,
+                onClear = budgetCycleViewModel::clearStart,
+                modifier = Modifier.weight(1f),
+            )
         } else if (destination == HomeDestination.Budgets)
         {
             BudgetLimitsScreen(
@@ -487,6 +524,7 @@ fun HomeScreen(
                 onNextMonth = budgetsViewModel::nextMonth,
                 onToday = budgetsViewModel::goToCurrentMonth,
                 onEdit = budgetsViewModel::openForm,
+                onOpenCycle = { destination = HomeDestination.BudgetCycle },
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Subcategories)

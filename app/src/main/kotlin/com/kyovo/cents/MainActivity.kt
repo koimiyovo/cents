@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
+import com.kyovo.cents.ui.budget.BudgetCycleViewModel
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
 import com.kyovo.cents.ui.onboarding.OnboardingScreen
@@ -103,6 +104,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val budgetCycleViewModel: BudgetCycleViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                BudgetCycleViewModel(
+                    getBudgetCalendar = appContainer.getBudgetCalendar,
+                    setDefaultStartDay = appContainer.setDefaultBudgetStartDay,
+                    setCycleStart = appContainer.setBudgetCycleStart,
+                    clearCycleStart = appContainer.clearBudgetCycleStart,
+                )
+            }
+        }
+    }
+
     private val recurringTransactionsViewModel: RecurringTransactionsViewModel by viewModels {
         viewModelFactory {
             initializer {
@@ -157,6 +171,7 @@ class MainActivity : ComponentActivity() {
                     accountFormViewModel = accountFormViewModel,
                     subcategoriesViewModel = subcategoriesViewModel,
                     budgetsViewModel = budgetsViewModel,
+                    budgetCycleViewModel = budgetCycleViewModel,
                     recurringTransactionsViewModel = recurringTransactionsViewModel,
                     projectsViewModel = projectsViewModel,
                 )
