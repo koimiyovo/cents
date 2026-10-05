@@ -29,6 +29,7 @@ class CentsWorkerFactory(private val appContainer: AppContainer) : WorkerFactory
                     appContainer.generateRecurringTransactions,
                     appContainer.notifyDueRecurringTransactions,
                     appContainer.notifyBudgetAlerts,
+                    appContainer.getBudgetCalendar,
                 )
             else -> null
         }

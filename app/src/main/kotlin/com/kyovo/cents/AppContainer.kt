@@ -1,6 +1,9 @@
 package com.kyovo.cents
 
 import android.content.Context
+import com.kyovo.cents.application.usecase.SetDefaultBudgetStartDayService
+import com.kyovo.cents.application.usecase.SetBudgetCycleStartService
+import com.kyovo.cents.application.usecase.ClearBudgetCycleStartService
 import com.kyovo.cents.application.usecase.ArchiveAccountService
 import com.kyovo.cents.application.usecase.CheckBudgetAlertsService
 import com.kyovo.cents.application.usecase.CreateProjectService
@@ -14,6 +17,7 @@ import com.kyovo.cents.application.usecase.DeleteTransactionService
 import com.kyovo.cents.application.usecase.GenerateRecurringTransactionsService
 import com.kyovo.cents.application.usecase.GetAccountBalanceService
 import com.kyovo.cents.application.usecase.GetAccountService
+import com.kyovo.cents.application.usecase.GetBudgetCalendarService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
 import com.kyovo.cents.application.usecase.GetProjectProgressService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
@@ -38,6 +42,9 @@ import com.kyovo.cents.application.usecase.UpdateProjectService
 import com.kyovo.cents.application.usecase.UpdateRecurringTransactionService
 import com.kyovo.cents.application.usecase.UpdateSubcategoryService
 import com.kyovo.cents.application.usecase.UpdateTransactionService
+import com.kyovo.cents.domain.port.input.SetDefaultBudgetStartDayUseCase
+import com.kyovo.cents.domain.port.input.SetBudgetCycleStartUseCase
+import com.kyovo.cents.domain.port.input.ClearBudgetCycleStartUseCase
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
 import com.kyovo.cents.domain.port.input.CreateProjectUseCase
@@ -51,6 +58,7 @@ import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
+import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
@@ -149,7 +157,13 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     // A month runs from midnight to midnight in the zone the transaction form dates things in (the
     // device's), so an expense lands in the same month for both.
     val getBudgetProgress: GetBudgetProgressUseCase =
-        GetBudgetProgressService(budgetRepository, transactionRepository, ZoneId.systemDefault())
+        GetBudgetProgressService(
+            budgetRepository, transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault()
+        )
+    val getBudgetCalendar: GetBudgetCalendarUseCase = GetBudgetCalendarService(persistence.budgetCalendar)
+    val setDefaultBudgetStartDay: SetDefaultBudgetStartDayUseCase = SetDefaultBudgetStartDayService(persistence.budgetCalendar)
+    val setBudgetCycleStart: SetBudgetCycleStartUseCase = SetBudgetCycleStartService(persistence.budgetCalendar)
+    val clearBudgetCycleStart: ClearBudgetCycleStartUseCase = ClearBudgetCycleStartService(persistence.budgetCalendar)
     val checkBudgetAlerts: CheckBudgetAlertsUseCase =
         CheckBudgetAlertsService(getBudgetProgress, budgetAlertRepository)
     val notifyBudgetAlerts: NotifyBudgetAlertUseCase =
@@ -158,9 +172,9 @@ class AppContainer(context: Context, persistence: RoomPersistence)
             SystemBudgetAlertNotifier(context, subcategoryRepository)
         )
     val getSpendingBreakdown: GetSpendingBreakdownUseCase =
-        GetSpendingBreakdownService(transactionRepository, ZoneId.systemDefault())
+        GetSpendingBreakdownService(transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val getSpendingTrend: GetSpendingTrendUseCase =
-        GetSpendingTrendService(transactionRepository, ZoneId.systemDefault())
+        GetSpendingTrendService(transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val openAccount: OpenAccountUseCase = OpenAccountService(
         accountRepository,
         UuidAccountIdGenerator(),
@@ -217,6 +231,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
             subcategoryRepository,
             transactionIdGenerator,
             unitOfWork,
+            persistence.budgetCalendar,
             Clock.system(ZoneId.systemDefault()),
             notifyBudgetAlerts,
         )

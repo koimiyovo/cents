@@ -105,6 +105,7 @@ fun BudgetScreen(
             MonthSelectorRow(
                 palette = palette,
                 label = state.selector.label,
+                range = state.cycleRange,
                 isCurrentMonth = state.isCurrentMonth,
                 onPrevious = onPreviousMonth,
                 onNext = onNextMonth,
@@ -174,6 +175,7 @@ private fun statusColor(palette: AccountsPalette, status: BudgetStatus?): Color 
 internal fun MonthSelectorRow(
     palette: AccountsPalette,
     label: String,
+    range: String?,
     isCurrentMonth: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
@@ -186,6 +188,11 @@ internal fun MonthSelectorRow(
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally)
         {
             Text(text = label, color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            // The days the budget month covers, when it is not the plain calendar month.
+            if (range != null)
+            {
+                Text(text = range, color = palette.textMuted, fontSize = 13.sp)
+            }
             // The way back to now, only when the screen is elsewhere.
             if (!isCurrentMonth)
             {

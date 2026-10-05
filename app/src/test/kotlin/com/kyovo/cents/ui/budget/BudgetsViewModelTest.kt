@@ -3,9 +3,11 @@ package com.kyovo.cents.ui.budget
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.BudgetStartDay
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Budget
+import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.BudgetProgress
 import com.kyovo.cents.domain.model.BudgetProjection
 import com.kyovo.cents.domain.model.Money
@@ -114,6 +116,7 @@ class BudgetsViewModelTest
     private val spendingBreakdown = FakeSpendingBreakdown()
     private val spendingTrend = FakeSpendingTrend()
     private val set = RecordingSet()
+    private val calendar = StoredBudgetCalendar()
 
     // Built once the main dispatcher is in place (the extension installs it before each test): this view
     // model starts observing as soon as it exists, unlike the ones that only touch their scope to write.
@@ -127,6 +130,7 @@ class BudgetsViewModelTest
             getBudgetProgress = progress,
             getSpendingBreakdown = spendingBreakdown,
             getSpendingTrend = spendingTrend,
+            getBudgetCalendar = calendar,
             setBudget = set,
             clock = clock,
         )
@@ -578,5 +582,80 @@ class BudgetsViewModelTest
         // THEN
         assertThat(set.commands).isEmpty()
         assertThat(state.error).isNull()
+    }
+
+    // ------------------------------------------------------------------ budget cycles
+
+    private fun viewModelAt(instant: String): BudgetsViewModel = BudgetsViewModel(
+        listSubcategories = subcategories,
+        getBudgetProgress = progress,
+        getSpendingBreakdown = spendingBreakdown,
+        getSpendingTrend = spendingTrend,
+        getBudgetCalendar = calendar,
+        setBudget = set,
+        clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC),
+    )
+
+    @Test
+    fun `starts on the budget month open today, which can be the next calendar month`()
+    {
+        // GIVEN cycles opening on the 25th, and today is September 26th
+        calendar.state.value = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+
+        // WHEN
+        viewModel = viewModelAt("2026-09-26T10:00:00Z")
+
+        // THEN October's cycle, begun yesterday, is the current one
+        assertThat(state.selector).isEqualTo(MonthSelector(YearMonth.of(2026, 10)))
+        assertThat(state.isCurrentMonth).isTrue()
+        assertThat(state.cycleRange).isEqualTo("25 sept. – 24 oct.")
+    }
+
+    @Test
+    fun `the arrows move from the cycle open today, and today brings back to it`()
+    {
+        // GIVEN
+        calendar.state.value = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+        viewModel = viewModelAt("2026-09-26T10:00:00Z")
+
+        // WHEN
+        viewModel.previousMonth()
+
+        // THEN
+        assertThat(state.selector).isEqualTo(MonthSelector(september))
+        assertThat(state.isCurrentMonth).isFalse()
+
+        // AND
+        viewModel.goToCurrentMonth()
+        assertThat(state.selector).isEqualTo(MonthSelector(YearMonth.of(2026, 10)))
+        assertThat(state.isCurrentMonth).isTrue()
+    }
+
+    @Test
+    fun `while following today, the month moves when the calendar does`()
+    {
+        // GIVEN calendar months, today September 26th: September
+        viewModel = viewModelAt("2026-09-26T10:00:00Z")
+        assertThat(state.selector).isEqualTo(MonthSelector(september))
+
+        // WHEN cycles are made to open on the 25th
+        calendar.state.value = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+
+        // THEN October's cycle is now the current one
+        assertThat(state.selector).isEqualTo(MonthSelector(YearMonth.of(2026, 10)))
+    }
+
+    @Test
+    fun `a month picked with the arrows stays when the calendar changes`()
+    {
+        // GIVEN
+        viewModel = viewModelAt("2026-09-26T10:00:00Z")
+        viewModel.previousMonth()
+
+        // WHEN
+        calendar.state.value = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+
+        // THEN
+        assertThat(state.selector).isEqualTo(MonthSelector(august))
     }
 }
