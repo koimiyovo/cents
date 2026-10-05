@@ -2,6 +2,7 @@ package com.kyovo.cents.ui.transaction
 
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.model.BudgetStartDay
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -9,6 +10,7 @@ import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Transaction
@@ -108,6 +110,7 @@ class TransactionFormBudgetAlertTest
 {
     private val record = RecordingRecord()
     private val check = FakeCheckBudgetAlerts()
+    private val calendar = FixedBudgetCalendar()
     private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         record,
@@ -120,6 +123,7 @@ class TransactionFormBudgetAlertTest
         FakeGenerateRecurring(createRecurring),
         FakeCreateProject(),
         NoProjectProgress,
+        getBudgetCalendar = calendar,
         now = { NOW },
         zone = PARIS,
     )
@@ -223,6 +227,23 @@ class TransactionFormBudgetAlertTest
 
         // THEN
         assertThat(check.months).containsExactly(YearMonth.of(2026, 9))
+    }
+
+    // With pay on the 25th, the 26th of September is already October's budget month: that is the month whose
+    // budgets the expense can have moved.
+    @Test
+    fun `the month checked is the budget cycle of the transaction's date`() = runTest()
+    {
+        // GIVEN cycles opening on the 25th
+        calendar.calendar = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+        fillExpense()
+        viewModel.update(form.copy(date = Instant.parse("2026-09-26T10:00:00Z")))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(check.months).containsExactly(YearMonth.of(2026, 10))
     }
 
     @Test
@@ -405,4 +426,5 @@ class TransactionFormBudgetAlertTest
         // THEN
         assertThat(viewModel.uiState.value.form).isNull()
     }
+
 }

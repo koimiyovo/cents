@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
@@ -67,6 +69,8 @@ data class BudgetsUiState(
     val form: BudgetFormState? = null,
     val error: BudgetFormError? = null,
     val isCurrentMonth: Boolean = true,
+    /** The days the month covers ("25 sept. – 27 oct."), null when it is a plain calendar month. */
+    val cycleRange: String? = null,
     val tab: BudgetTab = BudgetTab.OVERVIEW,
     val askNotificationPermission: Boolean = false
 )
@@ -83,13 +87,15 @@ class BudgetsViewModel(
     getBudgetProgress: GetBudgetProgressUseCase,
     getSpendingBreakdown: GetSpendingBreakdownUseCase,
     getSpendingTrend: GetSpendingTrendUseCase,
+    getBudgetCalendar: GetBudgetCalendarUseCase,
     private val setBudget: SetBudgetUseCase,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel()
 {
     /** What the user chose: the month, the account filter, the tab and the form. Not what is read from storage. */
     private data class Chosen(
-        val selector: MonthSelector,
+        /** The month picked with the arrows; null follows the cycle open today, whichever the calendar says. */
+        val month: YearMonth? = null,
         val accountId: AccountId? = null,
         val form: BudgetFormState? = null,
         val error: BudgetFormError? = null,
@@ -100,9 +106,22 @@ class BudgetsViewModel(
     /** What is being looked at: the month and the account filter together, since both restart every reading. */
     private data class Scope(val month: YearMonth, val accountId: AccountId?)
 
-    private val chosen = MutableStateFlow(Chosen(MonthSelector(currentMonth())))
+    /** The budget month open today: a cycle may start on the 25th, so it is not always the calendar month. */
+    private val currentCycle: StateFlow<YearMonth> = getBudgetCalendar.observe()
+        .map { it.cycleOf(LocalDate.now(clock)) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, YearMonth.now(clock))
+
+    private val calendar: StateFlow<BudgetCalendar> = getBudgetCalendar.observe()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, BudgetCalendar())
+
+    private val chosen = MutableStateFlow(Chosen())
     private val scope: Flow<Scope> =
-        chosen.map { Scope(it.selector.month, it.accountId) }.distinctUntilChanged()
+        combine(chosen, currentCycle) { chosen, today -> Scope(chosen.month ?: today, chosen.accountId) }
+            .distinctUntilChanged()
+
+    /** What the user chose, with what the month is relative to: today's cycle and the calendar's days. */
+    private data class Looking(val chosen: Chosen, val today: YearMonth, val calendar: BudgetCalendar)
 
     /**
      * The rows of each month/account asked for, tagged with that scope. Only the month or the account
@@ -138,19 +157,24 @@ class BudgetsViewModel(
     // after a change of month or account, the previous scope's data is still there for an instant, and must
     // not appear under the new scope's name.
     val uiState: StateFlow<BudgetsUiState> =
-        combine(chosen, rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth)
-        { chosen, (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
-            val wanted = Scope(chosen.selector.month, chosen.accountId)
+        combine(
+            combine(chosen, currentCycle, calendar, ::Looking),
+            rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth
+        )
+        { (chosen, today, calendar), (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
+            val month = chosen.month ?: today
+            val wanted = Scope(month, chosen.accountId)
             if (rowsScope != wanted || breakdownScope != wanted || trendScope != wanted) null
             else BudgetsUiState(
-                selector = chosen.selector,
+                selector = MonthSelector(month),
                 selectedAccountId = chosen.accountId,
                 rows = rows,
                 breakdown = breakdown,
                 trend = trend,
                 form = chosen.form,
                 error = chosen.error,
-                isCurrentMonth = chosen.selector.isCurrent(currentMonth()),
+                isCurrentMonth = MonthSelector(month).isCurrent(today),
+                cycleRange = budgetCycleRangeLabel(calendar, month),
                 tab = chosen.tab,
                 askNotificationPermission = chosen.askNotificationPermission
             )
@@ -159,10 +183,8 @@ class BudgetsViewModel(
             .stateIn(
                 viewModelScope,
                 SharingStarted.Eagerly,
-                BudgetsUiState(chosen.value.selector, isCurrentMonth = true),
+                BudgetsUiState(MonthSelector(currentCycle.value), isCurrentMonth = true),
             )
-
-    private fun currentMonth(): YearMonth = YearMonth.now(clock)
 
     fun previousMonth()
     {
@@ -176,7 +198,7 @@ class BudgetsViewModel(
 
     fun goToCurrentMonth()
     {
-        moveTo { MonthSelector(currentMonth()) }
+        chosen.update { it.copy(month = null, form = null, error = null) }
     }
 
     fun selectTab(tab: BudgetTab)
@@ -194,7 +216,9 @@ class BudgetsViewModel(
     /** A form is for the month it was opened in, so leaving that month closes it. */
     private fun moveTo(target: (MonthSelector) -> MonthSelector)
     {
-        chosen.update { it.copy(selector = target(it.selector), form = null, error = null) }
+        chosen.update {
+            it.copy(month = target(MonthSelector(it.month ?: currentCycle.value)).month, form = null, error = null)
+        }
     }
 
     /** Opens the form on [row], for the month shown, pre-filled with the budget in force if there is one. */
@@ -202,7 +226,7 @@ class BudgetsViewModel(
     {
         chosen.update {
             it.copy(
-                form = BudgetFormState.setting(row, it.selector.month),
+                form = BudgetFormState.setting(row, it.month ?: currentCycle.value),
                 error = null
             )
         }

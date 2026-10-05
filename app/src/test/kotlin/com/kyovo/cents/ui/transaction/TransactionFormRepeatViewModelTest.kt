@@ -79,6 +79,7 @@ class TransactionFormRepeatViewModelTest
         generateRecurringTransactions = generate,
         createProject = FakeCreateProject(),
         getProjectProgress = NoProjectProgress,
+        getBudgetCalendar = CalendarMonths,
         now = { NOW },
         zone = PARIS,
     )

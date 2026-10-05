@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
+import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
 import com.kyovo.cents.domain.port.input.NotifyDueRecurringTransactionsUseCase
 import java.time.LocalDate
-import java.time.YearMonth
 
 /**
  * The daily check, kept as thin as possible (everything worth testing lives in the use cases): catch the
@@ -23,6 +23,7 @@ class RecurringTransactionWorker(
     private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
     private val notifyDueRecurringTransactions: NotifyDueRecurringTransactionsUseCase,
     private val notifyBudgetAlerts: NotifyBudgetAlertUseCase,
+    private val getBudgetCalendar: GetBudgetCalendarUseCase,
 ) : CoroutineWorker(context, params)
 {
     override suspend fun doWork(): Result
@@ -30,7 +31,7 @@ class RecurringTransactionWorker(
         // Generation first: today's occurrence must be recorded before the user is told it is.
         generateRecurringTransactions.generate()
         notifyDueRecurringTransactions.notify(LocalDate.now())
-        notifyBudgetAlerts.notify(YearMonth.now())
+        notifyBudgetAlerts.notify(getBudgetCalendar.cycleOf(LocalDate.now()))
         return Result.success()
     }
 }

@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                     generateRecurringTransactions = appContainer.generateRecurringTransactions,
                     createProject = appContainer.createProject,
                     getProjectProgress = appContainer.getProjectProgress,
+                    getBudgetCalendar = appContainer.getBudgetCalendar,
                 )
             }
         }
@@ -95,6 +96,7 @@ class MainActivity : ComponentActivity() {
                     getBudgetProgress = appContainer.getBudgetProgress,
                     getSpendingBreakdown = appContainer.getSpendingBreakdown,
                     getSpendingTrend = appContainer.getSpendingTrend,
+                    getBudgetCalendar = appContainer.getBudgetCalendar,
                     setBudget = appContainer.setBudget,
                 )
             }

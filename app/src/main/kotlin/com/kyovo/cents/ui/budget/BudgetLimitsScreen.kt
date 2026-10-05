@@ -69,6 +69,7 @@ fun BudgetLimitsScreen(
         MonthSelectorRow(
             palette = palette,
             label = state.selector.label,
+            range = state.cycleRange,
             isCurrentMonth = state.isCurrentMonth,
             onPrevious = onPreviousMonth,
             onNext = onNextMonth,

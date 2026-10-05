@@ -108,6 +108,7 @@ class TransactionFormProjectAlertTest
         FakeGenerateRecurring(createRecurring),
         FakeCreateProject(),
         progress,
+        getBudgetCalendar = CalendarMonths,
         now = { NOW },
     )
 

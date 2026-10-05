@@ -32,6 +32,7 @@ import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
+import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
@@ -135,6 +136,7 @@ class TransactionFormViewModel(
     private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
     private val createProject: CreateProjectUseCase,
     private val getProjectProgress: GetProjectProgressUseCase,
+    private val getBudgetCalendar: GetBudgetCalendarUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
@@ -554,10 +556,10 @@ class TransactionFormViewModel(
         _uiState.update { it.copy(askNotificationPermission = false) }
     }
 
-    /** Runs the alert check for the month [date] falls in and hands each new alert to the screen. */
+    /** Runs the alert check for the budget month (cycle) [date] falls in and hands each new alert to the screen. */
     private suspend fun reportBudgetAlerts(date: Instant)
     {
-        checkBudgetAlerts.check(YearMonth.from(date.atZone(zone)))
+        checkBudgetAlerts.check(getBudgetCalendar.cycleOf(date.atZone(zone).toLocalDate()))
             .forEach { _budgetAlerts.send(it) }
     }
 }
