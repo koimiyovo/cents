@@ -33,4 +33,8 @@ interface SubcategoryDao
     /** Emits the rows now, then again each time the table changes: Room watches it for us. */
     @Query("SELECT * FROM subcategories ORDER BY rowid")
     fun observeAll(): Flow<List<SubcategoryEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM subcategories")
+    suspend fun deleteAll()
 }

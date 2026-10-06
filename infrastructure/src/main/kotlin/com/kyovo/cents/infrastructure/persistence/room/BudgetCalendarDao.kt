@@ -25,4 +25,11 @@ interface BudgetCalendarDao
     /** Empty until the user changes the default start day for the first time. */
     @Query("SELECT * FROM budget_settings")
     fun observeSettings(): Flow<List<BudgetSettingsEntity>>
+
+    /** Empties both tables: what restoring a backup starts from. */
+    @Query("DELETE FROM budget_cycle_starts")
+    suspend fun deleteAllStarts()
+
+    @Query("DELETE FROM budget_settings")
+    suspend fun deleteSettings()
 }
