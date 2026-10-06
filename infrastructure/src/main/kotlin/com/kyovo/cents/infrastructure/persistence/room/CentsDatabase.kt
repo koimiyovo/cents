@@ -12,7 +12,8 @@ import androidx.room3.RoomDatabase
  * frozen: version 2 adds the `budgets` table (with the alert threshold of each budget), version 3 adds
  * `recurring_expenses`, version 4 adds `budget_alerts` (the WorkManager check's memory of what it already
  * reported), version 5 turns `recurring_expenses` into `recurring_transactions` (a rule can now be an income
- * too, so it gets a `category`), each with a migration in [CentsMigrations]. **Version 3 turned out to already be installed**
+ * too, so it gets a `category`), version 6 adds `projects` and the `projectId` of a transaction, version 7 adds the budget calendar
+ * (`budget_cycle_starts` and `budget_settings`), each with a migration in [CentsMigrations]. **Version 3 turned out to already be installed**
  * (found the hard way: folding `budget_alerts` into it, instead of a real version 4, crashed on a real
  * phone with "Room cannot verify the data integrity" — its identity hash no longer matched the file
  * already there), so it is frozen too now, same as version 1: any further change to a table means a new
@@ -26,8 +27,11 @@ import androidx.room3.RoomDatabase
         BudgetEntity::class,
         RecurringTransactionEntity::class,
         BudgetAlertEntity::class,
+        ProjectEntity::class,
+        BudgetCycleStartEntity::class,
+        BudgetSettingsEntity::class
     ],
-    version = 5
+    version = 7
 )
 abstract class CentsDatabase : RoomDatabase()
 {
@@ -37,4 +41,6 @@ abstract class CentsDatabase : RoomDatabase()
     abstract fun budgetDao(): BudgetDao
     abstract fun recurringTransactionDao(): RecurringTransactionDao
     abstract fun budgetAlertDao(): BudgetAlertDao
+    abstract fun projectDao(): ProjectDao
+    abstract fun budgetCalendarDao(): BudgetCalendarDao
 }

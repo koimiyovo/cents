@@ -1,8 +1,8 @@
 package com.kyovo.cents.ui.subcategory
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
@@ -17,12 +17,13 @@ private const val CART = "🛒"
 private val EXPENSE = RecordableTransactionCategory.EXPENSE
 private val INCOME = RecordableTransactionCategory.INCOME
 
-private fun aSubcategory(emoji: String? = CART, kind: RecordableTransactionCategory = EXPENSE) = Subcategory(
-    SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001")),
-    kind,
-    SubcategoryName("Alimentation"),
-    emoji?.let { SubcategoryEmoji(it) },
-)
+private fun aSubcategory(emoji: String? = CART, kind: RecordableTransactionCategory = EXPENSE) =
+    Subcategory(
+        SubcategoryId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001")),
+        kind,
+        SubcategoryName("Alimentation"),
+        emoji?.let { Emoji(it) },
+    )
 
 class SubcategoryFormCreatingTest
 {
@@ -51,7 +52,7 @@ class SubcategoryFormCreatingTest
         // THEN
         assertThat(submission).isEqualTo(
             SubcategorySubmission.Create(
-                CreateSubcategoryCommand(EXPENSE, SubcategoryName("Loisirs"), SubcategoryEmoji(CART)),
+                CreateSubcategoryCommand(EXPENSE, SubcategoryName("Loisirs"), Emoji(CART)),
             ),
         )
     }
@@ -73,7 +74,8 @@ class SubcategoryFormCreatingTest
     fun `an income form creates an income subcategory`()
     {
         // WHEN
-        val submission = SubcategoryFormState.creating(INCOME).withName("Primes").submit() as SubcategorySubmission.Create
+        val submission = SubcategoryFormState.creating(INCOME).withName("Primes")
+            .submit() as SubcategorySubmission.Create
 
         // THEN
         assertThat(submission.command.kind).isEqualTo(INCOME)
@@ -108,7 +110,12 @@ class SubcategoryFormCreatingTest
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(
-            SubcategorySubmission.Invalid(setOf(SubcategoryFormError.NAME_REQUIRED, SubcategoryFormError.EMOJI_INVALID)),
+            SubcategorySubmission.Invalid(
+                setOf(
+                    SubcategoryFormError.NAME_REQUIRED,
+                    SubcategoryFormError.EMOJI_INVALID
+                )
+            ),
         )
     }
 }
@@ -129,7 +136,8 @@ class SubcategoryFormNameTest
     fun `a name of exactly the limit is accepted`()
     {
         // GIVEN
-        val form = SubcategoryFormState.creating(EXPENSE).withName("x".repeat(SubcategoryName.MAX_LENGTH))
+        val form =
+            SubcategoryFormState.creating(EXPENSE).withName("x".repeat(SubcategoryName.MAX_LENGTH))
 
         // WHEN / THEN
         assertThat(form.submit()).isInstanceOf(SubcategorySubmission.Create::class.java)
@@ -140,7 +148,8 @@ class SubcategoryFormNameTest
     fun `a name over the limit that got in anyway is refused as too long, not as missing`()
     {
         // GIVEN
-        val form = SubcategoryFormState.creating(EXPENSE).copy(name = "x".repeat(SubcategoryName.MAX_LENGTH + 1))
+        val form = SubcategoryFormState.creating(EXPENSE)
+            .copy(name = "x".repeat(SubcategoryName.MAX_LENGTH + 1))
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(SubcategorySubmission.Invalid(setOf(SubcategoryFormError.NAME_TOO_LONG)))
@@ -186,7 +195,9 @@ class SubcategoryFormEditingTest
     fun `the kind is kept for display, of an income as of an expense`()
     {
         assertThat(SubcategoryFormState.editing(aSubcategory(kind = INCOME)).kind).isEqualTo(INCOME)
-        assertThat(SubcategoryFormState.editing(aSubcategory(kind = EXPENSE)).kind).isEqualTo(EXPENSE)
+        assertThat(SubcategoryFormState.editing(aSubcategory(kind = EXPENSE)).kind).isEqualTo(
+            EXPENSE
+        )
     }
 
     @Test
@@ -202,7 +213,7 @@ class SubcategoryFormEditingTest
         // THEN
         assertThat(submission).isEqualTo(
             SubcategorySubmission.Update(
-                UpdateSubcategoryCommand(subcategory.id, SubcategoryName("Courses"), SubcategoryEmoji(CART)),
+                UpdateSubcategoryCommand(subcategory.id, SubcategoryName("Courses"), Emoji(CART)),
             ),
         )
     }
@@ -227,7 +238,8 @@ class SubcategoryFormEditingTest
         val subcategory = aSubcategory()
 
         // WHEN
-        val submission = SubcategoryFormState.editing(subcategory).submit() as SubcategorySubmission.Update
+        val submission =
+            SubcategoryFormState.editing(subcategory).submit() as SubcategorySubmission.Update
 
         // THEN
         assertThat(submission.command).isEqualTo(

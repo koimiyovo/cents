@@ -1,9 +1,9 @@
 package com.kyovo.cents.ui.subcategory
 
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
@@ -49,7 +49,8 @@ data class SubcategoryFormState(
 
     companion object
     {
-        fun creating(kind: RecordableTransactionCategory): SubcategoryFormState = SubcategoryFormState(kind)
+        fun creating(kind: RecordableTransactionCategory): SubcategoryFormState =
+            SubcategoryFormState(kind)
 
         fun editing(subcategory: Subcategory): SubcategoryFormState = SubcategoryFormState(
             kind = subcategory.kind,
@@ -60,7 +61,8 @@ data class SubcategoryFormState(
     }
 
     /** The name after an edit of the field: cut at the domain's limit, like every name field. */
-    fun withName(text: String): SubcategoryFormState = copy(name = limitNameInput(text, SubcategoryName.MAX_LENGTH))
+    fun withName(text: String): SubcategoryFormState =
+        copy(name = limitNameInput(text, SubcategoryName.MAX_LENGTH))
 
     /** The emoji picked; null removes it. */
     fun withEmoji(emoji: String?): SubcategoryFormState = copy(emoji = emoji)
@@ -75,7 +77,7 @@ data class SubcategoryFormState(
 
         val parsedEmoji = try
         {
-            emoji?.let { SubcategoryEmoji(it) }
+            emoji?.let { Emoji(it) }
         } catch (_: InvalidSubcategoryEmojiException)
         {
             errors += SubcategoryFormError.EMOJI_INVALID
@@ -87,10 +89,22 @@ data class SubcategoryFormState(
         val subcategoryName = SubcategoryName(trimmed)
         return if (editingId != null)
         {
-            SubcategorySubmission.Update(UpdateSubcategoryCommand(editingId, subcategoryName, parsedEmoji))
+            SubcategorySubmission.Update(
+                UpdateSubcategoryCommand(
+                    editingId,
+                    subcategoryName,
+                    parsedEmoji
+                )
+            )
         } else
         {
-            SubcategorySubmission.Create(CreateSubcategoryCommand(kind, subcategoryName, parsedEmoji))
+            SubcategorySubmission.Create(
+                CreateSubcategoryCommand(
+                    kind,
+                    subcategoryName,
+                    parsedEmoji
+                )
+            )
         }
     }
 }

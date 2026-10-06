@@ -12,14 +12,14 @@ import org.junit.jupiter.params.provider.ValueSource
  * picker's job (ZWJ sequences, skin tones and flags make a reliable check in the domain unrealistic).
  * It only refuses what can't be one: nothing, or far more text than any emoji needs.
  */
-class SubcategoryEmojiTest
+class EmojiTest
 {
     @ParameterizedTest
     @ValueSource(strings = ["", " ", "   ", "\t", "\n"])
     fun `refuses an empty or blank emoji`(value: String)
     {
         // WHEN / THEN
-        assertThatThrownBy { SubcategoryEmoji(value) }
+        assertThatThrownBy { Emoji(value) }
             .isInstanceOf(InvalidSubcategoryEmojiException::class.java)
     }
 
@@ -37,7 +37,7 @@ class SubcategoryEmojiTest
     fun `accepts a single emoji, however many code points it takes`(value: String)
     {
         // WHEN
-        val emoji = SubcategoryEmoji(value)
+        val emoji = Emoji(value)
 
         // THEN
         assertThat(emoji.value).isEqualTo(value)
@@ -47,7 +47,7 @@ class SubcategoryEmojiTest
     fun `refuses a long text`()
     {
         // WHEN / THEN
-        assertThatThrownBy { SubcategoryEmoji("Alimentation et courses") }
+        assertThatThrownBy { Emoji("Alimentation et courses") }
             .isInstanceOf(InvalidSubcategoryEmojiException::class.java)
     }
 
@@ -55,7 +55,7 @@ class SubcategoryEmojiTest
     fun `trims surrounding whitespace`()
     {
         // WHEN
-        val emoji = SubcategoryEmoji("  🛒 ")
+        val emoji = Emoji("  🛒 ")
 
         // THEN
         assertThat(emoji.value).isEqualTo("🛒")
@@ -68,14 +68,14 @@ class SubcategoryEmojiTest
         val text = "a".repeat(16)
 
         // WHEN / THEN
-        assertThat(SubcategoryEmoji(text).value).isEqualTo(text)
+        assertThat(Emoji(text).value).isEqualTo(text)
     }
 
     @Test
     fun `refuses an emoji of 17 characters`()
     {
         // WHEN / THEN
-        assertThatThrownBy { SubcategoryEmoji("a".repeat(17)) }
+        assertThatThrownBy { Emoji("a".repeat(17)) }
             .isInstanceOf(InvalidSubcategoryEmojiException::class.java)
     }
 
@@ -86,6 +86,6 @@ class SubcategoryEmojiTest
         val text = "a".repeat(16)
 
         // WHEN / THEN
-        assertThat(SubcategoryEmoji("  $text ").value).isEqualTo(text)
+        assertThat(Emoji("  $text ").value).isEqualTo(text)
     }
 }

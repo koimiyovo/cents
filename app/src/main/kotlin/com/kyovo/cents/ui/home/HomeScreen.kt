@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,7 +71,10 @@ import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetFormSheet
+import com.kyovo.cents.ui.budget.BudgetCycleScreen
+import com.kyovo.cents.ui.budget.BudgetCycleViewModel
 import com.kyovo.cents.ui.budget.BudgetLimitsScreen
+import com.kyovo.cents.ui.budget.MonthSelector
 import com.kyovo.cents.ui.budget.BudgetScreen
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.budget.budgetAlertNotice
@@ -78,6 +83,17 @@ import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
+import com.kyovo.cents.domain.model.ProjectId
+import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.input.ListProjectsUseCase
+import com.kyovo.cents.ui.budget.BudgetSection
+import com.kyovo.cents.ui.project.DeleteProjectDialog
+import com.kyovo.cents.ui.project.ProjectAnalysisTab
+import com.kyovo.cents.ui.project.ProjectDetailsScreen
+import com.kyovo.cents.ui.project.ProjectFormSheet
+import com.kyovo.cents.ui.project.ProjectsScreen
+import com.kyovo.cents.ui.project.ProjectsViewModel
+import com.kyovo.cents.ui.project.projectAlertNotice
 import com.kyovo.cents.ui.subcategory.DeleteSubcategoryDialog
 import com.kyovo.cents.ui.subcategory.SubcategoriesScreen
 import com.kyovo.cents.ui.subcategory.SubcategoriesViewModel
@@ -92,6 +108,8 @@ import com.kyovo.cents.ui.transaction.TransactionFormViewModel
 import com.kyovo.cents.ui.transaction.TransactionTapTarget
 import com.kyovo.cents.ui.transaction.transactionTapTarget
 import kotlinx.coroutines.launch
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 private enum class HomeTab
@@ -117,12 +135,16 @@ fun HomeScreen(
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     listRecurringTransactions: ListRecurringTransactionsUseCase,
+    listProjects: ListProjectsUseCase,
+    getProjectProgress: GetProjectProgressUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
     subcategoriesViewModel: SubcategoriesViewModel,
     budgetsViewModel: BudgetsViewModel,
+    budgetCycleViewModel: BudgetCycleViewModel,
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
+    projectsViewModel: ProjectsViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -134,7 +156,9 @@ fun HomeScreen(
     val accountFormState by accountFormViewModel.uiState.collectAsStateWithLifecycle()
     val subcategoriesState by subcategoriesViewModel.uiState.collectAsStateWithLifecycle()
     val budgetsState by budgetsViewModel.uiState.collectAsStateWithLifecycle()
+    val budgetCycleState by budgetCycleViewModel.uiState.collectAsStateWithLifecycle()
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
+    val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -142,10 +166,27 @@ fun HomeScreen(
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
     )
+    val projects by remember { listProjects.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    // The opened project is kept the same way, as its UUID string, to survive rotation.
+    var openedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    // The Budget tab's own state, held here so it is still there when the user comes back from a project's page.
+    var budgetSection by rememberSaveable { mutableStateOf(BudgetSection.MONTH) }
+    var analysedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
+    // Set when the page was opened from the Budget tab: Back then returns there, not to the list of projects.
+    var projectOpenedFromTab by rememberSaveable { mutableStateOf(false) }
+    val openedProjectId = openedProjectUuid?.let { ProjectId(UUID.fromString(it)) }
     // The opened account is kept as its UUID string: AccountId (a value class over java.util.UUID)
     // isn't Saveable, whereas a String is, so the details screen survives rotation.
     var openedAccountUuid by rememberSaveable { mutableStateOf<String?>(null) }
     var destination by rememberSaveable { mutableStateOf(HomeDestination.Tabs) }
+    val closeProjectPage = {
+        openedProjectUuid = null
+        if (projectOpenedFromTab)
+        {
+            projectOpenedFromTab = false
+            destination = HomeDestination.Tabs
+        }
+    }
     val openedAccountId = openedAccountUuid?.let { AccountId(UUID.fromString(it)) }
 
     // A tap on a row goes to the form that fits it: an opening deposit only has its amount to
@@ -160,7 +201,8 @@ fun HomeScreen(
             TransactionTapTarget.TRANSACTION_FORM     ->
                 formViewModel.openForEdit(
                     transaction,
-                    subcategories.find { it.id == transaction.subcategoryId })
+                    subcategories.find { it.id == transaction.subcategoryId },
+                    projects.find { it.id == transaction.projectId })
 
             TransactionTapTarget.NONE                 -> Unit
         }
@@ -295,6 +337,38 @@ fun HomeScreen(
         }
     }
 
+    // An income recorded close to where a budget cycle usually starts may be the pay that opens it: one question,
+    // with the answer one touch away. Ignoring it leaves the cycles as they are.
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.cycleStartSuggestions.collect { suggestion ->
+            val result = snackbarHostState.showSnackbar(
+                message = resources.getString(
+                    R.string.budget_cycle_suggestion,
+                    MonthSelector(suggestion.month).label,
+                    suggestion.date.format(DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH)),
+                ),
+                actionLabel = resources.getString(R.string.budget_cycle_suggestion_action),
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) budgetCycleViewModel.declareStart(suggestion.date)
+        }
+    }
+
+    // A project that the transaction just saved has brought close to its target, or over it: same snackbar.
+    LaunchedEffect(formViewModel)
+    {
+        formViewModel.projectAlerts.collect { alert ->
+            val notice = projectAlertNotice(alert)
+            val bodyRes = when (notice.level)
+            {
+                BudgetAlertLevel.CLOSE_TO_LIMIT -> R.string.project_alert_close_body
+                BudgetAlertLevel.OVER           -> R.string.project_alert_over_body
+            }
+            snackbarHostState.showSnackbar(resources.getString(bodyRes, notice.emoji, notice.projectName))
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -306,6 +380,8 @@ fun HomeScreen(
     BackHandler(enabled = destination.back() != null) {
         destination.back()?.let { destination = it }
     }
+    // Registered after the one above, so it wins: a project page goes back to the list of projects first.
+    BackHandler(enabled = openedProjectId != null) { closeProjectPage() }
 
     Column(
         modifier = modifier
@@ -328,6 +404,7 @@ fun HomeScreen(
                     getAccountBalance = getAccountBalance,
                     listTransactions = listTransactions,
                     listSubcategories = listSubcategories,
+                    projects = projects,
                     onBack = { openedAccountUuid = null },
                     // Back to the list afterwards: that is where the account has just moved
                     // (into "Comptes archivés"), and an archived account gets no "+" button.
@@ -363,8 +440,54 @@ fun HomeScreen(
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
                 onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
+                onOpenProjects = { destination = HomeDestination.Projects },
                 modifier = Modifier.weight(1f),
             )
+        } else if (destination == HomeDestination.Projects)
+        {
+            if (openedProjectId != null)
+            {
+                Box(modifier = Modifier.weight(1f)) {
+                    ProjectDetailsScreen(
+                        projectId = openedProjectId,
+                        listProjects = listProjects,
+                        getProjectProgress = getProjectProgress,
+                        listTransactions = listTransactions,
+                        accounts = accounts + archivedAccounts,
+                        subcategories = subcategories,
+                        onBack = closeProjectPage,
+                        onEdit = projectsViewModel::openForEdit,
+                        onTransactionClick = openTransaction,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // The form opens already filed under this project.
+                    AddTransactionFab(
+                        onClick = {
+                            formViewModel.open(
+                                accounts,
+                                preselectedAccountId = null,
+                                project = projects.find { it.id == openedProjectId },
+                            )
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                    )
+                }
+            } else
+            {
+                ProjectsScreen(
+                    listProjects = listProjects,
+                    getProjectProgress = getProjectProgress,
+                    onBack = { destination = HomeDestination.Settings },
+                    onCreate = projectsViewModel::openCreate,
+                    onOpen = {
+                        projectOpenedFromTab = false
+                        openedProjectUuid = it.project.id.value.toString()
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         } else if (destination == HomeDestination.RecurringTransactions)
         {
             RecurringTransactionsScreen(
@@ -382,6 +505,16 @@ fun HomeScreen(
                 },
                 modifier = Modifier.weight(1f),
             )
+        } else if (destination == HomeDestination.BudgetCycle)
+        {
+            BudgetCycleScreen(
+                state = budgetCycleState,
+                onBack = { destination = HomeDestination.Budgets },
+                onChangeDefaultDay = budgetCycleViewModel::changeDefaultStartDay,
+                onDeclare = budgetCycleViewModel::declareStart,
+                onClear = budgetCycleViewModel::clearStart,
+                modifier = Modifier.weight(1f),
+            )
         } else if (destination == HomeDestination.Budgets)
         {
             BudgetLimitsScreen(
@@ -391,6 +524,7 @@ fun HomeScreen(
                 onNextMonth = budgetsViewModel::nextMonth,
                 onToday = budgetsViewModel::goToCurrentMonth,
                 onEdit = budgetsViewModel::openForm,
+                onOpenCycle = { destination = HomeDestination.BudgetCycle },
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Subcategories)
@@ -433,6 +567,7 @@ fun HomeScreen(
                                 listArchivedAccounts,
                                 listTransactions,
                                 listSubcategories,
+                                projects = projects,
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
                             )
@@ -447,6 +582,26 @@ fun HomeScreen(
                                 onSelectTab = budgetsViewModel::selectTab,
                                 onSelectAccount = budgetsViewModel::selectAccount,
                                 onOpenSettings = { destination = HomeDestination.Settings },
+                                section = budgetSection,
+                                onSelectSection = { budgetSection = it },
+                                projectsTab = {
+                                    ProjectAnalysisTab(
+                                        palette = palette,
+                                        listProjects = listProjects,
+                                        getProjectProgress = getProjectProgress,
+                                        listTransactions = listTransactions,
+                                        subcategories = subcategories,
+                                        chosenProjectUuid = analysedProjectUuid,
+                                        onChooseProject = { analysedProjectUuid = it.value.toString() },
+                                        onCreateProject = projectsViewModel::openCreate,
+                                        // The project's page, then back to this tab rather than to the list of projects.
+                                        onOpenProject = { id ->
+                                            projectOpenedFromTab = true
+                                            openedProjectUuid = id.value.toString()
+                                            destination = HomeDestination.Projects
+                                        },
+                                    )
+                                },
                             )
                     }
                 }
@@ -492,6 +647,7 @@ fun HomeScreen(
             // Archived ones too: an edited transaction may sit on one (the form decides which are offered).
             accounts = accounts + archivedAccounts,
             subcategories = subcategories,
+            projects = projects,
             form = form,
             showErrors = formState.showErrors,
             failure = formState.failure,
@@ -499,6 +655,7 @@ fun HomeScreen(
             onSubmit = formViewModel::submit,
             onDelete = formViewModel::askToDelete,
             onCreateSubcategory = formViewModel::askToCreateSubcategory,
+            onCreateProject = formViewModel::askToCreateProject,
             onCreateAccount = { field ->
                 // Remember which accounts exist, to recognise the new one and choose it for that field.
                 formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
@@ -519,6 +676,16 @@ fun HomeScreen(
                 onDismiss = formViewModel::dismissNewSubcategory,
             )
         }
+    }
+    // The "new project" form of the transaction form, over it; the same sheet as the projects screen.
+    formState.newProject?.let { draft ->
+        ProjectFormSheet(
+            form = draft.form,
+            errors = draft.errors,
+            onFormChange = formViewModel::updateNewProject,
+            onSubmit = formViewModel::confirmNewProject,
+            onDismiss = formViewModel::dismissNewProject,
+        )
     }
     formState.confirmingDelete?.let { transaction ->
         DeleteTransactionDialog(
@@ -565,6 +732,24 @@ fun HomeScreen(
             subcategory = subcategory,
             onConfirm = subcategoriesViewModel::confirmDelete,
             onDismiss = subcategoriesViewModel::dismissDelete,
+        )
+    }
+    projectsState.form?.let { form ->
+        ProjectFormSheet(
+            form = form,
+            errors = projectsState.errors,
+            onFormChange = projectsViewModel::update,
+            onSubmit = projectsViewModel::submit,
+            onDismiss = projectsViewModel::close,
+            onDelete = if (form.isEditing) projectsViewModel::askToDelete else null,
+        )
+    }
+    projectsState.confirmingDelete?.let { project ->
+        DeleteProjectDialog(
+            palette = palette,
+            project = project,
+            onConfirm = projectsViewModel::confirmDelete,
+            onDismiss = projectsViewModel::dismissDelete,
         )
     }
     recurringTransactionsState.form?.let { form ->

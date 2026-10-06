@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -28,7 +29,7 @@ class UpdateTransactionServiceTransferTest
     private val id = aTransactionId()
     private val accountRepository = InMemoryAccountRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository())
+    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository(), InMemoryProjectRepository())
 
     @ParameterizedTest
     @EnumSource(value = TransactionCategory::class, names = ["TRANSFER_OUT", "TRANSFER_IN"])

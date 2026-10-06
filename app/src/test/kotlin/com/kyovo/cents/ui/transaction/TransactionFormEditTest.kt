@@ -164,6 +164,7 @@ class TransactionFormEditTest
                     subcategoryId = GROCERIES_SUBCATEGORY.id,
                     description = TransactionDescription.of("Marché du samedi"),
                     date = EARLIER,
+                    projectId = null,
                 ),
             ),
         )

@@ -11,7 +11,6 @@ import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.TransactionTitle
@@ -60,7 +59,9 @@ class RecurringTransactionRowsTest
         val accountId = AccountId(UUID.randomUUID())
         val rent = RecurringTransactionRow(aRecurringTransaction(accountId), "Compte courant", null)
         val salary = RecurringTransactionRow(
-            aRecurringTransaction(accountId, category = RecordableTransactionCategory.INCOME), "Compte courant", null,
+            aRecurringTransaction(accountId, category = RecordableTransactionCategory.INCOME),
+            "Compte courant",
+            null,
         )
 
         // WHEN / THEN
@@ -74,14 +75,25 @@ class RecurringTransactionRowsTest
         // GIVEN
         val account = anAccount(AccountId(UUID.randomUUID()), "Compte courant")
         val subcategory =
-            Subcategory(SubcategoryId(UUID.randomUUID()), RecordableTransactionCategory.EXPENSE, SubcategoryName("Logement"), null)
+            Subcategory(
+                SubcategoryId(UUID.randomUUID()),
+                RecordableTransactionCategory.EXPENSE,
+                SubcategoryName("Logement"),
+                null
+            )
         val rule = aRecurringTransaction(account.id, subcategory.id)
 
         // WHEN
         val rows = recurringTransactionRows(listOf(rule), listOf(account), listOf(subcategory))
 
         // THEN
-        assertThat(rows).containsExactly(RecurringTransactionRow(rule, "Compte courant", "Logement"))
+        assertThat(rows).containsExactly(
+            RecurringTransactionRow(
+                rule,
+                "Compte courant",
+                "Logement"
+            )
+        )
     }
 
     @Test
@@ -117,13 +129,23 @@ class RecurrenceSummaryTest
     @Test
     fun `weekly at interval one omits the count`()
     {
-        assertThat(recurrenceSummary(RecurrenceFrequency.WEEKLY, 1)).isEqualTo("Toutes les semaines")
+        assertThat(
+            recurrenceSummary(
+                RecurrenceFrequency.WEEKLY,
+                1
+            )
+        ).isEqualTo("Toutes les semaines")
     }
 
     @Test
     fun `weekly at another interval names the count`()
     {
-        assertThat(recurrenceSummary(RecurrenceFrequency.WEEKLY, 2)).isEqualTo("Toutes les 2 semaines")
+        assertThat(
+            recurrenceSummary(
+                RecurrenceFrequency.WEEKLY,
+                2
+            )
+        ).isEqualTo("Toutes les 2 semaines")
     }
 
     @Test

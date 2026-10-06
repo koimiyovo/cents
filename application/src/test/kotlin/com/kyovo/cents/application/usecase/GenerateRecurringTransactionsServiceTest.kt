@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryBudgetCalendarRepository
 import com.kyovo.cents.application.fakes.InMemoryRecurringTransactionRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
@@ -13,6 +14,7 @@ import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.domain.model.BudgetStartDay
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
@@ -63,6 +65,7 @@ class GenerateRecurringTransactionsServiceTest
     private val recurringTransactionRepository = InMemoryRecurringTransactionRepository()
     private val transactionRepository = InMemoryTransactionRepository()
     private val unitOfWork = InMemoryUnitOfWork()
+    private val calendarRepository = InMemoryBudgetCalendarRepository()
     private val budgetAlerts = RecordingNotifyBudgetAlerts(transactionRepository)
 
     private val accountId = anAccountId()
@@ -74,6 +77,7 @@ class GenerateRecurringTransactionsServiceTest
         subcategoryRepository,
         SequentialTransactionIdGenerator(ids),
         unitOfWork,
+        calendarRepository,
         at,
         budgetAlerts,
     )
@@ -597,5 +601,78 @@ class GenerateRecurringTransactionsServiceTest
         // THEN the 24th, but not October's 1st, which is next month
         assertThat(transactionRepository.saved.map { it.date })
             .containsExactly(LocalDate.of(2026, 9, 24).atTime(12, 0).toInstant(ZoneOffset.UTC))
+    }
+
+    // ------------------------------------------------------------------ budget cycles
+    // "The current month" is the budget cycle open today, and "later this month" runs to the end of that
+    // cycle: with pay on the 25th, the 26th of September is already October's budget month.
+
+    private fun clockAt(instant: String) = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC)
+
+    @Test
+    fun `checks the budget alerts of the cycle open today, not of the calendar month`() = runTest()
+    {
+        // GIVEN cycles opening on the 25th, and today is September 26th: October's cycle, begun yesterday
+        calendarRepository.saveDefaultStartDay(BudgetStartDay(25))
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 9, 26)))
+
+        // WHEN
+        aService(ids(4), clockAt("2026-09-26T10:00:00Z")).generate()
+
+        // THEN
+        assertThat(transactionRepository.saved).hasSize(1)
+        assertThat(budgetAlerts.months).containsExactly(YearMonth.of(2026, 10))
+    }
+
+    @Test
+    fun `does not check a cycle that received nothing`() = runTest()
+    {
+        // GIVEN cycles opening on the 25th, today is September 26th, and the rule's only occurrence due is
+        // September 20th: September's cycle, which is over
+        calendarRepository.saveDefaultStartDay(BudgetStartDay(25))
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(
+            aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 9, 20), endDate = LocalDate.of(2026, 9, 20))
+        )
+
+        // WHEN
+        aService(ids(4), clockAt("2026-09-26T10:00:00Z")).generate()
+
+        // THEN it is recorded (a catch-up), but nothing is news for the cycle open today
+        assertThat(transactionRepository.saved).hasSize(1)
+        assertThat(budgetAlerts.months).isEmpty()
+    }
+
+    @Test
+    fun `the next occurrence is generated while it falls before the end of the cycle, even in the next calendar month`() = runTest()
+    {
+        // GIVEN cycles opening on the 5th: today (September 15th) is in the cycle that ends on October 4th
+        calendarRepository.saveDefaultStartDay(BudgetStartDay(5))
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 8, 3)))
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN August 3rd and September 3rd have come, and October 3rd is still this cycle's
+        assertThat(transactionRepository.saved.map { it.date.atZone(ZoneOffset.UTC).toLocalDate() })
+            .containsExactlyInAnyOrder(LocalDate.of(2026, 8, 3), LocalDate.of(2026, 9, 3), LocalDate.of(2026, 10, 3))
+    }
+
+    @Test
+    fun `an occurrence after the end of the cycle waits for the next one`() = runTest()
+    {
+        // GIVEN cycles opening on the 5th: today (September 15th) is in the cycle that ends on October 4th
+        calendarRepository.saveDefaultStartDay(BudgetStartDay(5))
+        accountRepository.save(anAccount(id = accountId))
+        recurringTransactionRepository.save(aRecurringTransaction(accountId = accountId, startDate = LocalDate.of(2026, 8, 10)))
+
+        // WHEN
+        aService(ids(4)).generate()
+
+        // THEN October 10th is next cycle's
+        assertThat(transactionRepository.saved.map { it.date.atZone(ZoneOffset.UTC).toLocalDate() })
+            .containsExactlyInAnyOrder(LocalDate.of(2026, 8, 10), LocalDate.of(2026, 9, 10))
     }
 }

@@ -1,6 +1,7 @@
 package com.kyovo.cents.application.usecase
 
 import kotlinx.coroutines.flow.first
+import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.aSubcategoryId
@@ -37,7 +38,7 @@ class UpdateTransactionServiceAccountChangeTest
 
     private val accountRepository = InMemoryAccountRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository())
+    private val service = UpdateTransactionService(accountRepository, transactionRepository, InMemorySubcategoryRepository(), InMemoryProjectRepository())
 
     private val from = anAccount(id = fromId, name = AccountName("Compte courant"))
     private val to = anAccount(id = toId, name = AccountName("Livret A"))

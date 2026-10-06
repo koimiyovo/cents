@@ -1,18 +1,17 @@
 package com.kyovo.cents.application.usecase
 
-import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
-import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.aSubcategory
 import com.kyovo.cents.application.fakes.aSubcategoryId
 import com.kyovo.cents.application.fakes.anUpdateSubcategoryCommand
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryName
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 /**
@@ -31,7 +30,7 @@ class UpdateSubcategoryServiceTest
     {
         // GIVEN
         repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
-        val cart = SubcategoryEmoji("🛒")
+        val cart = Emoji("🛒")
 
         // WHEN
         val result = service.update(
@@ -48,7 +47,7 @@ class UpdateSubcategoryServiceTest
     fun `a null emoji removes the one it had`() = runTest()
     {
         // GIVEN
-        repository.save(aSubcategory(id = id, emoji = SubcategoryEmoji("🛒")))
+        repository.save(aSubcategory(id = id, emoji = Emoji("🛒")))
 
         // WHEN
         val result = service.update(anUpdateSubcategoryCommand(id = id, emoji = null))
@@ -64,7 +63,8 @@ class UpdateSubcategoryServiceTest
         repository.save(aSubcategory(id = id, kind = RecordableTransactionCategory.INCOME))
 
         // WHEN
-        val result = service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Primes")))
+        val result =
+            service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Primes")))
 
         // THEN
         assertThat(result.kind).isEqualTo(RecordableTransactionCategory.INCOME)
@@ -79,36 +79,51 @@ class UpdateSubcategoryServiceTest
     }
 
     @Test
-    fun `throws when another subcategory of the same kind has that name, and changes nothing`() = runTest()
-    {
-        // GIVEN
-        val renamed = aSubcategory(id = id, name = SubcategoryName("Alimentation"))
-        val sibling = aSubcategory(id = otherId, name = SubcategoryName("Transport"))
-        repository.save(renamed)
-        repository.save(sibling)
+    fun `throws when another subcategory of the same kind has that name, and changes nothing`() =
+        runTest()
+        {
+            // GIVEN
+            val renamed = aSubcategory(id = id, name = SubcategoryName("Alimentation"))
+            val sibling = aSubcategory(id = otherId, name = SubcategoryName("Transport"))
+            repository.save(renamed)
+            repository.save(sibling)
 
-        // WHEN
-        assertThatThrownBySuspending {
-            service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName(" transport ")))
-        }.isInstanceOf(DuplicateSubcategoryNameException::class.java)
+            // WHEN
+            assertThatThrownBySuspending {
+                service.update(
+                    anUpdateSubcategoryCommand(
+                        id = id,
+                        name = SubcategoryName(" transport ")
+                    )
+                )
+            }.isInstanceOf(DuplicateSubcategoryNameException::class.java)
 
-        // THEN
-        assertThat(repository.saved).containsExactly(renamed, sibling)
-    }
+            // THEN
+            assertThat(repository.saved).containsExactly(renamed, sibling)
+        }
 
     @Test
     fun `accepts a name used under the other kind`() = runTest()
     {
         // GIVEN
         repository.save(
-            aSubcategory(id = id, kind = RecordableTransactionCategory.EXPENSE, name = SubcategoryName("Alimentation")),
+            aSubcategory(
+                id = id,
+                kind = RecordableTransactionCategory.EXPENSE,
+                name = SubcategoryName("Alimentation")
+            ),
         )
         repository.save(
-            aSubcategory(id = otherId, kind = RecordableTransactionCategory.INCOME, name = SubcategoryName("Autre")),
+            aSubcategory(
+                id = otherId,
+                kind = RecordableTransactionCategory.INCOME,
+                name = SubcategoryName("Autre")
+            ),
         )
 
         // WHEN
-        val result = service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Autre")))
+        val result =
+            service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Autre")))
 
         // THEN
         assertThat(result.name).isEqualTo(SubcategoryName("Autre"))
@@ -123,23 +138,32 @@ class UpdateSubcategoryServiceTest
         repository.save(aSubcategory(id = id, name = SubcategoryName("transport")))
 
         // WHEN
-        val result = service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Transport")))
+        val result =
+            service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Transport")))
 
         // THEN
         assertThat(result.name).isEqualTo(SubcategoryName("Transport"))
     }
 
     @Test
-    fun `throws when another subcategory of the same kind has that name with other accents`() = runTest()
-    {
-        // GIVEN
-        repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
-        repository.save(aSubcategory(id = otherId, name = SubcategoryName("Éducation")))
+    fun `throws when another subcategory of the same kind has that name with other accents`() =
+        runTest()
+        {
+            // GIVEN
+            repository.save(aSubcategory(id = id, name = SubcategoryName("Alimentation")))
+            repository.save(aSubcategory(id = otherId, name = SubcategoryName("Éducation")))
 
-        // WHEN / THEN
-        assertThatThrownBySuspending { service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("education"))) }
-            .isInstanceOf(DuplicateSubcategoryNameException::class.java)
-    }
+            // WHEN / THEN
+            assertThatThrownBySuspending {
+                service.update(
+                    anUpdateSubcategoryCommand(
+                        id = id,
+                        name = SubcategoryName("education")
+                    )
+                )
+            }
+                .isInstanceOf(DuplicateSubcategoryNameException::class.java)
+        }
 
     // Adding the accent it was missing is a change of its own name, not a clash with itself.
     @Test
@@ -149,7 +173,8 @@ class UpdateSubcategoryServiceTest
         repository.save(aSubcategory(id = id, name = SubcategoryName("Education")))
 
         // WHEN
-        val result = service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Éducation")))
+        val result =
+            service.update(anUpdateSubcategoryCommand(id = id, name = SubcategoryName("Éducation")))
 
         // THEN
         assertThat(result.name.value).isEqualTo("Éducation")

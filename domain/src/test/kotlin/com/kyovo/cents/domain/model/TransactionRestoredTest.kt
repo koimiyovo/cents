@@ -33,7 +33,7 @@ class TransactionRestoredTest
         description: TransactionDescription? = null,
         title: TransactionTitle = this.title,
         amount: Money = Money(1_250),
-    ) = Transaction.restored(id, accountId, amount, title, category, subcategoryId, description, date)
+    ) = Transaction.restored(id, accountId, amount, title, category, subcategoryId, description, date, null)
 
     @Test
     fun `an expense is restored as the one that was recorded`()

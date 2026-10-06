@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
@@ -63,6 +64,7 @@ import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.datePickerColorScheme
 import com.kyovo.cents.ui.home.toEpochMillisUtc
 import com.kyovo.cents.ui.home.toLocalDateUtc
+import com.kyovo.cents.ui.project.DEFAULT_PROJECT_EMOJI
 import com.kyovo.cents.ui.recurring.EndDateField
 import com.kyovo.cents.ui.recurring.FrequencyField
 import com.kyovo.cents.ui.recurring.IntervalField
@@ -85,6 +87,7 @@ import java.util.Locale
 fun TransactionFormSheet(
     accounts: List<Account>,
     subcategories: List<Subcategory>,
+    projects: List<Project>,
     form: TransactionFormState,
     showErrors: Boolean,
     failure: SubmitFailure?,
@@ -92,6 +95,7 @@ fun TransactionFormSheet(
     onSubmit: () -> Unit,
     onDelete: () -> Unit,
     onCreateSubcategory: () -> Unit,
+    onCreateProject: () -> Unit,
     onCreateAccount: (AccountField) -> Unit,
     onDismiss: () -> Unit,
 )
@@ -149,7 +153,8 @@ fun TransactionFormSheet(
             }
             TypeSelector(
                 palette = palette,
-                types = if (form.isEditing) listOf(
+                // An edit, or a form opened from a project's page, is an income or an expense: no transfer there.
+                types = if (form.isEditing || form.projectLocked) listOf(
                     TransactionFormType.EXPENSE,
                     TransactionFormType.INCOME
                 )
@@ -254,6 +259,19 @@ fun TransactionFormSheet(
                     FormError.SUBCATEGORY_MISMATCH in errors,
                     FormError.SUBCATEGORY_MISMATCH,
                 )
+                // Not offered to a transaction that repeats: a recurring rule is not tied to a project.
+                if (form.canHaveProject)
+                {
+                    ProjectPicker(
+                        palette = palette,
+                        projects = form.projectChoices(projects),
+                        selected = form.project,
+                        onSelect = { onFormChange(form.withProject(it)) },
+                        onCreate = onCreateProject,
+                        // Opened from a project's page, the project is fixed: shown, greyed.
+                        locked = form.projectLocked,
+                    )
+                }
                 Text(
                     text = stringResource(
                         if (showDetails) R.string.transaction_form_less_details
@@ -302,6 +320,7 @@ fun TransactionFormSheet(
                             SubmitFailure.ARCHIVED_ACCOUNT        -> R.string.transaction_form_failure_archived
                             SubmitFailure.SAME_ACCOUNT            -> R.string.transaction_form_error_same_account
                             SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
+                            SubmitFailure.PROJECT_NOT_FOUND       -> R.string.transaction_form_failure_project_gone
                         },
                     ),
                 )
@@ -496,6 +515,34 @@ private fun SubcategoryPicker(
             fillWidth = true,
             footerLabel = stringResource(R.string.transaction_form_subcategory_create),
             onFooterClick = onCreate,
+        )
+    }
+}
+
+/** The project the transaction is filed under, next to its subcategory: "Aucun", the projects, "+ Nouveau projet". */
+@Composable
+private fun ProjectPicker(
+    palette: AccountsPalette,
+    projects: List<Project>,
+    selected: Project?,
+    onSelect: (Project?) -> Unit,
+    onCreate: () -> Unit,
+    locked: Boolean,
+)
+{
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.transaction_form_project_label))
+        val noneLabel = stringResource(R.string.transaction_form_project_none)
+        SelectDropdown(
+            palette = palette,
+            options = listOf(SelectOption<Project?>(null, noneLabel)) +
+                    projects.map { SelectOption<Project?>(it, "${it.emoji?.value ?: DEFAULT_PROJECT_EMOJI} ${it.name.value}") },
+            selected = selected,
+            onSelect = onSelect,
+            fillWidth = true,
+            footerLabel = stringResource(R.string.transaction_form_project_create),
+            onFooterClick = onCreate,
+            enabled = !locked,
         )
     }
 }

@@ -9,7 +9,7 @@ package com.kyovo.cents.ui.common
  * Which of them a given phone can actually draw is decided at display time (see [NameAndEmojiField]):
  * recent emojis show up as empty boxes on old Android versions.
  */
-internal val SUBCATEGORY_EMOJIS: List<String> = listOf(
+internal val EMOJIS: List<String> = listOf(
     // food
     "🛒", "🍎", "🍞", "🍕", "☕", "🍷", "🥗", "🍔",
     // transport

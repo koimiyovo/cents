@@ -1,8 +1,8 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
@@ -44,20 +44,28 @@ abstract class SubcategoryRepositoryContract
         repository = createRepository()
     }
 
-    private val groceries = aSubcategory(1, RecordableTransactionCategory.EXPENSE, "Alimentation", "🛒")
-    private val transport = aSubcategory(2, RecordableTransactionCategory.EXPENSE, "Transport", null)
+    private val groceries =
+        aSubcategory(1, RecordableTransactionCategory.EXPENSE, "Alimentation", "🛒")
+    private val transport =
+        aSubcategory(2, RecordableTransactionCategory.EXPENSE, "Transport", null)
     private val salary = aSubcategory(3, RecordableTransactionCategory.INCOME, "Salaire", "💰")
 
-    private fun aSubcategory(suffix: Int, kind: RecordableTransactionCategory, name: String, emoji: String?) =
+    private fun aSubcategory(
+        suffix: Int,
+        kind: RecordableTransactionCategory,
+        name: String,
+        emoji: String?
+    ) =
         Subcategory(
             SubcategoryId(UUID.fromString("55555555-5555-5555-5555-55555555555$suffix")),
             kind,
             SubcategoryName(name),
-            emoji?.let { SubcategoryEmoji(it) },
+            emoji?.let { Emoji(it) },
         )
 
     /** Runs the test in real time. */
-    protected fun realTime(block: suspend CoroutineScope.() -> Unit): Unit = runBlocking(block = block)
+    protected fun realTime(block: suspend CoroutineScope.() -> Unit): Unit =
+        runBlocking(block = block)
 
     // ------------------------------------------------------------------ reading what was saved
 
@@ -104,7 +112,7 @@ abstract class SubcategoryRepositoryContract
         repository.save(salary)
 
         // WHEN it is renamed and given another emoji
-        val renamed = groceries.copy(name = SubcategoryName("Courses"), emoji = SubcategoryEmoji("🥖"))
+        val renamed = groceries.copy(name = SubcategoryName("Courses"), emoji = Emoji("🥖"))
         repository.save(renamed)
 
         // THEN it did not move, and nothing was duplicated
@@ -175,7 +183,12 @@ abstract class SubcategoryRepositoryContract
     fun `keeps a name of the longest length`() = realTime()
     {
         // GIVEN
-        val longest = aSubcategory(4, RecordableTransactionCategory.EXPENSE, "x".repeat(SubcategoryName.MAX_LENGTH), null)
+        val longest = aSubcategory(
+            4,
+            RecordableTransactionCategory.EXPENSE,
+            "x".repeat(SubcategoryName.MAX_LENGTH),
+            null
+        )
 
         // WHEN
         repository.save(longest)
@@ -246,28 +259,29 @@ abstract class SubcategoryRepositoryContract
     }
 
     @Test
-    fun `an observer follows the repository as subcategories are added, changed and deleted`() = realTime()
-    {
-        // GIVEN a screen collecting the subcategories
-        val latest = repository.observeAll().stateIn(this, SharingStarted.Eagerly, null)
-        latest.filterNotNullFirst { it.isEmpty() }
+    fun `an observer follows the repository as subcategories are added, changed and deleted`() =
+        realTime()
+        {
+            // GIVEN a screen collecting the subcategories
+            val latest = repository.observeAll().stateIn(this, SharingStarted.Eagerly, null)
+            latest.filterNotNullFirst { it.isEmpty() }
 
-        // WHEN / THEN each change shows up, in stored order
-        repository.save(groceries)
-        latest.filterNotNullFirst { it == listOf(groceries) }
+            // WHEN / THEN each change shows up, in stored order
+            repository.save(groceries)
+            latest.filterNotNullFirst { it == listOf(groceries) }
 
-        repository.save(transport)
-        latest.filterNotNullFirst { it == listOf(groceries, transport) }
+            repository.save(transport)
+            latest.filterNotNullFirst { it == listOf(groceries, transport) }
 
-        val renamed = groceries.copy(name = SubcategoryName("Courses"))
-        repository.save(renamed)
-        latest.filterNotNullFirst { it == listOf(renamed, transport) }
+            val renamed = groceries.copy(name = SubcategoryName("Courses"))
+            repository.save(renamed)
+            latest.filterNotNullFirst { it == listOf(renamed, transport) }
 
-        repository.deleteById(renamed.id)
-        latest.filterNotNullFirst { it == listOf(transport) }
+            repository.deleteById(renamed.id)
+            latest.filterNotNullFirst { it == listOf(transport) }
 
-        coroutineContext.cancelChildren()
-    }
+            coroutineContext.cancelChildren()
+        }
 
     private suspend fun StateFlow<List<Subcategory>?>.filterNotNullFirst(
         matches: (List<Subcategory>) -> Boolean,

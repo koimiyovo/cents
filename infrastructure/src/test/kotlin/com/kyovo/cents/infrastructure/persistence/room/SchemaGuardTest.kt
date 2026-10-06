@@ -51,6 +51,38 @@ class SchemaGuardTest
             .isEqualTo(V1_IDENTITY_HASH)
     }
 
+    // Version 6 (the projects) is a promise too since version 7 was made a version of its own.
+    @Test
+    fun `version 6 of the schema is still the one that was installed`()
+    {
+        val file = schemaFiles[6] ?: error("schemas/.../6.json is missing: it must stay in git")
+
+        assertThat(identityHashOf(file))
+            .describedAs(
+                "The schema of version 6 changed, but version 6 may be installed on a real phone. Do not edit " +
+                    "the entities of an installed version: restore schemas/.../6.json from git, undo the change, " +
+                    "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+            )
+            .isEqualTo(V6_IDENTITY_HASH)
+    }
+
+    // Version 5 is installed on the phone too (it migrated from 4 there): a promise from now on.
+    @Test
+    fun `version 5 of the schema is still the one that was installed`()
+    {
+        val file = schemaFiles[5] ?: error("schemas/.../5.json is missing: it must stay in git")
+
+        assertThat(identityHashOf(file))
+            .describedAs(
+                "The schema of version 5 changed, but version 5 is installed on a real phone. Do not edit " +
+                    "the entities of an installed version: restore schemas/.../5.json from git, undo the change, " +
+                    "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+            )
+            .isEqualTo(V5_IDENTITY_HASH)
+    }
+
     @Test
     fun `the exported versions follow each other without a gap`()
     {
@@ -86,5 +118,7 @@ class SchemaGuardTest
     private companion object
     {
         const val V1_IDENTITY_HASH = "6443675907e21e5be77fbe107eff03cc"
+        const val V5_IDENTITY_HASH = "959f22002575ed2103f61203f7ef5c9d"
+        const val V6_IDENTITY_HASH = "ad2200012b41c2ed01ec67a56d4409ac"
     }
 }

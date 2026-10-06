@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
@@ -40,7 +41,7 @@ class UpdateTransactionServiceTest
             aTransaction(id = id, accountId = accountId, amount = aMoney(1_000), category = TransactionCategory.EXPENSE)
         )
         subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(
             id = id,
             amount = aMoney(5_000),
@@ -76,7 +77,7 @@ class UpdateTransactionServiceTest
         val accountId = anAccountId("22222222-2222-2222-2222-222222222222")
         val repository = InMemoryTransactionRepository()
         repository.save(aTransaction(id = id, accountId = accountId, category = TransactionCategory.EXPENSE))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(
             id = id,
             accountId = accountId,
@@ -95,7 +96,7 @@ class UpdateTransactionServiceTest
     {
         // GIVEN
         val repository = InMemoryTransactionRepository()
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(id = aTransactionId())
 
         // WHEN / THEN
@@ -110,7 +111,7 @@ class UpdateTransactionServiceTest
         val id = aTransactionId()
         val repository = InMemoryTransactionRepository()
         repository.save(aTransaction(id = id, category = TransactionCategory.INITIAL_DEPOSIT))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(id = id)
 
         // WHEN / THEN
@@ -126,7 +127,7 @@ class UpdateTransactionServiceTest
         val original = aTransaction(id = id, category = TransactionCategory.INITIAL_DEPOSIT)
         val repository = InMemoryTransactionRepository()
         repository.save(original)
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(id = id)
 
         // WHEN
@@ -145,7 +146,7 @@ class UpdateTransactionServiceTest
         val repository = InMemoryTransactionRepository()
         repository.save(aTransaction(id = id, category = TransactionCategory.EXPENSE))
         subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(
             id = id,
             category = RecordableTransactionCategory.EXPENSE,
@@ -165,7 +166,7 @@ class UpdateTransactionServiceTest
         val original = aTransaction(id = id, category = TransactionCategory.EXPENSE)
         val repository = InMemoryTransactionRepository()
         repository.save(original)
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
         val command = anUpdateTransactionCommand(id = id, subcategoryId = salaryId)
 
         // WHEN
@@ -185,7 +186,7 @@ class UpdateTransactionServiceTest
         subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.EXPENSE))
         val repository = InMemoryTransactionRepository()
         repository.save(aTransaction(id = id, category = TransactionCategory.EXPENSE, subcategoryId = salaryId))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
 
         // WHEN
         val result = service.update(anUpdateTransactionCommand(id = id, subcategoryId = null))
@@ -201,7 +202,7 @@ class UpdateTransactionServiceTest
         val id = aTransactionId()
         val repository = InMemoryTransactionRepository()
         repository.save(aTransaction(id = id, category = TransactionCategory.INITIAL_DEPOSIT))
-        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository)
+        val service = UpdateTransactionService(InMemoryAccountRepository(), repository, subcategoryRepository, InMemoryProjectRepository())
 
         // WHEN / THEN it is the deposit rule that answers
         assertThatThrownBySuspending { service.update(anUpdateTransactionCommand(id = id, subcategoryId = salaryId)) }
