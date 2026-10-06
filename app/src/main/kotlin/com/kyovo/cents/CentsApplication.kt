@@ -2,10 +2,12 @@ package com.kyovo.cents
 
 import android.app.Application
 import androidx.work.Configuration
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import com.kyovo.cents.work.AutomaticBackupWorker
 import com.kyovo.cents.work.CentsWorkerFactory
 import com.kyovo.cents.work.RecurringTransactionWorker
 import com.kyovo.cents.work.delayUntilNext
@@ -67,9 +69,22 @@ class CentsApplication : Application(), Configuration.Provider {
                 .setInitialDelay(delayUntilNext(hour = 8, now = ZonedDateTime.now()))
                 .build(),
         )
+
+        // Once a week, whenever the phone is not low on battery (the exact day does not matter, unlike the
+        // morning check above). Scheduled even when no folder is chosen: the worker then does nothing, and
+        // choosing one later needs no scheduling. KEEP for the same reason as above.
+        workManager.enqueueUniquePeriodicWork(
+            AUTOMATIC_BACKUP_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<AutomaticBackupWorker>(7, TimeUnit.DAYS)
+                .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
+                .build(),
+        )
     }
 
     private companion object {
+        const val AUTOMATIC_BACKUP_WORK_NAME = "automatic-backup-weekly"
+
         // The name of the work as it was first scheduled, kept as is: renaming it would enqueue a second
         // periodic work next to the one already scheduled on the phone.
         const val RECURRING_TRANSACTIONS_WORK_NAME = "recurring-expenses-daily"
