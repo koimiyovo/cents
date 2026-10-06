@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryBudgetCalendarRepository
 import com.kyovo.cents.application.fakes.InMemoryBudgetRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aBudget
@@ -40,8 +41,9 @@ class GetBudgetProgressServiceTest
     private val budgetRepository = InMemoryBudgetRepository()
     private val transactionRepository = InMemoryTransactionRepository()
 
+    // Nothing declared in the calendar: a cycle is a calendar month, which is what these tests describe.
     private fun aServiceIn(zone: ZoneId) =
-        GetBudgetProgressService(budgetRepository, transactionRepository, zone)
+        GetBudgetProgressService(budgetRepository, transactionRepository, InMemoryBudgetCalendarRepository(), zone)
 
     private fun anExpense(
         suffix: Int,

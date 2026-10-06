@@ -14,7 +14,8 @@ data class Transaction private constructor(
     val category: TransactionCategory,
     val subcategoryId: SubcategoryId?,
     val description: TransactionDescription?,
-    val date: Instant
+    val date: Instant,
+    val projectId: ProjectId?
 )
 {
     companion object
@@ -37,7 +38,8 @@ data class Transaction private constructor(
                 category = TransactionCategory.INITIAL_DEPOSIT,
                 subcategoryId = null,
                 description = null,
-                date = date
+                date = date,
+                projectId = null
             )
         }
 
@@ -49,7 +51,8 @@ data class Transaction private constructor(
             category: RecordableTransactionCategory,
             subcategory: Subcategory?,
             description: TransactionDescription?,
-            date: Instant
+            date: Instant,
+            projectId: ProjectId? = null
         ): Transaction
         {
             requireNonZero(amount)
@@ -67,7 +70,8 @@ data class Transaction private constructor(
                 category = category.toTransactionCategory(),
                 subcategoryId = subcategory?.id,
                 description = description,
-                date = date
+                date = date,
+                projectId = projectId
             )
         }
 
@@ -86,12 +90,13 @@ data class Transaction private constructor(
             category: TransactionCategory,
             subcategoryId: SubcategoryId?,
             description: TransactionDescription?,
-            date: Instant
+            date: Instant,
+            projectId: ProjectId?
         ): Transaction
         {
             val canBeDescribed =
                 category == TransactionCategory.INCOME || category == TransactionCategory.EXPENSE
-            if (!canBeDescribed && (subcategoryId != null || description != null))
+            if (!canBeDescribed && (subcategoryId != null || description != null || projectId != null))
             {
                 throw InvalidRestoredTransactionException()
             }
@@ -104,7 +109,8 @@ data class Transaction private constructor(
                 category,
                 subcategoryId,
                 description,
-                date
+                date,
+                projectId
             )
         }
 
@@ -126,7 +132,8 @@ data class Transaction private constructor(
                 category = TransactionCategory.TRANSFER_OUT,
                 subcategoryId = null,
                 description = null,
-                date = date
+                date = date,
+                projectId = null
             )
         }
 
@@ -148,7 +155,8 @@ data class Transaction private constructor(
                 category = TransactionCategory.TRANSFER_IN,
                 subcategoryId = null,
                 description = null,
-                date = date
+                date = date,
+                projectId = null
             )
         }
 
@@ -168,6 +176,15 @@ data class Transaction private constructor(
     fun withoutSubcategory(): Transaction
     {
         return copy(subcategoryId = null)
+    }
+
+    /**
+     * The same transaction, without project. Used when the project it pointed to is deleted: the
+     * transaction stays, and nothing else about it (so no balance) changes.
+     */
+    fun withoutProject(): Transaction
+    {
+        return copy(projectId = null)
     }
 
     val signedAmount: Long

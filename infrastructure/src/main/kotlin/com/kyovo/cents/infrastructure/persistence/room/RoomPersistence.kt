@@ -9,11 +9,14 @@ import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.port.output.AccountRepository
 import com.kyovo.cents.domain.port.output.BudgetAlertRepository
+import com.kyovo.cents.domain.port.output.BudgetCalendarRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
+import com.kyovo.cents.domain.port.output.ProjectRepository
 import com.kyovo.cents.domain.port.output.RecurringTransactionRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import com.kyovo.cents.domain.port.output.UnitOfWork
+import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence.Companion.open
 import java.nio.ByteBuffer
 import java.util.UUID
 
@@ -30,7 +33,10 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
     val transactions: TransactionRepository = RoomTransactionRepository(database.transactionDao())
     val budgets: BudgetRepository = RoomBudgetRepository(database.budgetDao())
     val budgetAlerts: BudgetAlertRepository = RoomBudgetAlertRepository(database.budgetAlertDao())
-    val recurringTransactions: RecurringTransactionRepository = RoomRecurringTransactionRepository(database.recurringTransactionDao())
+    val recurringTransactions: RecurringTransactionRepository =
+        RoomRecurringTransactionRepository(database.recurringTransactionDao())
+    val projects: ProjectRepository = RoomProjectRepository(database.projectDao())
+    val budgetCalendar: BudgetCalendarRepository = RoomBudgetCalendarRepository(database.budgetCalendarDao())
     val unitOfWork: UnitOfWork = RoomUnitOfWork(database)
 
     fun close()
@@ -53,11 +59,12 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
          */
         fun open(context: Context, name: String = DATABASE_NAME): RoomPersistence
         {
-            val database = Room.databaseBuilder(context.applicationContext, CentsDatabase::class.java, name)
-                .setDriver(AndroidSQLiteDriver())
-                .addMigrations(*CentsMigrations.ALL.toTypedArray())
-                .addCallback(DefaultSubcategoriesCallback())
-                .build()
+            val database =
+                Room.databaseBuilder(context.applicationContext, CentsDatabase::class.java, name)
+                    .setDriver(AndroidSQLiteDriver())
+                    .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                    .addCallback(DefaultSubcategoriesCallback())
+                    .build()
             return RoomPersistence(database)
         }
 
@@ -102,23 +109,28 @@ private class DefaultSubcategoriesCallback : RoomDatabase.Callback()
 {
     override suspend fun onCreate(connection: SQLiteConnection)
     {
-        connection.prepare("INSERT INTO subcategories (id, kind, name, emoji) VALUES (?, ?, ?, ?)").use { statement ->
-            for (subcategory in DefaultSubcategories.ALL)
-            {
-                val row = subcategory.toEntity()
-                statement.reset()
-                statement.bindBlob(1, row.id.toBytes())
-                statement.bindText(2, row.kind)
-                statement.bindText(3, row.name)
-                if (row.emoji == null) statement.bindNull(4) else statement.bindText(4, row.emoji)
-                statement.step()
+        connection.prepare("INSERT INTO subcategories (id, kind, name, emoji) VALUES (?, ?, ?, ?)")
+            .use { statement ->
+                for (subcategory in DefaultSubcategories.ALL)
+                {
+                    val row = subcategory.toEntity()
+                    statement.reset()
+                    statement.bindBlob(1, row.id.toBytes())
+                    statement.bindText(2, row.kind)
+                    statement.bindText(3, row.name)
+                    if (row.emoji == null) statement.bindNull(4) else statement.bindText(
+                        4,
+                        row.emoji
+                    )
+                    statement.step()
+                }
             }
-        }
     }
 
     /** A UUID as Room stores it: 16 bytes, the most significant half first. */
     private fun UUID.toBytes(): ByteArray
     {
-        return ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits).array()
+        return ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits)
+            .array()
     }
 }

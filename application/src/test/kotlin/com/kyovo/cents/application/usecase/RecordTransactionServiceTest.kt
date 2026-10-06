@@ -1,9 +1,8 @@
 package com.kyovo.cents.application.usecase
 
-import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
-import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
@@ -15,6 +14,7 @@ import com.kyovo.cents.application.fakes.aTransactionId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.InvalidTransactionSubcategoryException
@@ -22,8 +22,8 @@ import com.kyovo.cents.domain.exception.SubcategoryNotFoundException
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.TransactionDescription
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class RecordTransactionServiceTest
@@ -46,6 +46,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(generatedTransactionId),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(
@@ -85,6 +86,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(generatedTransactionId),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(
@@ -119,6 +121,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(accountId = anAccountId())
@@ -138,6 +141,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(accountId = anAccountId())
@@ -159,12 +163,18 @@ class RecordTransactionServiceTest
         val date = anInstant()
         val accountRepository = InMemoryAccountRepository()
         accountRepository.save(anAccount(id = accountId))
-        subcategoryRepository.save(aSubcategory(id = groceriesId, kind = RecordableTransactionCategory.EXPENSE))
+        subcategoryRepository.save(
+            aSubcategory(
+                id = groceriesId,
+                kind = RecordableTransactionCategory.EXPENSE
+            )
+        )
         val transactionRepository = InMemoryTransactionRepository()
         val service = RecordTransactionService(
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(generatedTransactionId),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(
@@ -205,6 +215,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(accountId = accountId, subcategoryId = groceriesId)
@@ -228,11 +239,13 @@ class RecordTransactionServiceTest
             accountRepository,
             InMemoryTransactionRepository(),
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
 
         // WHEN
-        val result = service.record(aRecordTransactionCommand(accountId = accountId, subcategoryId = null))
+        val result =
+            service.record(aRecordTransactionCommand(accountId = accountId, subcategoryId = null))
 
         // THEN
         assertThat(result.subcategoryId).isNull()
@@ -245,12 +258,18 @@ class RecordTransactionServiceTest
         val accountId = anAccountId()
         val accountRepository = InMemoryAccountRepository()
         accountRepository.save(anAccount(id = accountId))
-        subcategoryRepository.save(aSubcategory(id = salaryId, kind = RecordableTransactionCategory.INCOME))
+        subcategoryRepository.save(
+            aSubcategory(
+                id = salaryId,
+                kind = RecordableTransactionCategory.INCOME
+            )
+        )
         val transactionRepository = InMemoryTransactionRepository()
         val service = RecordTransactionService(
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(
@@ -276,6 +295,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(
@@ -302,6 +322,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(accountId = accountId)
@@ -323,6 +344,7 @@ class RecordTransactionServiceTest
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(accountId = accountId)
@@ -343,12 +365,18 @@ class RecordTransactionServiceTest
             InMemoryAccountRepository(),
             InMemoryTransactionRepository(),
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
 
         // WHEN / THEN
         assertThatThrownBySuspending {
-            service.record(aRecordTransactionCommand(accountId = anAccountId(), subcategoryId = groceriesId))
+            service.record(
+                aRecordTransactionCommand(
+                    accountId = anAccountId(),
+                    subcategoryId = groceriesId
+                )
+            )
         }.isInstanceOf(AccountNotFoundException::class.java)
     }
 
@@ -363,12 +391,18 @@ class RecordTransactionServiceTest
             accountRepository,
             InMemoryTransactionRepository(),
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
 
         // WHEN / THEN
         assertThatThrownBySuspending {
-            service.record(aRecordTransactionCommand(accountId = accountId, subcategoryId = groceriesId))
+            service.record(
+                aRecordTransactionCommand(
+                    accountId = accountId,
+                    subcategoryId = groceriesId
+                )
+            )
         }.isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
@@ -379,12 +413,18 @@ class RecordTransactionServiceTest
         val accountId = anAccountId()
         val accountRepository = InMemoryAccountRepository()
         accountRepository.save(anAccount(id = accountId))
-        subcategoryRepository.save(aSubcategory(id = groceriesId, kind = RecordableTransactionCategory.EXPENSE))
+        subcategoryRepository.save(
+            aSubcategory(
+                id = groceriesId,
+                kind = RecordableTransactionCategory.EXPENSE
+            )
+        )
         val transactionRepository = InMemoryTransactionRepository()
         val service = RecordTransactionService(
             accountRepository,
             transactionRepository,
             FixedTransactionIdGenerator(aTransactionId()),
+            InMemoryProjectRepository(),
             subcategoryRepository
         )
         val command = aRecordTransactionCommand(

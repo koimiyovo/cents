@@ -2,6 +2,7 @@ package com.kyovo.cents.domain.port.input
 
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
+import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -23,7 +24,8 @@ data class UpdateTransactionCommand(
     val category: RecordableTransactionCategory,
     val subcategoryId: SubcategoryId?,
     val description: TransactionDescription?,
-    val date: Instant
+    val date: Instant,
+    val projectId: ProjectId?
 )
 {
     /** [subcategory] is the one [subcategoryId] designates, resolved by the caller (null when there is none). */
@@ -37,7 +39,8 @@ data class UpdateTransactionCommand(
             category,
             subcategory,
             description,
-            date
+            date,
+            projectId
         )
     }
 }

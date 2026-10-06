@@ -1,8 +1,8 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import org.assertj.core.api.Assertions.assertThat
@@ -22,7 +22,7 @@ class SubcategoryEntityMapperTest
         SubcategoryId(uuid),
         RecordableTransactionCategory.EXPENSE,
         SubcategoryName("Alimentation"),
-        SubcategoryEmoji("🛒"),
+        Emoji("🛒"),
     )
 
     @Test
@@ -38,7 +38,9 @@ class SubcategoryEntityMapperTest
     @Test
     fun `an income is stored under its own kind`()
     {
-        assertThat(groceries.copy(kind = RecordableTransactionCategory.INCOME).toEntity().kind).isEqualTo("INCOME")
+        assertThat(
+            groceries.copy(kind = RecordableTransactionCategory.INCOME).toEntity().kind
+        ).isEqualTo("INCOME")
     }
 
     @Test
@@ -57,7 +59,14 @@ class SubcategoryEntityMapperTest
     fun `a row without an emoji becomes a subcategory without an emoji`()
     {
         assertThat(SubcategoryEntity(uuid, "INCOME", "Salaire", null).toDomain())
-            .isEqualTo(Subcategory(SubcategoryId(uuid), RecordableTransactionCategory.INCOME, SubcategoryName("Salaire"), null))
+            .isEqualTo(
+                Subcategory(
+                    SubcategoryId(uuid),
+                    RecordableTransactionCategory.INCOME,
+                    SubcategoryName("Salaire"),
+                    null
+                )
+            )
     }
 
     // The kind is stored as text, so a database can hold a kind this version of the app has never heard of.

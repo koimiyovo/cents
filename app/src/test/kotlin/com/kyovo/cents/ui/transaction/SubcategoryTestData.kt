@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -24,7 +25,7 @@ internal val FUEL_SUBCATEGORY = Subcategory(
 )
 
 internal val SALARY_SUBCATEGORY = Subcategory(
-    SubcategoryId(UUID.fromString("bbbbbbbb-0000-0000-0000-000000000001")),
+    DefaultSubcategories.SALARY_ID,
     RecordableTransactionCategory.INCOME,
     SubcategoryName("Salaire"),
     null,
@@ -40,7 +41,7 @@ internal fun subcategoryFor(id: SubcategoryId?): Subcategory? = ALL_TEST_SUBCATE
  * silently drop it); tests that don't care resolve it from the transaction like the screen does.
  */
 internal fun TransactionFormState.Companion.editing(transaction: Transaction): TransactionFormState =
-    editing(transaction, subcategoryFor(transaction.subcategoryId))
+    editing(transaction, subcategoryFor(transaction.subcategoryId), projectFor(transaction.projectId))
 
 internal fun TransactionFormViewModel.openForEdit(transaction: Transaction) =
-    openForEdit(transaction, subcategoryFor(transaction.subcategoryId))
+    openForEdit(transaction, subcategoryFor(transaction.subcategoryId), projectFor(transaction.projectId))

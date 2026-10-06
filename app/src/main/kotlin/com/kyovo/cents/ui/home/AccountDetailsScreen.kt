@@ -52,6 +52,7 @@ import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AccountType
+import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.model.SubcategoryId
@@ -75,6 +76,7 @@ fun AccountDetailsScreen(
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
     listSubcategories: ListSubcategoriesUseCase,
+    projects: List<Project>,
     onBack: () -> Unit,
     onArchive: () -> Unit,
     onUnarchive: () -> Unit,
@@ -123,6 +125,7 @@ fun AccountDetailsScreen(
     // Already ordered by name by the use case.
     val subcategories by remember { listSubcategories.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val subcategoriesById = remember(subcategories) { subcategories.associateBy { it.id } }
+    val projectsById = remember(projects) { projects.associateBy { it.id } }
 
     // Unlike the global tab (30 days by default), an account's page opens on its full history:
     // the opening deposit is often far in the past and would otherwise be hidden at first glance.
@@ -254,7 +257,8 @@ fun AccountDetailsScreen(
                         dayTransactions,
                         accountsById = emptyMap(),
                         subcategoriesById = subcategoriesById,
-                        onTransactionClick = onTransactionClick
+                        onTransactionClick = onTransactionClick,
+                        projectsById = projectsById,
                     )
                 }
             }

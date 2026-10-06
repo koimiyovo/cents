@@ -6,19 +6,20 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.NotifyBudgetAlertUseCase
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.BudgetCalendarRepository
 import com.kyovo.cents.domain.port.output.RecurringTransactionRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
 import com.kyovo.cents.domain.port.output.TransactionIdGenerator
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import com.kyovo.cents.domain.port.output.UnitOfWork
+import kotlinx.coroutines.flow.first
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.YearMonth
 
 /**
  * Generates the transactions of the recurring rules: every occurrence that has already come, and at most one
- * more, the next one, when it falls later in the current month. Never further ahead: generating months in
+ * more, the next one, when it falls later in the current budget month (cycle). Never further ahead: generating months in
  * advance filled the transactions list with what was not due yet.
  */
 class GenerateRecurringTransactionsService(
@@ -28,6 +29,7 @@ class GenerateRecurringTransactionsService(
     private val subcategoryRepository: SubcategoryRepository,
     private val transactionIdGenerator: TransactionIdGenerator,
     private val unitOfWork: UnitOfWork,
+    private val calendarRepository: BudgetCalendarRepository,
     private val clock: Clock,
     private val notifyBudgetAlerts: NotifyBudgetAlertUseCase
 ) : GenerateRecurringTransactionsUseCase
@@ -36,12 +38,15 @@ class GenerateRecurringTransactionsService(
     {
         val zone = clock.zone
         val today = LocalDate.now(clock)
-        val currentMonth = YearMonth.from(today)
+        // "This month" is the budget cycle open today, which may run from the 25th to the 24th.
+        val calendar = calendarRepository.observe().first()
+        val currentMonth = calendar.cycleOf(today)
+        val endOfCurrentMonth = calendar.endOf(currentMonth).minusDays(1)
         var recordedInCurrentMonth = false
 
         for (rule in recurringTransactionRepository.findAll())
         {
-            val toGenerate = occurrencesToGenerate(rule, today, currentMonth.atEndOfMonth())
+            val toGenerate = occurrencesToGenerate(rule, today, endOfCurrentMonth)
             if (toGenerate.isEmpty()) continue
 
             // An archived account refuses new transactions: skip the rule entirely rather than generate
@@ -74,7 +79,7 @@ class GenerateRecurringTransactionsService(
             }
 
             // Only spending can cross a budget: an income generated this month changes none.
-            if (rule.category == RecordableTransactionCategory.EXPENSE && toGenerate.any { YearMonth.from(it) == currentMonth })
+            if (rule.category == RecordableTransactionCategory.EXPENSE && toGenerate.any { calendar.cycleOf(it) == currentMonth })
             {
                 recordedInCurrentMonth = true
             }

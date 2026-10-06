@@ -2,6 +2,7 @@ package com.kyovo.cents.ui.transaction
 
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.model.BudgetStartDay
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
@@ -9,8 +10,12 @@ import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
+import com.kyovo.cents.domain.model.Subcategory
+import com.kyovo.cents.domain.model.SubcategoryId
+import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionId
 import com.kyovo.cents.domain.model.TransactionTitle
@@ -25,6 +30,7 @@ import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
+import com.kyovo.cents.ui.budget.CycleStartSuggestion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -35,12 +41,18 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.time.Instant
+import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.Currency
 import java.util.UUID
 
 private val NOW = Instant.parse("2026-09-23T12:00:00Z")
+
+private val REFUND_SUBCATEGORY = Subcategory(
+    SubcategoryId(UUID.fromString("bbbbbbbb-0000-0000-0000-000000000002")),
+    RecordableTransactionCategory.INCOME, SubcategoryName("Remboursement"), null,
+)
 private val PARIS = ZoneId.of("Europe/Paris")
 
 private class RecordingRecord : RecordTransactionUseCase
@@ -108,6 +120,7 @@ class TransactionFormBudgetAlertTest
 {
     private val record = RecordingRecord()
     private val check = FakeCheckBudgetAlerts()
+    private val calendar = FixedBudgetCalendar()
     private val createRecurring = FakeCreateRecurring()
     private val viewModel = TransactionFormViewModel(
         record,
@@ -118,6 +131,9 @@ class TransactionFormBudgetAlertTest
         check,
         createRecurring,
         FakeGenerateRecurring(createRecurring),
+        FakeCreateProject(),
+        NoProjectProgress,
+        getBudgetCalendar = calendar,
         now = { NOW },
         zone = PARIS,
     )
@@ -221,6 +237,23 @@ class TransactionFormBudgetAlertTest
 
         // THEN
         assertThat(check.months).containsExactly(YearMonth.of(2026, 9))
+    }
+
+    // With pay on the 25th, the 26th of September is already October's budget month: that is the month whose
+    // budgets the expense can have moved.
+    @Test
+    fun `the month checked is the budget cycle of the transaction's date`() = runTest()
+    {
+        // GIVEN cycles opening on the 25th
+        calendar.calendar = BudgetCalendar(defaultStartDay = BudgetStartDay(25))
+        fillExpense()
+        viewModel.update(form.copy(date = Instant.parse("2026-09-26T10:00:00Z")))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(check.months).containsExactly(YearMonth.of(2026, 10))
     }
 
     @Test
@@ -402,5 +435,97 @@ class TransactionFormBudgetAlertTest
 
         // THEN
         assertThat(viewModel.uiState.value.form).isNull()
+    }
+
+    // ------------------------------------------------------------------ the pay that opens a cycle
+
+    private fun TestScope.collectSuggestions(): List<CycleStartSuggestion>
+    {
+        val received = mutableListOf<CycleStartSuggestion>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.cycleStartSuggestions.toList(received) }
+        return received
+    }
+
+    private fun fillIncome(on: String? = null, subcategory: Subcategory? = SALARY_SUBCATEGORY)
+    {
+        viewModel.open(listOf(checking, savings), preselectedAccountId = checking.id)
+        viewModel.update(
+            form.withType(TransactionFormType.INCOME)
+                .copy(amountText = "2000", title = "Salaire", subcategory = subcategory)
+        )
+        if (on != null) viewModel.update(form.copy(date = Instant.parse(on)))
+    }
+
+    @Test
+    fun `a salary a few days before a cycle's usual start suggests opening it that day`() = runTest()
+    {
+        // GIVEN calendar months, and pay on September 28th
+        val received = collectSuggestions()
+        fillIncome(on = "2026-09-28T09:00:00Z")
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN October's cycle could open that day
+        assertThat(received).containsExactly(CycleStartSuggestion(LocalDate.of(2026, 9, 28), YearMonth.of(2026, 10)))
+    }
+
+    @Test
+    fun `a salary far from any cycle start suggests nothing`() = runTest()
+    {
+        // GIVEN today is September 23rd: a week and more before October's usual start
+        val received = collectSuggestions()
+        fillIncome()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(received).isEmpty()
+    }
+
+    // Any income close to a cycle's start would ask too often: only the salary is taken for the pay.
+    @Test
+    fun `an income that is not a salary suggests nothing, with another subcategory or none`() = runTest()
+    {
+        // GIVEN pay-like dates, but a refund and an income with no subcategory
+        val received = collectSuggestions()
+        fillIncome(on = "2026-09-28T09:00:00Z", subcategory = REFUND_SUBCATEGORY)
+        viewModel.submit()
+        fillIncome(on = "2026-09-28T09:00:00Z", subcategory = null)
+        viewModel.submit()
+
+        // THEN
+        assertThat(received).isEmpty()
+    }
+
+    @Test
+    fun `an expense never suggests a cycle start`() = runTest()
+    {
+        // GIVEN
+        val received = collectSuggestions()
+        fillExpense()
+        viewModel.update(form.copy(date = Instant.parse("2026-09-28T09:00:00Z")))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(received).isEmpty()
+    }
+
+    @Test
+    fun `a refused salary suggests nothing`() = runTest()
+    {
+        // GIVEN
+        val received = collectSuggestions()
+        record.failWith = CannotRecordTransactionOnArchivedAccountException()
+        fillIncome(on = "2026-09-28T09:00:00Z")
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(received).isEmpty()
     }
 }

@@ -8,34 +8,51 @@ import com.kyovo.cents.domain.exception.CannotDeleteTransferException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.CannotUpdateInitialDepositException
 import com.kyovo.cents.domain.exception.CannotUpdateTransferException
+import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.exception.DuplicateSubcategoryNameException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryNameException
+import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
+import com.kyovo.cents.domain.model.BudgetAlertLevel
+import com.kyovo.cents.domain.model.DefaultSubcategories
+import com.kyovo.cents.domain.model.Emoji
+import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.CheckBudgetAlertsUseCase
+import com.kyovo.cents.domain.port.input.CreateProjectUseCase
 import com.kyovo.cents.domain.port.input.CreateRecurringTransactionUseCase
 import com.kyovo.cents.domain.port.input.CreateSubcategoryCommand
 import com.kyovo.cents.domain.port.input.CreateSubcategoryUseCase
 import com.kyovo.cents.domain.port.input.DeleteTransactionUseCase
+import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
+import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.GenerateRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.RecordTransactionUseCase
 import com.kyovo.cents.domain.port.input.RecordTransferUseCase
 import com.kyovo.cents.domain.port.input.UpdateTransactionUseCase
+import com.kyovo.cents.ui.budget.CycleStartSuggestion
+import com.kyovo.cents.ui.budget.cycleStartSuggestion
+import com.kyovo.cents.ui.project.NewProjectDraft
+import com.kyovo.cents.ui.project.ProjectAlert
+import com.kyovo.cents.ui.project.ProjectFormError
+import com.kyovo.cents.ui.project.ProjectFormState
+import com.kyovo.cents.ui.project.ProjectSubmission
+import com.kyovo.cents.ui.project.newlyReachedLevel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,6 +69,9 @@ enum class SubmitFailure
 
     /** Editing: the transaction is gone, or is one the domain won't let be changed. */
     TRANSACTION_UNAVAILABLE,
+
+    /** The project chosen was deleted since the form was opened. */
+    PROJECT_NOT_FOUND,
 }
 
 /**
@@ -85,7 +105,8 @@ data class NewSubcategoryDraft(
 /**
  * [form] is null while the sheet is closed, so "is the sheet open" and its content can't disagree.
  * [confirmingDelete] is set while the user is being asked whether to delete the edited transaction.
- * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up.
+ * [newSubcategory] is set while the dialog to create a subcategory (from the form's dropdown) is up, and
+ * [newProject] while the one to create a project is.
  * [askNotificationPermission] is raised once a repeating form has created its rule, for the screen to ask for the
  * permission the rule's notification needs (see [TransactionFormViewModel.dismissNotificationPermissionAsk]).
  */
@@ -95,6 +116,7 @@ data class TransactionFormUiState(
     val failure: SubmitFailure? = null,
     val confirmingDelete: TransactionToDelete? = null,
     val newSubcategory: NewSubcategoryDraft? = null,
+    val newProject: NewProjectDraft? = null,
     val askNotificationPermission: Boolean = false,
 )
 
@@ -115,6 +137,9 @@ class TransactionFormViewModel(
     private val checkBudgetAlerts: CheckBudgetAlertsUseCase,
     private val createRecurringTransaction: CreateRecurringTransactionUseCase,
     private val generateRecurringTransactions: GenerateRecurringTransactionsUseCase,
+    private val createProject: CreateProjectUseCase,
+    private val getProjectProgress: GetProjectProgressUseCase,
+    private val getBudgetCalendar: GetBudgetCalendarUseCase,
     private val now: () -> Instant = { Instant.now() },
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) : ViewModel()
@@ -133,6 +158,23 @@ class TransactionFormViewModel(
      */
     val budgetAlerts: Flow<BudgetAlert> = _budgetAlerts.receiveAsFlow()
 
+    // Same reasoning for a project brought close to its target, or over it, by the transaction just saved.
+    private val _projectAlerts = Channel<ProjectAlert>(Channel.UNLIMITED)
+
+    /**
+     * The project alerts a transaction saved from this form has just caused, for the screen to tell the user
+     * about at once. Worked out from where the project stood before the save and after it - nothing is
+     * remembered, and no background job is involved, since a transaction only reaches a project from here.
+     */
+    val projectAlerts: Flow<ProjectAlert> = _projectAlerts.receiveAsFlow()
+
+    // An income recorded close to where a budget cycle usually starts may be the pay that opens it: the form says so
+    // once, as an event, and the screen offers to move the start (see [cycleStartSuggestion]).
+    private val _cycleStartSuggestions = Channel<CycleStartSuggestion>(Channel.UNLIMITED)
+
+    /** The proposals to start a budget cycle on the day of an income just recorded here, each delivered once. */
+    val cycleStartSuggestions: Flow<CycleStartSuggestion> = _cycleStartSuggestions.receiveAsFlow()
+
     /** The transaction being edited, as it was when the edit began (what a deletion would erase). */
     private var editedTransaction: Transaction? = null
 
@@ -142,7 +184,7 @@ class TransactionFormViewModel(
     private var accountRequest: AccountRequest? = null
 
     /** Opens a fresh form. Called when the user asks for a new transaction, never on recomposition. */
-    fun open(accounts: List<Account>, preselectedAccountId: AccountId?)
+    fun open(accounts: List<Account>, preselectedAccountId: AccountId?, project: Project? = null)
     {
         editedTransaction = null
         accountRequest = null
@@ -153,21 +195,23 @@ class TransactionFormViewModel(
                 accounts = accounts,
                 preselectedAccountId = preselectedAccountId ?: onlyAccountId,
                 now = now(),
+                project = project,
             ),
         )
     }
 
     /**
-     * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] is the one
-     * it points to (null when it has none).
+     * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] and [project] are
+     * the ones it points to (null when it has none).
      */
-    fun openForEdit(transaction: Transaction, subcategory: Subcategory?)
+    fun openForEdit(transaction: Transaction, subcategory: Subcategory?, project: Project?)
     {
         // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
         accountRequest = null
-        _uiState.value = TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory))
+        _uiState.value =
+            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory, project))
     }
 
     /**
@@ -225,13 +269,27 @@ class TransactionFormViewModel(
 
     fun updateNewSubcategoryName(name: String)
     {
-        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(name = name, error = null)) }
+        _uiState.update { state ->
+            state.copy(
+                newSubcategory = state.newSubcategory?.copy(
+                    name = name,
+                    error = null
+                )
+            )
+        }
     }
 
     /** Picks the emoji of the subcategory being created; null removes the one picked. */
     fun selectNewSubcategoryEmoji(emoji: String?)
     {
-        _uiState.update { state -> state.copy(newSubcategory = state.newSubcategory?.copy(emoji = emoji, error = null)) }
+        _uiState.update { state ->
+            state.copy(
+                newSubcategory = state.newSubcategory?.copy(
+                    emoji = emoji,
+                    error = null
+                )
+            )
+        }
     }
 
     fun dismissNewSubcategory()
@@ -258,7 +316,10 @@ class TransactionFormViewModel(
         val created = try
         {
             createSubcategory.create(
-                CreateSubcategoryCommand(kind, SubcategoryName(draft.name), draft.emoji?.let { SubcategoryEmoji(it) }),
+                CreateSubcategoryCommand(
+                    kind,
+                    SubcategoryName(draft.name),
+                    draft.emoji?.let { Emoji(it) }),
             )
         } catch (_: InvalidSubcategoryNameException)
         {
@@ -274,7 +335,68 @@ class TransactionFormViewModel(
             return
         }
 
-        _uiState.update { it.copy(form = it.form?.copy(subcategory = created), newSubcategory = null) }
+        _uiState.update {
+            it.copy(
+                form = it.form?.copy(subcategory = created),
+                newSubcategory = null
+            )
+        }
+    }
+
+    /** Opens the "new project" dialog. Nothing to do for a transfer or a repeating transaction, which have no project. */
+    fun askToCreateProject()
+    {
+        val form = _uiState.value.form ?: return
+        // Nothing to create where the project is fixed, or where there is none.
+        if (!form.canHaveProject || form.projectLocked) return
+        _uiState.update { it.copy(newProject = NewProjectDraft()) }
+    }
+
+    /** Replaces the form of the dialog (an edit of a field); what was reported about the last attempt is stale. */
+    fun updateNewProject(form: ProjectFormState)
+    {
+        _uiState.update { state -> state.copy(newProject = state.newProject?.copy(form = form, errors = emptySet())) }
+    }
+
+    fun dismissNewProject()
+    {
+        _uiState.update { it.copy(newProject = null) }
+    }
+
+    /**
+     * Creates the project and selects it in the form. A blank name, a bad target or an already-used name
+     * leaves the dialog open and says why; on success the new project shows up in every dropdown (they
+     * observe the list).
+     */
+    fun confirmNewProject()
+    {
+        viewModelScope.launch { createNewProject() }
+    }
+
+    private suspend fun createNewProject()
+    {
+        val draft = _uiState.value.newProject ?: return
+        val created = try
+        {
+            when (val submission = draft.form.submit())
+            {
+                is ProjectSubmission.Invalid ->
+                {
+                    _uiState.update { it.copy(newProject = draft.copy(errors = submission.errors)) }
+                    return
+                }
+
+                is ProjectSubmission.Create  -> createProject.create(submission.command)
+                // The dialog only creates: an update never comes out of a form that was not an edit.
+                is ProjectSubmission.Update  -> return
+            }
+        } catch (_: DuplicateProjectNameException)
+        {
+            _uiState.update { it.copy(newProject = draft.copy(errors = setOf(ProjectFormError.NAME_TAKEN))) }
+            return
+        }
+
+        _uiState.update { it.copy(form = it.form?.withProject(created), newProject = null) }
     }
 
     /** Asks for confirmation before deleting the edited transaction. Does nothing on a new one. */
@@ -283,7 +405,12 @@ class TransactionFormViewModel(
         val original = editedTransaction ?: return
         if (_uiState.value.form?.editingId != original.id) return
         _uiState.update {
-            it.copy(confirmingDelete = TransactionToDelete(original.title.value, original.signedAmount))
+            it.copy(
+                confirmingDelete = TransactionToDelete(
+                    original.title.value,
+                    original.signedAmount
+                )
+            )
         }
     }
 
@@ -310,13 +437,23 @@ class TransactionFormViewModel(
             deleteTransaction.delete(id)
         } catch (_: CannotDeleteInitialDepositException)
         {
-            _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
+            _uiState.update {
+                it.copy(
+                    confirmingDelete = null,
+                    failure = SubmitFailure.TRANSACTION_UNAVAILABLE
+                )
+            }
             return
         } catch (_: CannotDeleteTransferException)
         {
             // Not reachable from this form (it only opens incomes and expenses), but the domain
             // says no to a transfer leg, and that must be an answer on screen, not a crash.
-            _uiState.update { it.copy(confirmingDelete = null, failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
+            _uiState.update {
+                it.copy(
+                    confirmingDelete = null,
+                    failure = SubmitFailure.TRANSACTION_UNAVAILABLE
+                )
+            }
             return
         }
         close()
@@ -340,20 +477,23 @@ class TransactionFormViewModel(
     {
         val form = _uiState.value.form ?: return
         val submission = form.stampedAt(now(), zone).submit(zone)
+        // The project this save may bring up a band, and where it stood before: told about only if the save goes through.
+        val watched = form.project.takeIf { submission is FormSubmission.Record || submission is FormSubmission.Update }
+        val levelBefore = watched?.let { alertLevelOf(it) }
         try
         {
             when (submission)
             {
-                is FormSubmission.Invalid  ->
+                is FormSubmission.Invalid ->
                 {
                     _uiState.update { it.copy(showErrors = true) }
                     return
                 }
 
-                is FormSubmission.Record   -> recordTransaction.record(submission.command)
-                is FormSubmission.Repeat   -> createRecurringTransaction.create(submission.command)
+                is FormSubmission.Record -> recordTransaction.record(submission.command)
+                is FormSubmission.Repeat -> createRecurringTransaction.create(submission.command)
                 is FormSubmission.Transfer -> recordTransfer.record(submission.command)
-                is FormSubmission.Update   -> updateTransaction.update(submission.command)
+                is FormSubmission.Update -> updateTransaction.update(submission.command)
             }
         } catch (_: AccountNotFoundException)
         {
@@ -366,6 +506,10 @@ class TransactionFormViewModel(
         } catch (_: TransferToSameAccountException)
         {
             _uiState.update { it.copy(failure = SubmitFailure.SAME_ACCOUNT) }
+            return
+        } catch (_: ProjectNotFoundException)
+        {
+            _uiState.update { it.copy(failure = SubmitFailure.PROJECT_NOT_FOUND) }
             return
         } catch (_: TransactionNotFoundException)
         {
@@ -404,7 +548,27 @@ class TransactionFormViewModel(
             else                     -> null
         }
         if (spentOn != null) reportBudgetAlerts(spentOn)
+
+        // A new salary may be the pay that opens a budget cycle. Only the salary, for now: any income close to a
+        // cycle's start would ask too often.
+        if (submission is FormSubmission.Record && submission.command.category == RecordableTransactionCategory.INCOME &&
+            submission.command.subcategoryId == DefaultSubcategories.SALARY_ID)
+        {
+            val calendar = getBudgetCalendar.observe().first()
+            cycleStartSuggestion(submission.command.date.atZone(zone).toLocalDate(), calendar)
+                ?.let { _cycleStartSuggestions.send(it) }
+        }
+
+        // A project is brought up a band by an expense or a smaller refund alike: the levels decide, not the kind.
+        if (watched != null)
+        {
+            newlyReachedLevel(levelBefore, alertLevelOf(watched))?.let { _projectAlerts.send(ProjectAlert(watched, it)) }
+        }
     }
+
+    /** Where the project stands against its target right now; null without a target, below 80 %, or unknown. */
+    private suspend fun alertLevelOf(project: Project): BudgetAlertLevel? =
+        getProjectProgress.observe(project.id).first()?.alertLevel()
 
     /** The screen has shown the rationale (or launched the system request): the ask is done. */
     fun dismissNotificationPermissionAsk()
@@ -412,9 +576,10 @@ class TransactionFormViewModel(
         _uiState.update { it.copy(askNotificationPermission = false) }
     }
 
-    /** Runs the alert check for the month [date] falls in and hands each new alert to the screen. */
+    /** Runs the alert check for the budget month (cycle) [date] falls in and hands each new alert to the screen. */
     private suspend fun reportBudgetAlerts(date: Instant)
     {
-        checkBudgetAlerts.check(YearMonth.from(date.atZone(zone))).forEach { _budgetAlerts.send(it) }
+        checkBudgetAlerts.check(getBudgetCalendar.cycleOf(date.atZone(zone).toLocalDate()))
+            .forEach { _budgetAlerts.send(it) }
     }
 }

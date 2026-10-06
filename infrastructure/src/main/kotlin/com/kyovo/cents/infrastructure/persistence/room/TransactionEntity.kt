@@ -33,8 +33,14 @@ import java.util.UUID
             childColumns = ["subcategoryId"],
             onDelete = ForeignKey.SET_NULL,
         ),
+        ForeignKey(
+            entity = ProjectEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["projectId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("accountId"), Index("subcategoryId"), Index("date")],
+    indices = [Index("accountId"), Index("subcategoryId"), Index("projectId"), Index("date")],
 )
 data class TransactionEntity(
     @PrimaryKey val id: UUID,
@@ -45,4 +51,5 @@ data class TransactionEntity(
     val subcategoryId: UUID?,
     val description: String?,
     val date: Long,
+    val projectId: UUID?
 )

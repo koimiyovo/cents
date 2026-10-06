@@ -4,5 +4,5 @@ data class Subcategory(
     val id: SubcategoryId,
     val kind: RecordableTransactionCategory,
     val name: SubcategoryName,
-    val emoji: SubcategoryEmoji?
+    val emoji: Emoji?
 )

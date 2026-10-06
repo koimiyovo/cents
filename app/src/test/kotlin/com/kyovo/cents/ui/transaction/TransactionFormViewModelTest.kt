@@ -166,6 +166,9 @@ class TransactionFormViewModelTest
         NoAlerts,
         createRecurring,
         FakeGenerateRecurring(createRecurring),
+        FakeCreateProject(),
+        NoProjectProgress,
+        getBudgetCalendar = CalendarMonths,
         now = { NOW },
     )
 

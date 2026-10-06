@@ -77,6 +77,9 @@ class TransactionFormRepeatViewModelTest
         record, Unused, Unused, Unused, Unused, Unused,
         createRecurringTransaction = create,
         generateRecurringTransactions = generate,
+        createProject = FakeCreateProject(),
+        getProjectProgress = NoProjectProgress,
+        getBudgetCalendar = CalendarMonths,
         now = { NOW },
         zone = PARIS,
     )

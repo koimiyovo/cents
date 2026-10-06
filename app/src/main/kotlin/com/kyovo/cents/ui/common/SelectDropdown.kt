@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -71,6 +72,8 @@ internal fun <T> SelectDropdown(
     placeholder: String = "",
     footerLabel: String? = null,
     onFooterClick: (() -> Unit)? = null,
+    // False greys the field and ignores touches: it shows a value that cannot be changed (a locked project).
+    enabled: Boolean = true,
 )
 {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -83,13 +86,19 @@ internal fun <T> SelectDropdown(
     val selectedLabel = options.firstOrNull { it.value == selected }?.label
 
     Column(modifier = modifier) {
-        val trigger = Modifier.clickable {
-            if (!expanded)
-            {
-                focusManager.clearFocus()
-                keyboard?.hide()
+        val trigger = if (enabled)
+        {
+            Modifier.clickable {
+                if (!expanded)
+                {
+                    focusManager.clearFocus()
+                    keyboard?.hide()
+                }
+                expanded = !expanded
             }
-            expanded = !expanded
+        } else
+        {
+            Modifier.alpha(DISABLED_ALPHA)
         }
         if (fillWidth)
         {
@@ -98,7 +107,7 @@ internal fun <T> SelectDropdown(
         {
             DropdownPill(labelPrefix + (selectedLabel ?: placeholder), palette, trigger)
         }
-        if (expanded)
+        if (expanded && enabled)
         {
             Column(
                 modifier = Modifier
@@ -134,6 +143,8 @@ internal fun <T> SelectDropdown(
         }
     }
 }
+
+private const val DISABLED_ALPHA = 0.5f
 
 // About six rows: enough to browse without the list swallowing the sheet or the screen.
 private val MAX_OPTIONS_HEIGHT = 288.dp

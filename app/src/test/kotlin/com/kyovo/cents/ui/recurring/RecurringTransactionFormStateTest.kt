@@ -1,13 +1,13 @@
 package com.kyovo.cents.ui.recurring
 
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.model.RecurringTransactionId
 import com.kyovo.cents.domain.model.Subcategory
-import com.kyovo.cents.domain.model.SubcategoryEmoji
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.model.SubcategoryName
 import com.kyovo.cents.domain.model.TransactionTitle
@@ -21,12 +21,13 @@ import java.util.UUID
 private val ACCOUNT_ID = AccountId(UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001"))
 private val TODAY: LocalDate = LocalDate.of(2026, 9, 27)
 
-private fun aSubcategory(kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE) = Subcategory(
-    SubcategoryId(UUID.randomUUID()),
-    kind,
-    SubcategoryName("Abonnements"),
-    SubcategoryEmoji("📱"),
-)
+private fun aSubcategory(kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE) =
+    Subcategory(
+        SubcategoryId(UUID.randomUUID()),
+        kind,
+        SubcategoryName("Abonnements"),
+        Emoji("📱"),
+    )
 
 private fun aRecurringTransaction(
     id: RecurringTransactionId = RecurringTransactionId(UUID.randomUUID()),
@@ -109,7 +110,8 @@ class RecurringTransactionFormCreatingTest
     fun `the subcategory is optional`()
     {
         // GIVEN
-        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withAmount("10").withTitle("Loyer")
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withAmount("10")
+            .withTitle("Loyer")
 
         // WHEN
         val submission = form.submit() as RecurringTransactionSubmission.Create
@@ -139,7 +141,8 @@ class RecurringTransactionFormCreatingTest
     fun `no account is refused`()
     {
         // GIVEN
-        val form = RecurringTransactionFormState.creating(null, TODAY).withAmount("10").withTitle("Loyer")
+        val form =
+            RecurringTransactionFormState.creating(null, TODAY).withAmount("10").withTitle("Loyer")
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(
@@ -151,7 +154,8 @@ class RecurringTransactionFormCreatingTest
     fun `an invalid amount is refused`()
     {
         // GIVEN
-        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withTitle("Loyer").withAmount("abc")
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withTitle("Loyer")
+            .withAmount("abc")
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(
@@ -286,7 +290,8 @@ class RecurringTransactionFormMutatorsTest
     fun `enabling an end date before the start date snaps it to the start date`()
     {
         // GIVEN a form whose stale end date (from creating()) equals the start date already, moved back
-        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).copy(endDate = TODAY.minusDays(3))
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY)
+            .copy(endDate = TODAY.minusDays(3))
 
         // WHEN
         val enabled = form.withEndDateEnabled(true)
@@ -322,7 +327,8 @@ class RecurringTransactionFormMutatorsTest
         // GIVEN
         val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
         val income = aSubcategory(RecordableTransactionCategory.INCOME)
-        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withCategory(RecordableTransactionCategory.INCOME)
+        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY)
+            .withCategory(RecordableTransactionCategory.INCOME)
 
         // WHEN / THEN
         assertThat(form.subcategoryChoices(listOf(expense, income))).containsExactly(income)
@@ -351,10 +357,13 @@ class RecurringTransactionFormMutatorsTest
     {
         // GIVEN
         val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
-        val form = RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withSubcategory(expense)
+        val form =
+            RecurringTransactionFormState.creating(ACCOUNT_ID, TODAY).withSubcategory(expense)
 
         // WHEN / THEN
-        assertThat(form.withCategory(RecordableTransactionCategory.EXPENSE).subcategory).isEqualTo(expense)
+        assertThat(form.withCategory(RecordableTransactionCategory.EXPENSE).subcategory).isEqualTo(
+            expense
+        )
     }
 
     @Test
@@ -413,7 +422,9 @@ class RecurringTransactionFormEditingTest
         val expense = aSubcategory(RecordableTransactionCategory.EXPENSE)
         val income = aSubcategory(RecordableTransactionCategory.INCOME)
         val form = RecurringTransactionFormState.editing(
-            aRecurringTransaction(category = RecordableTransactionCategory.INCOME), null, "Compte courant",
+            aRecurringTransaction(category = RecordableTransactionCategory.INCOME),
+            null,
+            "Compte courant",
         )
 
         // WHEN / THEN
@@ -455,7 +466,11 @@ class RecurringTransactionFormEditingTest
     fun `a rule without an end date is edited with none`()
     {
         // WHEN
-        val form = RecurringTransactionFormState.editing(aRecurringTransaction(endDate = null), null, "Compte courant")
+        val form = RecurringTransactionFormState.editing(
+            aRecurringTransaction(endDate = null),
+            null,
+            "Compte courant"
+        )
 
         // THEN
         assertThat(form.hasEndDate).isFalse()
@@ -499,7 +514,8 @@ class RecurringTransactionFormEditingTest
 
         // WHEN
         val submission =
-            RecurringTransactionFormState.editing(rule, null, "Compte courant").submit() as RecurringTransactionSubmission.Update
+            RecurringTransactionFormState.editing(rule, null, "Compte courant")
+                .submit() as RecurringTransactionSubmission.Update
 
         // THEN
         assertThat(submission.command.amount).isEqualTo(rule.amount)
@@ -513,7 +529,11 @@ class RecurringTransactionFormEditingTest
     {
         // GIVEN
         val subcategory = aSubcategory()
-        val form = RecurringTransactionFormState.editing(aRecurringTransaction(subcategoryId = subcategory.id), subcategory, "Compte courant")
+        val form = RecurringTransactionFormState.editing(
+            aRecurringTransaction(subcategoryId = subcategory.id),
+            subcategory,
+            "Compte courant"
+        )
             .withSubcategory(null)
 
         // WHEN
@@ -527,7 +547,9 @@ class RecurringTransactionFormEditingTest
     fun `a blank title on an edit is refused`()
     {
         // GIVEN
-        val form = RecurringTransactionFormState.editing(aRecurringTransaction(), null, "Compte courant").withTitle("")
+        val form =
+            RecurringTransactionFormState.editing(aRecurringTransaction(), null, "Compte courant")
+                .withTitle("")
 
         // WHEN / THEN
         assertThat(form.submit()).isEqualTo(
