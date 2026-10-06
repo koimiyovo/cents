@@ -85,6 +85,7 @@ import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.backup.BackupResult
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
+import com.kyovo.cents.ui.backup.AutomaticBackupViewModel
 import com.kyovo.cents.ui.backup.DataBackupScreen
 import com.kyovo.cents.ui.backup.DataBackupViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
@@ -151,6 +152,7 @@ fun HomeScreen(
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
     projectsViewModel: ProjectsViewModel,
     dataBackupViewModel: DataBackupViewModel,
+    automaticBackupViewModel: AutomaticBackupViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -166,6 +168,7 @@ fun HomeScreen(
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val dataBackupState by dataBackupViewModel.uiState.collectAsStateWithLifecycle()
+    val automaticBackupState by automaticBackupViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -500,6 +503,11 @@ fun HomeScreen(
                 onDismissImportConfirmation = dataBackupViewModel::dismissImportConfirmation,
                 onImportFrom = dataBackupViewModel::importFrom,
                 onDismissResult = dataBackupViewModel::dismissResult,
+                automatic = automaticBackupState,
+                onChooseAutomaticFolder = automaticBackupViewModel::chooseFolder,
+                onBackUpNow = automaticBackupViewModel::backUpNow,
+                onDisableAutomatic = automaticBackupViewModel::disable,
+                onDismissAutomaticOutcome = automaticBackupViewModel::dismissOutcome,
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Projects)

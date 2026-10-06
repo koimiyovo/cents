@@ -1,7 +1,9 @@
 package com.kyovo.cents.ui.backup
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,9 +56,15 @@ fun DataBackupScreen(
     onDismissImportConfirmation: () -> Unit,
     onImportFrom: (String) -> Unit,
     onDismissResult: () -> Unit,
+    automatic: AutomaticBackupUiState,
+    onChooseAutomaticFolder: (String) -> Unit,
+    onBackUpNow: () -> Unit,
+    onDisableAutomatic: () -> Unit,
+    onDismissAutomaticOutcome: () -> Unit,
     modifier: Modifier = Modifier,
 )
 {
+    val context = LocalContext.current
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
 
     // A picker that is closed without choosing gives back null: nothing to do then.
@@ -67,6 +76,19 @@ fun DataBackupScreen(
     val importPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { onImportFrom(it.toString()) } }
+
+    // The grant to a picked folder lasts only until the app restarts unless it is made persistent: without
+    // it the weekly worker could write nowhere. A picker closed without choosing gives back null.
+    val folderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            onChooseAutomaticFolder(it.toString())
+        }
+    }
 
     val busy = state.operation != BackupOperation.IDLE
 
@@ -84,7 +106,53 @@ fun DataBackupScreen(
             HomeTopBar(palette, stringResource(R.string.backup_title))
         }
 
-        state.result?.let { ResultCard(palette, it, onDismissResult) }
+        state.result?.let {
+            val failed = it is BackupResult.ExportFailed || it is BackupResult.ImportFailed
+            ResultCard(palette, backupResultMessage(it), failed, onDismissResult)
+        }
+
+        automatic.outcome?.let {
+            ResultCard(
+                palette,
+                if (it == AutomaticBackupOutcome.BACKED_UP) R.string.backup_auto_done else R.string.backup_auto_failed,
+                failed = it == AutomaticBackupOutcome.FAILED,
+                onDismiss = onDismissAutomaticOutcome,
+            )
+        }
+
+        Card(palette) {
+            Text(
+                text = stringResource(R.string.backup_auto_title),
+                color = palette.textPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.backup_auto_hint),
+                color = palette.textMuted,
+                fontSize = 13.sp,
+            )
+            if (automatic.folder == null)
+            {
+                OutlinedFormButton(palette, stringResource(R.string.backup_auto_choose)) { folderPicker.launch(null) }
+            } else
+            {
+                Text(
+                    text = stringResource(R.string.backup_auto_folder, folderDisplayName(automatic.folder)),
+                    color = palette.textSecondary,
+                    fontSize = 14.sp,
+                )
+                if (automatic.running)
+                {
+                    Progress(palette, stringResource(R.string.backup_auto_running))
+                } else
+                {
+                    OutlinedFormButton(palette, stringResource(R.string.backup_auto_now), onClick = onBackUpNow)
+                }
+                OutlinedFormButton(palette, stringResource(R.string.backup_auto_change)) { folderPicker.launch(null) }
+                OutlinedFormButton(palette, stringResource(R.string.backup_auto_disable), onClick = onDisableAutomatic)
+            }
+        }
 
         Card(palette) {
             Text(
@@ -180,9 +248,8 @@ private fun ImportConfirmationDialog(palette: AccountsPalette, onConfirm: () -> 
 }
 
 @Composable
-private fun ResultCard(palette: AccountsPalette, result: BackupResult, onDismiss: () -> Unit)
+private fun ResultCard(palette: AccountsPalette, @StringRes message: Int, failed: Boolean, onDismiss: () -> Unit)
 {
-    val failed = result is BackupResult.ExportFailed || result is BackupResult.ImportFailed
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -192,7 +259,7 @@ private fun ResultCard(palette: AccountsPalette, result: BackupResult, onDismiss
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = stringResource(backupResultMessage(result)),
+            text = stringResource(message),
             color = if (failed) palette.error else palette.textPrimary,
             fontSize = 14.sp,
         )

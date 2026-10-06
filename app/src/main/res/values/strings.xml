@@ -423,4 +423,14 @@
     <string name="backup_result_import_not_a_backup">Ce fichier n\'est pas une sauvegarde Cents valide. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_unreadable">Ce fichier n\'a pas pu être lu. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_storage">L\'import a échoué. Vos données n\'ont pas été modifiées.</string>
+    <string name="backup_auto_title">Sauvegarde automatique</string>
+    <string name="backup_auto_hint">Chaque semaine, Cents enregistre une copie de vos données dans le dossier de votre choix et garde les 5 dernières. Ces copies ne sont pas chiffrées : choisissez un dossier que vous maîtrisez.</string>
+    <string name="backup_auto_choose">Choisir un dossier</string>
+    <string name="backup_auto_folder">Dossier : %1$s</string>
+    <string name="backup_auto_now">Sauvegarder maintenant</string>
+    <string name="backup_auto_change">Changer de dossier</string>
+    <string name="backup_auto_disable">Désactiver</string>
+    <string name="backup_auto_running">Sauvegarde en cours…</string>
+    <string name="backup_auto_done">Sauvegarde enregistrée dans le dossier choisi.</string>
+    <string name="backup_auto_failed">La sauvegarde a échoué : le dossier n\'est pas accessible. Choisissez-en un autre.</string>
 </resources>
