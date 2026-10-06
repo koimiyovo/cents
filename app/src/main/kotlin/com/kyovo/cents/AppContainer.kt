@@ -89,6 +89,13 @@ import com.kyovo.cents.infrastructure.id.UuidRecurringTransactionIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import com.kyovo.cents.application.usecase.ExportDataService
+import com.kyovo.cents.application.usecase.ImportDataService
+import com.kyovo.cents.domain.port.input.ExportDataUseCase
+import com.kyovo.cents.domain.port.input.ImportDataUseCase
+import com.kyovo.cents.infrastructure.backup.JsonBackupSerializer
+import com.kyovo.cents.ui.backup.AndroidBackupFiles
+import com.kyovo.cents.ui.backup.BackupFiles
 import com.kyovo.cents.notification.SystemBudgetAlertNotifier
 import com.kyovo.cents.notification.SystemRecurringTransactionNotifier
 import java.time.Clock
@@ -98,7 +105,7 @@ import java.time.ZoneId
  * Manual wiring for the app's single-Activity shell: takes the storage (the Room database's
  * repositories and unit of work) and exposes the application services the UI reads from.
  * Held by [CentsApplication] so it survives Activity recreation; real DI can replace it later.
- * [context] is only for [SystemBudgetAlertNotifier] (a notification channel, posting) — kept last and
+ * [context] is only for [SystemBudgetAlertNotifier] (a notification channel, posting) and the backup files (the content resolver) — kept last and
  * unstored beyond that, everything else here works from the domain's ports alone.
  */
 class AppContainer(context: Context, persistence: RoomPersistence)
@@ -241,4 +248,19 @@ class AppContainer(context: Context, persistence: RoomPersistence)
             accountRepository,
             SystemRecurringTransactionNotifier(context)
         )
+
+    private val backupSerializer = JsonBackupSerializer()
+    val exportData: ExportDataUseCase = ExportDataService(
+        accountRepository,
+        subcategoryRepository,
+        transactionRepository,
+        budgetRepository,
+        persistence.budgetCalendar,
+        recurringTransactionRepository,
+        projectRepository,
+        unitOfWork,
+        backupSerializer,
+    )
+    val importData: ImportDataUseCase = ImportDataService(backupSerializer, persistence.backupRestorer)
+    val backupFiles: BackupFiles = AndroidBackupFiles(context.contentResolver)
 }

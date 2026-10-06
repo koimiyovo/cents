@@ -82,6 +82,11 @@ import com.kyovo.cents.ui.recurring.DeleteRecurringTransactionDialog
 import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
+import com.kyovo.cents.ui.backup.BackupResult
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import com.kyovo.cents.ui.backup.DataBackupScreen
+import com.kyovo.cents.ui.backup.DataBackupViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
@@ -145,6 +150,7 @@ fun HomeScreen(
     budgetCycleViewModel: BudgetCycleViewModel,
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
     projectsViewModel: ProjectsViewModel,
+    dataBackupViewModel: DataBackupViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -159,6 +165,7 @@ fun HomeScreen(
     val budgetCycleState by budgetCycleViewModel.uiState.collectAsStateWithLifecycle()
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
+    val dataBackupState by dataBackupViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -369,6 +376,25 @@ fun HomeScreen(
         }
     }
 
+    // After an import everything the screens pointed to may be gone (the opened account, the project being
+    // analysed): back to the first tab, with nothing opened, and the outcome said in a snackbar since the
+    // backup screen is left. The result is dismissed first so it is announced once. Collected from the flow,
+    // not keyed on the state: dismissing changes the state, which would cancel an effect keyed on it before
+    // the snackbar was shown.
+    LaunchedEffect(dataBackupViewModel)
+    {
+        dataBackupViewModel.uiState.map { it.result }.filter { it == BackupResult.Imported }.collect {
+            dataBackupViewModel.dismissResult()
+            destination = HomeDestination.Tabs
+            openedAccountUuid = null
+            openedProjectUuid = null
+            projectOpenedFromTab = false
+            analysedProjectUuid = null
+            pagerState.scrollToPage(HomeTab.Accounts.ordinal)
+            snackbarHostState.showSnackbar(resources.getString(R.string.backup_result_imported))
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -441,6 +467,20 @@ fun HomeScreen(
                 onOpenBudgets = { destination = HomeDestination.Budgets },
                 onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
                 onOpenProjects = { destination = HomeDestination.Projects },
+                onOpenBackup = { destination = HomeDestination.Backup },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (destination == HomeDestination.Backup)
+        {
+            DataBackupScreen(
+                state = dataBackupState,
+                suggestedFileName = dataBackupViewModel.exportFileName(),
+                onBack = { destination = HomeDestination.Settings },
+                onExportTo = dataBackupViewModel::exportTo,
+                onAskToImport = dataBackupViewModel::askToImport,
+                onDismissImportConfirmation = dataBackupViewModel::dismissImportConfirmation,
+                onImportFrom = dataBackupViewModel::importFrom,
+                onDismissResult = dataBackupViewModel::dismissResult,
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Projects)

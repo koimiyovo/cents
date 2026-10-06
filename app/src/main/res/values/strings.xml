@@ -392,4 +392,25 @@
     <string name="project_analysis_top_title">Plus grosses dépenses</string>
     <string name="project_alert_close_body">%1$s %2$s approche de son objectif.</string>
     <string name="project_alert_over_body">%1$s %2$s dépasse son objectif.</string>
+    <string name="settings_backup">Sauvegarde</string>
+    <string name="settings_backup_hint">Exporter ou importer toutes vos données</string>
+    <string name="backup_title">Sauvegarde</string>
+    <string name="backup_export_title">Exporter</string>
+    <string name="backup_export_hint">Enregistre tous vos comptes, transactions, budgets et projets dans un fichier de votre choix. Ce fichier n\'est pas chiffré : gardez-le en lieu sûr.</string>
+    <string name="backup_export_button">Exporter mes données</string>
+    <string name="backup_exporting">Export en cours…</string>
+    <string name="backup_import_title">Importer</string>
+    <string name="backup_import_hint">Restaure vos données depuis un fichier exporté par Cents, par exemple sur un nouveau téléphone.</string>
+    <string name="backup_import_button">Importer un fichier</string>
+    <string name="backup_importing">Import en cours…</string>
+    <string name="backup_import_confirm_title">Remplacer vos données ?</string>
+    <string name="backup_import_confirm_body">L\'import efface tout ce que contient l\'application (comptes, transactions, budgets, projets, sous-catégories) et le remplace par le contenu du fichier. Exportez d\'abord si vous voulez pouvoir revenir en arrière.</string>
+    <string name="backup_import_confirm_button">Choisir un fichier</string>
+    <string name="backup_result_dismiss">OK</string>
+    <string name="backup_result_exported">Sauvegarde enregistrée. Elle contient toutes vos finances, en clair : gardez-la en lieu sûr.</string>
+    <string name="backup_result_imported">Données restaurées.</string>
+    <string name="backup_result_export_failed">L\'export a échoué : le fichier n\'a pas pu être écrit.</string>
+    <string name="backup_result_import_not_a_backup">Ce fichier n\'est pas une sauvegarde Cents valide. Vos données n\'ont pas été modifiées.</string>
+    <string name="backup_result_import_unreadable">Ce fichier n\'a pas pu être lu. Vos données n\'ont pas été modifiées.</string>
+    <string name="backup_result_import_storage">L\'import a échoué. Vos données n\'ont pas été modifiées.</string>
 </resources>
