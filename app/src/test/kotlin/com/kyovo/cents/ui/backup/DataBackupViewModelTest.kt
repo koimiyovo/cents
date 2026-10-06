@@ -2,6 +2,7 @@ package com.kyovo.cents.ui.backup
 
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.InvalidBackupException
+import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import kotlinx.coroutines.CompletableDeferred
@@ -192,7 +193,42 @@ class DataBackupViewModelTest
         // THEN
         assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
         assertThat(state.confirmingImport).isFalse()
-        assertThat(state.result).isEqualTo(BackupResult.Imported)
+        assertThat(state.result).isEqualTo(BackupResult.Imported(importData.summary))
+    }
+
+    @Test
+    fun `the result of an import carries what the use case says was restored`()
+    {
+        // GIVEN
+        files.stored["content://files/backup"] = "the file"
+        importData.summary = BackupSummary(
+            accounts = 2, subcategories = 21, transactions = 412, budgets = 3, recurringTransactions = 1, projects = 0
+        )
+
+        // WHEN
+        viewModel.importFrom("content://files/backup")
+
+        // THEN
+        val result = state.result as BackupResult.Imported
+        assertThat(result.summary.accounts).isEqualTo(2)
+        assertThat(result.summary.transactions).isEqualTo(412)
+        assertThat(result.summary.isEmpty).isFalse()
+    }
+
+    @Test
+    fun `an import of a backup with nothing in it is still a success, and says so`()
+    {
+        // GIVEN
+        files.stored["content://files/empty"] = "an empty backup"
+        importData.summary = BackupSummary(0, 0, 0, 0, 0, 0)
+
+        // WHEN
+        viewModel.importFrom("content://files/empty")
+
+        // THEN
+        val result = state.result as BackupResult.Imported
+        assertThat(result.summary.isEmpty).isTrue()
+        assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
     }
 
     @Test
@@ -213,7 +249,7 @@ class DataBackupViewModelTest
 
         // THEN
         assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
-        assertThat(state.result).isEqualTo(BackupResult.Imported)
+        assertThat(state.result).isEqualTo(BackupResult.Imported(importData.summary))
     }
 
     @Test
@@ -350,10 +386,16 @@ private class FakeImportData : ImportDataUseCase
     val imported = mutableListOf<String>()
     var failure: Throwable? = null
 
-    override suspend fun import(text: String)
+    /** What the use case answers once it has imported. */
+    var summary = BackupSummary(
+        accounts = 1, subcategories = 21, transactions = 7, budgets = 0, recurringTransactions = 0, projects = 1
+    )
+
+    override suspend fun import(text: String): BackupSummary
     {
         failure?.let { throw it }
         imported += text
+        return summary
     }
 }
 

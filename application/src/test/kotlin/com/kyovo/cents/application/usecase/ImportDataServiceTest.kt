@@ -9,6 +9,7 @@ import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.InvalidBackupException
 import com.kyovo.cents.domain.model.BackupSnapshot
+import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.model.BudgetCalendar
 import com.kyovo.cents.domain.model.TransactionCategory
 import kotlinx.coroutines.test.runTest
@@ -149,5 +150,60 @@ class ImportDataServiceTest
 
         // THEN
         assertThat(restorer.restored).hasSize(2)
+    }
+
+    @Test
+    fun `answers with what was restored, counted by kind`() = runTest()
+    {
+        // GIVEN one account, one subcategory, one transaction
+        serializer.onRead = { consistent }
+
+        // WHEN
+        val summary = service.import("the file")
+
+        // THEN
+        assertThat(summary).isEqualTo(
+            BackupSummary(
+                accounts = 1,
+                subcategories = 1,
+                transactions = 1,
+                budgets = 0,
+                recurringTransactions = 0,
+                projects = 0
+            )
+        )
+        assertThat(summary.isEmpty).isFalse()
+    }
+
+    @Test
+    fun `a backup with nothing in it answers with an empty summary`() = runTest()
+    {
+        // GIVEN
+        serializer.onRead = {
+            consistent.copy(accounts = emptyList(), subcategories = emptyList(), transactions = emptyList())
+        }
+
+        // WHEN
+        val summary = service.import("an empty backup")
+
+        // THEN: still accepted, and the caller can tell the app has been emptied
+        assertThat(summary.isEmpty).isTrue()
+        assertThat(restorer.restored).hasSize(1)
+    }
+
+    @Test
+    fun `the summary describes what was put in place, not what was there before`() = runTest()
+    {
+        // GIVEN two imports of different sizes
+        serializer.onRead = { consistent }
+        service.import("first")
+        serializer.onRead = { consistent.copy(transactions = emptyList()) }
+
+        // WHEN
+        val summary = service.import("second")
+
+        // THEN
+        assertThat(summary.transactions).isEqualTo(0)
+        assertThat(summary.accounts).isEqualTo(1)
     }
 }

@@ -3,6 +3,7 @@ package com.kyovo.cents.ui.backup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBackupException
+import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import kotlinx.coroutines.CancellationException
@@ -23,7 +24,8 @@ enum class ImportFailure { NOT_A_BACKUP, FILE_UNREADABLE, STORAGE_FAILED }
 sealed interface BackupResult
 {
     data object Exported : BackupResult
-    data object Imported : BackupResult
+    /** [summary] is what the file held, which is what the app now holds (possibly nothing at all). */
+    data class Imported(val summary: BackupSummary) : BackupResult
     data object ExportFailed : BackupResult
     data class ImportFailed(val reason: ImportFailure) : BackupResult
 }
@@ -111,8 +113,7 @@ class DataBackupViewModel(
 
         return try
         {
-            importData.import(text)
-            BackupResult.Imported
+            BackupResult.Imported(importData.import(text))
         } catch (e: CancellationException)
         {
             throw e

@@ -212,7 +212,8 @@ private fun ResultCard(palette: AccountsPalette, result: BackupResult, onDismiss
 internal fun backupResultMessage(result: BackupResult): Int = when (result)
 {
     BackupResult.Exported -> R.string.backup_result_exported
-    BackupResult.Imported -> R.string.backup_result_imported
+    // The home screen words an import with its summary; this is the short form, for a card.
+    is BackupResult.Imported -> R.string.backup_result_imported
     BackupResult.ExportFailed -> R.string.backup_result_export_failed
     is BackupResult.ImportFailed -> when (result.reason)
     {
