@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
+import com.kyovo.cents.ui.backup.DataBackupViewModel
 import com.kyovo.cents.ui.budget.BudgetCycleViewModel
 import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.home.HomeScreen
@@ -130,6 +131,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val dataBackupViewModel: DataBackupViewModel by viewModels {
+        viewModelFactory {
+            initializer {
+                DataBackupViewModel(
+                    exportData = appContainer.exportData,
+                    importData = appContainer.importData,
+                    files = appContainer.backupFiles,
+                )
+            }
+        }
+    }
+
     private val accountFormViewModel: AccountFormViewModel by viewModels {
         viewModelFactory {
             initializer {
@@ -174,6 +187,7 @@ class MainActivity : ComponentActivity() {
                     budgetCycleViewModel = budgetCycleViewModel,
                     recurringTransactionsViewModel = recurringTransactionsViewModel,
                     projectsViewModel = projectsViewModel,
+                    dataBackupViewModel = dataBackupViewModel,
                 )
             }
         }

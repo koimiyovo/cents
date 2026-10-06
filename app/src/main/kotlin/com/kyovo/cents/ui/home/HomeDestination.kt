@@ -13,7 +13,8 @@ internal enum class HomeDestination
     Budgets,
     BudgetCycle,
     RecurringTransactions,
-    Projects;
+    Projects,
+    Backup;
 
     /**
      * Where Back leads from here — one level up at a time — or null on the tabs, where Back is left to
@@ -28,5 +29,6 @@ internal enum class HomeDestination
         BudgetCycle      -> Budgets
         RecurringTransactions -> Settings
         Projects              -> Settings
+        Backup                -> Settings
     }
 }
