@@ -409,6 +409,16 @@
     <string name="backup_result_dismiss">OK</string>
     <string name="backup_result_exported">Sauvegarde enregistrée. Elle contient toutes vos finances, en clair : gardez-la en lieu sûr.</string>
     <string name="backup_result_imported">Données restaurées.</string>
+    <string name="backup_result_imported_summary">Données restaurées : %1$s, %2$s.</string>
+    <string name="backup_result_imported_empty">Le fichier ne contenait aucune donnée : l\'application est maintenant vide.</string>
+    <plurals name="backup_count_accounts">
+        <item quantity="one">%d compte</item>
+        <item quantity="other">%d comptes</item>
+    </plurals>
+    <plurals name="backup_count_transactions">
+        <item quantity="one">%d transaction</item>
+        <item quantity="other">%d transactions</item>
+    </plurals>
     <string name="backup_result_export_failed">L\'export a échoué : le fichier n\'a pas pu être écrit.</string>
     <string name="backup_result_import_not_a_backup">Ce fichier n\'est pas une sauvegarde Cents valide. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_unreadable">Ce fichier n\'a pas pu être lu. Vos données n\'ont pas été modifiées.</string>

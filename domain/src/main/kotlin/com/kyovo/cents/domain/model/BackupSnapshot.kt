@@ -17,6 +17,19 @@ data class BackupSnapshot(
     val projects: List<Project>
 )
 {
+    /** What the snapshot holds, counted by kind. */
+    fun summary(): BackupSummary
+    {
+        return BackupSummary(
+            accounts = accounts.size,
+            subcategories = subcategories.size,
+            transactions = transactions.size,
+            budgets = budgets.size,
+            recurringTransactions = recurringTransactions.size,
+            projects = projects.size
+        )
+    }
+
     /**
      * Whether the pieces agree with each other, which reading each one cannot tell: no id twice, no name
      * taken twice (the rule that applies when one is created: active accounts, subcategories of a kind,

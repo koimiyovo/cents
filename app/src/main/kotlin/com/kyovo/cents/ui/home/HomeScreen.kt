@@ -83,7 +83,7 @@ import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.backup.BackupResult
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 import com.kyovo.cents.ui.backup.DataBackupScreen
 import com.kyovo.cents.ui.backup.DataBackupViewModel
@@ -383,7 +383,7 @@ fun HomeScreen(
     // the snackbar was shown.
     LaunchedEffect(dataBackupViewModel)
     {
-        dataBackupViewModel.uiState.map { it.result }.filter { it == BackupResult.Imported }.collect {
+        dataBackupViewModel.uiState.map { it.result }.filterIsInstance<BackupResult.Imported>().collect { imported ->
             dataBackupViewModel.dismissResult()
             destination = HomeDestination.Tabs
             openedAccountUuid = null
@@ -391,7 +391,26 @@ fun HomeScreen(
             projectOpenedFromTab = false
             analysedProjectUuid = null
             pagerState.scrollToPage(HomeTab.Accounts.ordinal)
-            snackbarHostState.showSnackbar(resources.getString(R.string.backup_result_imported))
+            val summary = imported.summary
+            if (summary.isEmpty)
+            {
+                // Said for longer: the user may have picked the wrong file, and everything is gone.
+                snackbarHostState.showSnackbar(
+                    message = resources.getString(R.string.backup_result_imported_empty),
+                    duration = SnackbarDuration.Long,
+                )
+            } else
+            {
+                snackbarHostState.showSnackbar(
+                    resources.getString(
+                        R.string.backup_result_imported_summary,
+                        resources.getQuantityString(R.plurals.backup_count_accounts, summary.accounts, summary.accounts),
+                        resources.getQuantityString(
+                            R.plurals.backup_count_transactions, summary.transactions, summary.transactions
+                        ),
+                    )
+                )
+            }
         }
     }
 
