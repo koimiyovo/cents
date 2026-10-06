@@ -24,4 +24,8 @@ interface BudgetAlertDao
 
     @Query("DELETE FROM budget_alerts WHERE subcategoryId = :subcategoryId")
     suspend fun deleteBySubcategoryId(subcategoryId: UUID)
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM budget_alerts")
+    suspend fun deleteAll()
 }

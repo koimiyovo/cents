@@ -33,4 +33,8 @@ interface ProjectDao
     /** Emits the rows now, then again each time the table changes: Room watches it for us. */
     @Query("SELECT * FROM projects ORDER BY rowid")
     fun observeAll(): Flow<List<ProjectEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM projects")
+    suspend fun deleteAll()
 }
