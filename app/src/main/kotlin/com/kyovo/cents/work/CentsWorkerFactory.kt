@@ -7,10 +7,10 @@ import androidx.work.WorkerParameters
 import com.kyovo.cents.AppContainer
 
 /**
- * Builds [RecurringTransactionWorker] with its real dependencies from [appContainer] — WorkManager's default
+ * Builds [RecurringTransactionWorker] and [AutomaticBackupWorker] with their real dependencies from [appContainer] — WorkManager's default
  * instantiation only knows a `(Context, WorkerParameters)` constructor, so a custom factory is the only
  * way a worker gets anything beyond that. Returning `null` for any other class name lets WorkManager
- * fall back to its own default, reflection-based instantiation (irrelevant here: this is the only worker).
+ * fall back to its own default, reflection-based instantiation (irrelevant here: there are no other workers).
  */
 class CentsWorkerFactory(private val appContainer: AppContainer) : WorkerFactory()
 {
@@ -31,6 +31,8 @@ class CentsWorkerFactory(private val appContainer: AppContainer) : WorkerFactory
                     appContainer.notifyBudgetAlerts,
                     appContainer.getBudgetCalendar,
                 )
+            AutomaticBackupWorker::class.java.name ->
+                AutomaticBackupWorker(appContext, workerParameters, appContainer.runAutomaticBackup)
             else -> null
         }
     }

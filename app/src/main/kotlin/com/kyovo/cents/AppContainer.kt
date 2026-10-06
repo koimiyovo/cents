@@ -94,8 +94,13 @@ import com.kyovo.cents.application.usecase.ImportDataService
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import com.kyovo.cents.infrastructure.backup.JsonBackupSerializer
+import com.kyovo.cents.application.usecase.AutomaticBackupService
+import com.kyovo.cents.domain.port.input.RunAutomaticBackupUseCase
 import com.kyovo.cents.ui.backup.AndroidBackupFiles
+import com.kyovo.cents.ui.backup.AndroidBackupFolder
 import com.kyovo.cents.ui.backup.BackupFiles
+import com.kyovo.cents.ui.backup.DataStoreAutomaticBackupSettings
+import com.kyovo.cents.ui.backup.automaticBackupDataStore
 import com.kyovo.cents.notification.SystemBudgetAlertNotifier
 import com.kyovo.cents.notification.SystemRecurringTransactionNotifier
 import java.time.Clock
@@ -263,4 +268,14 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     )
     val importData: ImportDataUseCase = ImportDataService(backupSerializer, persistence.backupRestorer)
     val backupFiles: BackupFiles = AndroidBackupFiles(context.contentResolver)
+
+    // The automatic backup: the chosen folder lives in DataStore (the screen will read and change it
+    // through this same object), the copies are written with the content resolver.
+    val automaticBackupSettings = DataStoreAutomaticBackupSettings(context.automaticBackupDataStore)
+    val runAutomaticBackup: RunAutomaticBackupUseCase = AutomaticBackupService(
+        exportData,
+        automaticBackupSettings,
+        AndroidBackupFolder(context.contentResolver),
+        Clock.system(ZoneId.systemDefault()),
+    )
 }
