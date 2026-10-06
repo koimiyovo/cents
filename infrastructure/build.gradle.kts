@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.google.ksp)
     alias(libs.plugins.androidx.room3)
 }
@@ -34,6 +35,7 @@ room3 {
 dependencies {
     implementation(project(":domain"))
     implementation(libs.androidx.room3.runtime)
+    implementation(libs.kotlinx.serialization.json)
     ksp(libs.androidx.room3.compiler)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
