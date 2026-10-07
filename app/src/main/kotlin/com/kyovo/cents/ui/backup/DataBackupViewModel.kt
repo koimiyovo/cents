@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBackupException
 import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
+import com.kyovo.cents.domain.port.input.ExportTransactionsCsvUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ enum class ImportFailure { NOT_A_BACKUP, FILE_UNREADABLE, STORAGE_FAILED }
 sealed interface BackupResult
 {
     data object Exported : BackupResult
+    data object CsvExported : BackupResult
     /** [summary] is what the file held, which is what the app now holds (possibly nothing at all). */
     data class Imported(val summary: BackupSummary) : BackupResult
     data object ExportFailed : BackupResult
@@ -45,6 +47,7 @@ class DataBackupViewModel(
     private val exportData: ExportDataUseCase,
     private val importData: ImportDataUseCase,
     private val files: BackupFiles,
+    private val exportTransactionsCsv: ExportTransactionsCsvUseCase,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel()
 {
@@ -56,14 +59,29 @@ class DataBackupViewModel(
         return "cents-sauvegarde-${LocalDate.now(clock)}.json"
     }
 
+    fun csvFileName(): String
+    {
+        return "cents-transactions-${LocalDate.now(clock)}.csv"
+    }
+
     fun exportTo(location: String)
+    {
+        write(location, BackupResult.Exported) { exportData.export() }
+    }
+
+    fun exportCsvTo(location: String)
+    {
+        write(location, BackupResult.CsvExported) { exportTransactionsCsv.export() }
+    }
+
+    private fun write(location: String, success: BackupResult, text: suspend () -> String)
     {
         if (!start(BackupOperation.EXPORTING)) return
         viewModelScope.launch {
             val result = try
             {
-                files.write(location, exportData.export())
-                BackupResult.Exported
+                files.write(location, text())
+                success
             } catch (e: CancellationException)
             {
                 throw e

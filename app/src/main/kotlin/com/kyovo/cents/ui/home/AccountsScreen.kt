@@ -340,13 +340,14 @@ fun AccountsScreen(
 /**
  * Shared by every Home tab: the "CENTS" kicker plus that tab's own title. The tabs also pass
  * [onSettingsClick] to show the settings button (a gear) at the right; a screen that has its own
- * actions leaves it out.
+ * actions leaves it out. [onExportClick] adds an export button just before it.
  */
 @Composable
 internal fun HomeTopBar(
     palette: AccountsPalette,
     title: String,
-    onSettingsClick: (() -> Unit)? = null
+    onSettingsClick: (() -> Unit)? = null,
+    onExportClick: (() -> Unit)? = null
 )
 {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -363,6 +364,22 @@ internal fun HomeTopBar(
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
             )
+        }
+        if (onExportClick != null)
+        {
+            val description = stringResource(R.string.transactions_export_description)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(palette.surface)
+                    .clickable(onClick = onExportClick)
+                    .semantics { contentDescription = description },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = "📤", fontSize = 20.sp)
+            }
+            Spacer(Modifier.width(8.dp))
         }
         if (onSettingsClick != null)
         {

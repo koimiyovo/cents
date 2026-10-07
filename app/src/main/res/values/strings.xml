@@ -196,6 +196,7 @@
 
     <!-- Settings and subcategory management -->
     <string name="settings_button_description">Réglages</string>
+    <string name="transactions_export_description">Exporter les transactions (CSV)</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_subcategories">Sous-catégories</string>
     <string name="settings_subcategories_hint">Ajouter, renommer ou supprimer</string>
@@ -398,6 +399,8 @@
     <string name="backup_export_title">Exporter</string>
     <string name="backup_export_hint">Enregistre tous vos comptes, transactions, budgets et projets dans un fichier de votre choix. Ce fichier n\'est pas chiffré : gardez-le en lieu sûr.</string>
     <string name="backup_export_button">Exporter mes données</string>
+    <string name="backup_csv_hint">Ou un tableau de vos transactions (CSV), à ouvrir dans un tableur. Il ne peut pas être réimporté.</string>
+    <string name="backup_csv_button">Exporter les transactions (CSV)</string>
     <string name="backup_exporting">Export en cours…</string>
     <string name="backup_import_title">Importer</string>
     <string name="backup_import_hint">Restaure vos données depuis un fichier exporté par Cents, par exemple sur un nouveau téléphone.</string>
@@ -408,6 +411,7 @@
     <string name="backup_import_confirm_button">Choisir un fichier</string>
     <string name="backup_result_dismiss">OK</string>
     <string name="backup_result_exported">Sauvegarde enregistrée. Elle contient toutes vos finances, en clair : gardez-la en lieu sûr.</string>
+    <string name="backup_result_csv_exported">Tableau enregistré. Il contient vos transactions en clair : gardez-le en lieu sûr.</string>
     <string name="backup_result_imported">Données restaurées.</string>
     <string name="backup_result_imported_summary">Données restaurées : %1$s, %2$s.</string>
     <string name="backup_result_imported_empty">Le fichier ne contenait aucune donnée : l\'application est maintenant vide.</string>

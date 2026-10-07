@@ -90,8 +90,10 @@ import com.kyovo.cents.infrastructure.id.UuidSubcategoryIdGenerator
 import com.kyovo.cents.infrastructure.id.UuidTransactionIdGenerator
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
 import com.kyovo.cents.application.usecase.ExportDataService
+import com.kyovo.cents.application.usecase.ExportTransactionsCsvService
 import com.kyovo.cents.application.usecase.ImportDataService
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
+import com.kyovo.cents.domain.port.input.ExportTransactionsCsvUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import com.kyovo.cents.infrastructure.backup.JsonBackupSerializer
 import com.kyovo.cents.application.usecase.AutomaticBackupService
@@ -265,6 +267,14 @@ class AppContainer(context: Context, persistence: RoomPersistence)
         projectRepository,
         unitOfWork,
         backupSerializer,
+    )
+    val exportTransactionsCsv: ExportTransactionsCsvUseCase = ExportTransactionsCsvService(
+        accountRepository,
+        subcategoryRepository,
+        transactionRepository,
+        projectRepository,
+        unitOfWork,
+        ZoneId.systemDefault(),
     )
     val importData: ImportDataUseCase = ImportDataService(backupSerializer, persistence.backupRestorer)
     val backupFiles: BackupFiles = AndroidBackupFiles(context.contentResolver)

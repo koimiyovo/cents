@@ -52,6 +52,8 @@ fun DataBackupScreen(
     suggestedFileName: String,
     onBack: () -> Unit,
     onExportTo: (String) -> Unit,
+    suggestedCsvFileName: String,
+    onExportCsvTo: (String) -> Unit,
     onAskToImport: () -> Unit,
     onDismissImportConfirmation: () -> Unit,
     onImportFrom: (String) -> Unit,
@@ -71,6 +73,9 @@ fun DataBackupScreen(
     val exportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { onExportTo(it.toString()) } }
+    val csvPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri -> uri?.let { onExportCsvTo(it.toString()) } }
     // Any type is offered: a file saved from a cloud app or a file manager is not always labelled
     // "application/json". What is picked is checked completely before anything is replaced.
     val importPicker = rememberLauncherForActivityResult(
@@ -174,6 +179,15 @@ fun DataBackupScreen(
                 OutlinedFormButton(palette, stringResource(R.string.backup_export_button))
                 {
                     if (!busy) exportPicker.launch(suggestedFileName)
+                }
+                Text(
+                    text = stringResource(R.string.backup_csv_hint),
+                    color = palette.textMuted,
+                    fontSize = 13.sp,
+                )
+                OutlinedFormButton(palette, stringResource(R.string.backup_csv_button))
+                {
+                    if (!busy) csvPicker.launch(suggestedCsvFileName)
                 }
             }
         }
@@ -279,6 +293,7 @@ private fun ResultCard(palette: AccountsPalette, @StringRes message: Int, failed
 internal fun backupResultMessage(result: BackupResult): Int = when (result)
 {
     BackupResult.Exported -> R.string.backup_result_exported
+    BackupResult.CsvExported -> R.string.backup_result_csv_exported
     // The home screen words an import with its summary; this is the short form, for a card.
     is BackupResult.Imported -> R.string.backup_result_imported
     BackupResult.ExportFailed -> R.string.backup_result_export_failed

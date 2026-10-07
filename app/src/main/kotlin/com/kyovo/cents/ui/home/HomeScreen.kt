@@ -83,7 +83,10 @@ import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.backup.BackupResult
+import com.kyovo.cents.ui.backup.backupResultMessage
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import com.kyovo.cents.ui.backup.AutomaticBackupViewModel
 import com.kyovo.cents.ui.backup.DataBackupScreen
@@ -379,6 +382,22 @@ fun HomeScreen(
         }
     }
 
+    // The CSV export can start from the Transactions tab, away from the backup screen that shows results:
+    // its outcome is said in a snackbar there. On the backup screen the result card does it.
+    LaunchedEffect(dataBackupViewModel)
+    {
+        dataBackupViewModel.uiState.map { it.result }
+            .filterNotNull()
+            .filter { it == BackupResult.CsvExported || it == BackupResult.ExportFailed }
+            .collect {
+                if (destination == HomeDestination.Tabs)
+                {
+                    dataBackupViewModel.dismissResult()
+                    snackbarHostState.showSnackbar(resources.getString(backupResultMessage(it)))
+                }
+            }
+    }
+
     // After an import everything the screens pointed to may be gone (the opened account, the project being
     // analysed): back to the first tab, with nothing opened, and the outcome said in a snackbar since the
     // backup screen is left. The result is dismissed first so it is announced once. Collected from the flow,
@@ -499,6 +518,8 @@ fun HomeScreen(
                 suggestedFileName = dataBackupViewModel.exportFileName(),
                 onBack = { destination = HomeDestination.Settings },
                 onExportTo = dataBackupViewModel::exportTo,
+                suggestedCsvFileName = dataBackupViewModel.csvFileName(),
+                onExportCsvTo = dataBackupViewModel::exportCsvTo,
                 onAskToImport = dataBackupViewModel::askToImport,
                 onDismissImportConfirmation = dataBackupViewModel::dismissImportConfirmation,
                 onImportFrom = dataBackupViewModel::importFrom,
@@ -637,6 +658,8 @@ fun HomeScreen(
                                 projects = projects,
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
+                                suggestedCsvFileName = dataBackupViewModel.csvFileName(),
+                                onExportCsvTo = dataBackupViewModel::exportCsvTo,
                             )
 
                         HomeTab.Budget ->
