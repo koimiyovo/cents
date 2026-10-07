@@ -4,9 +4,11 @@ import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.InvalidBackupException
 import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.port.input.ExportDataUseCase
+import com.kyovo.cents.domain.port.input.ExportTransactionsCsvUseCase
 import com.kyovo.cents.domain.port.input.ImportDataUseCase
 import kotlinx.coroutines.CompletableDeferred
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.entry
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.IOException
@@ -31,8 +33,9 @@ class DataBackupViewModelTest
     private val exportData = FakeExportData("{\"the\":\"backup\"}")
     private val importData = FakeImportData()
     private val files = FakeBackupFiles()
+    private val exportCsv = FakeExportCsv("Date;Compte\r\n")
 
-    private val viewModel = DataBackupViewModel(exportData, importData, files, clock)
+    private val viewModel = DataBackupViewModel(exportData, importData, files, exportCsv, clock)
 
     private val state get() = viewModel.uiState.value
 
@@ -75,6 +78,38 @@ class DataBackupViewModelTest
         // THEN
         assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
         assertThat(state.result).isEqualTo(BackupResult.Exported)
+    }
+
+    @Test
+    fun `the file offered for the CSV is named after today`()
+    {
+        assertThat(viewModel.csvFileName()).isEqualTo("cents-transactions-2026-09-26.csv")
+    }
+
+    @Test
+    fun `a CSV export writes the table to the place that was chosen and says so`()
+    {
+        // WHEN
+        viewModel.exportCsvTo("content://files/table")
+
+        // THEN
+        assertThat(files.stored).containsOnly(entry("content://files/table", "Date;Compte\r\n"))
+        assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
+        assertThat(state.result).isEqualTo(BackupResult.CsvExported)
+    }
+
+    @Test
+    fun `a CSV export that cannot be written fails like any export`()
+    {
+        // GIVEN
+        files.writeFailure = IOException("no space left")
+
+        // WHEN
+        viewModel.exportCsvTo("content://files/table")
+
+        // THEN
+        assertThat(state.result).isEqualTo(BackupResult.ExportFailed)
+        assertThat(state.operation).isEqualTo(BackupOperation.IDLE)
     }
 
     @Test
@@ -433,4 +468,9 @@ private class FakeBackupFiles : BackupFiles
         readFailure?.let { throw it }
         return stored.getValue(location)
     }
+}
+
+private class FakeExportCsv(private val text: String) : ExportTransactionsCsvUseCase
+{
+    override suspend fun export(): String = text
 }

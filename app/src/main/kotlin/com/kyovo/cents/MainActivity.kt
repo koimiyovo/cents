@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
                     exportData = appContainer.exportData,
                     importData = appContainer.importData,
                     files = appContainer.backupFiles,
+                    exportTransactionsCsv = appContainer.exportTransactionsCsv,
                 )
             }
         }
