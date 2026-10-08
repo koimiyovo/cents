@@ -24,4 +24,8 @@ interface BudgetDao
     /** Emits the rows now, then again each time the table changes: Room watches it for us. */
     @Query("SELECT * FROM budgets ORDER BY rowid")
     fun observeAll(): Flow<List<BudgetEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAll()
 }

@@ -27,4 +27,8 @@ interface TransactionDao
     /** Emits the rows now, then again each time the table changes. */
     @Query("SELECT * FROM transactions ORDER BY rowid")
     fun observeAll(): Flow<List<TransactionEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAll()
 }

@@ -8,6 +8,7 @@ import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.kyovo.cents.domain.model.DefaultSubcategories
 import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.BackupRestorer
 import com.kyovo.cents.domain.port.output.BudgetAlertRepository
 import com.kyovo.cents.domain.port.output.BudgetCalendarRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
@@ -36,7 +37,9 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
     val recurringTransactions: RecurringTransactionRepository =
         RoomRecurringTransactionRepository(database.recurringTransactionDao())
     val projects: ProjectRepository = RoomProjectRepository(database.projectDao())
-    val budgetCalendar: BudgetCalendarRepository = RoomBudgetCalendarRepository(database.budgetCalendarDao())
+    val budgetCalendar: BudgetCalendarRepository =
+        RoomBudgetCalendarRepository(database.budgetCalendarDao())
+    val backupRestorer: BackupRestorer = RoomBackupRestorer(database)
     val unitOfWork: UnitOfWork = RoomUnitOfWork(database)
 
     fun close()

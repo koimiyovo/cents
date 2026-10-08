@@ -14,5 +14,6 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="." />
+        <exclude domain="file" path="datastore" />
     </cloud-backup>
 </data-extraction-rules>

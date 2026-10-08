@@ -67,4 +67,8 @@ abstract class AccountDao
     /** Emits the rows now, then again each time the table changes. */
     @Query("SELECT * FROM accounts ORDER BY position")
     abstract fun observeAll(): Flow<List<AccountEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM accounts")
+    abstract suspend fun deleteAll()
 }

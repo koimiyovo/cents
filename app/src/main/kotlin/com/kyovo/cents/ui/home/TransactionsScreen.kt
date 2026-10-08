@@ -1,6 +1,8 @@
 package com.kyovo.cents.ui.home
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -89,10 +91,17 @@ fun TransactionsScreen(
     projects: List<Project>,
     onTransactionClick: (Transaction) -> Unit,
     onOpenSettings: () -> Unit,
+    suggestedCsvFileName: String,
+    onExportCsvTo: (String) -> Unit,
     modifier: Modifier = Modifier,
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
+
+    // A picker closed without choosing gives back null: nothing to do then.
+    val csvPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri -> uri?.let { onExportCsvTo(it.toString()) } }
 
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     // The account filter offers the active accounts only, but the list still shows the history of
@@ -159,7 +168,12 @@ fun TransactionsScreen(
             .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = FAB_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        HomeTopBar(palette, stringResource(R.string.transactions_title), onOpenSettings)
+        HomeTopBar(
+            palette,
+            stringResource(R.string.transactions_title),
+            onOpenSettings,
+            onExportClick = { csvPicker.launch(suggestedCsvFileName) },
+        )
         Text(
             text = stringResource(R.string.transactions_subtitle),
             color = palette.textMuted,

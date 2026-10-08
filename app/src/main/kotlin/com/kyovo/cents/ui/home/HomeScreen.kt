@@ -82,6 +82,15 @@ import com.kyovo.cents.ui.recurring.DeleteRecurringTransactionDialog
 import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
 import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
+import com.kyovo.cents.ui.backup.BackupResult
+import com.kyovo.cents.ui.backup.backupResultMessage
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import com.kyovo.cents.ui.backup.AutomaticBackupViewModel
+import com.kyovo.cents.ui.backup.DataBackupScreen
+import com.kyovo.cents.ui.backup.DataBackupViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
@@ -145,6 +154,8 @@ fun HomeScreen(
     budgetCycleViewModel: BudgetCycleViewModel,
     recurringTransactionsViewModel: RecurringTransactionsViewModel,
     projectsViewModel: ProjectsViewModel,
+    dataBackupViewModel: DataBackupViewModel,
+    automaticBackupViewModel: AutomaticBackupViewModel,
     modifier: Modifier = Modifier,
 )
 {
@@ -159,6 +170,8 @@ fun HomeScreen(
     val budgetCycleState by budgetCycleViewModel.uiState.collectAsStateWithLifecycle()
     val recurringTransactionsState by recurringTransactionsViewModel.uiState.collectAsStateWithLifecycle()
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
+    val dataBackupState by dataBackupViewModel.uiState.collectAsStateWithLifecycle()
+    val automaticBackupState by automaticBackupViewModel.uiState.collectAsStateWithLifecycle()
     val accounts by remember { listAccounts.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
     val archivedAccounts by remember { listArchivedAccounts.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
@@ -369,6 +382,60 @@ fun HomeScreen(
         }
     }
 
+    // The CSV export can start from the Transactions tab, away from the backup screen that shows results:
+    // its outcome is said in a snackbar there. On the backup screen the result card does it.
+    LaunchedEffect(dataBackupViewModel)
+    {
+        dataBackupViewModel.uiState.map { it.result }
+            .filterNotNull()
+            .filter { it == BackupResult.CsvExported || it == BackupResult.ExportFailed }
+            .collect {
+                if (destination == HomeDestination.Tabs)
+                {
+                    dataBackupViewModel.dismissResult()
+                    snackbarHostState.showSnackbar(resources.getString(backupResultMessage(it)))
+                }
+            }
+    }
+
+    // After an import everything the screens pointed to may be gone (the opened account, the project being
+    // analysed): back to the first tab, with nothing opened, and the outcome said in a snackbar since the
+    // backup screen is left. The result is dismissed first so it is announced once. Collected from the flow,
+    // not keyed on the state: dismissing changes the state, which would cancel an effect keyed on it before
+    // the snackbar was shown.
+    LaunchedEffect(dataBackupViewModel)
+    {
+        dataBackupViewModel.uiState.map { it.result }.filterIsInstance<BackupResult.Imported>().collect { imported ->
+            dataBackupViewModel.dismissResult()
+            destination = HomeDestination.Tabs
+            openedAccountUuid = null
+            openedProjectUuid = null
+            projectOpenedFromTab = false
+            analysedProjectUuid = null
+            pagerState.scrollToPage(HomeTab.Accounts.ordinal)
+            val summary = imported.summary
+            if (summary.isEmpty)
+            {
+                // Said for longer: the user may have picked the wrong file, and everything is gone.
+                snackbarHostState.showSnackbar(
+                    message = resources.getString(R.string.backup_result_imported_empty),
+                    duration = SnackbarDuration.Long,
+                )
+            } else
+            {
+                snackbarHostState.showSnackbar(
+                    resources.getString(
+                        R.string.backup_result_imported_summary,
+                        resources.getQuantityString(R.plurals.backup_count_accounts, summary.accounts, summary.accounts),
+                        resources.getQuantityString(
+                            R.plurals.backup_count_transactions, summary.transactions, summary.transactions
+                        ),
+                    )
+                )
+            }
+        }
+    }
+
     // An account created from the transaction form (when there was none) is chosen in it at once.
     LaunchedEffect(accounts) { formViewModel.accountsChanged(accounts) }
 
@@ -441,6 +508,27 @@ fun HomeScreen(
                 onOpenBudgets = { destination = HomeDestination.Budgets },
                 onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
                 onOpenProjects = { destination = HomeDestination.Projects },
+                onOpenBackup = { destination = HomeDestination.Backup },
+                modifier = Modifier.weight(1f),
+            )
+        } else if (destination == HomeDestination.Backup)
+        {
+            DataBackupScreen(
+                state = dataBackupState,
+                suggestedFileName = dataBackupViewModel.exportFileName(),
+                onBack = { destination = HomeDestination.Settings },
+                onExportTo = dataBackupViewModel::exportTo,
+                suggestedCsvFileName = dataBackupViewModel.csvFileName(),
+                onExportCsvTo = dataBackupViewModel::exportCsvTo,
+                onAskToImport = dataBackupViewModel::askToImport,
+                onDismissImportConfirmation = dataBackupViewModel::dismissImportConfirmation,
+                onImportFrom = dataBackupViewModel::importFrom,
+                onDismissResult = dataBackupViewModel::dismissResult,
+                automatic = automaticBackupState,
+                onChooseAutomaticFolder = automaticBackupViewModel::chooseFolder,
+                onBackUpNow = automaticBackupViewModel::backUpNow,
+                onDisableAutomatic = automaticBackupViewModel::disable,
+                onDismissAutomaticOutcome = automaticBackupViewModel::dismissOutcome,
                 modifier = Modifier.weight(1f),
             )
         } else if (destination == HomeDestination.Projects)
@@ -570,6 +658,8 @@ fun HomeScreen(
                                 projects = projects,
                                 onTransactionClick = openTransaction,
                                 onOpenSettings = { destination = HomeDestination.Settings },
+                                suggestedCsvFileName = dataBackupViewModel.csvFileName(),
+                                onExportCsvTo = dataBackupViewModel::exportCsvTo,
                             )
 
                         HomeTab.Budget ->

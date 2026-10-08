@@ -27,4 +27,8 @@ interface RecurringTransactionDao
     /** Emits the rows now, then again each time the table changes: Room watches it for us. */
     @Query("SELECT * FROM recurring_transactions ORDER BY rowid")
     fun observeAll(): Flow<List<RecurringTransactionEntity>>
+
+    /** Empties the table: what restoring a backup starts from. */
+    @Query("DELETE FROM recurring_transactions")
+    suspend fun deleteAll()
 }
