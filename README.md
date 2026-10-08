@@ -18,10 +18,20 @@ The user interface is in French.
 
 ### Transactions
 - Record an **expense**, an **income** or a **transfer** between two accounts (a transfer is stored as two movements, one out and one in, so both balances stay right; the two are not edited separately).
-- Give a transaction a title, a date (today, yesterday or any day), a subcategory and a description.
+- Give a transaction a title, a date (today, yesterday or any day, future ones included: they show as "À venir"), a subcategory, a description and, optionally, a project.
 - Edit or delete an income or an expense, and even move it to another account. Balances are always computed from the transactions, so they follow.
 - History grouped by day, with a search box and filters by period (7 days, 30 days, all time, custom range), by account and by subcategory, plus the expenses / income / net of what is shown.
 - Each account has its own page with its balance and its history.
+
+### Budgets
+- Set a monthly limit on an expense subcategory, with its own alert threshold (a slider). A month without a limit of its own inherits the most recent earlier one, so nothing is copied when a month starts.
+- A **Budget** tab shows where each budget stands (on track, close, over), most urgent first, with the spending breakdown and trend, and a month selector.
+- A budget month need not be the calendar month: choose the day it starts (for example the day the pay comes in), or declare the start of a single month. After a salary is recorded, the app offers to start the cycle on that date.
+- Crossing a threshold is announced once: by a snackbar when you record the expense yourself, by a notification when the app recorded it.
+
+### Recurring transactions and projects
+- **Recurring transactions** (expenses or incomes, weekly, monthly or yearly): the app records each occurrence that has come, and the next one if it falls within the current budget month. A WorkManager job runs every morning to do it and to notify what is due that day.
+- **Projects** group transactions across subcategories (a trip, a renovation), with an optional target and an alert threshold, and show their progress.
 
 ### Subcategories
 - The app comes with 21 common subcategories, each with an emoji (14 for expenses such as food, housing, transport or health, and 7 for income such as salary or refunds).
@@ -31,13 +41,16 @@ The user interface is in French.
 
 ### Data and privacy
 - Everything is stored in a local database on the device and kept from one launch to the next. The app never sends anything over the network, and the database is left out of Android's cloud backup.
+- **Export and import**: save everything (accounts, transactions, budgets, projects…) to a JSON file and restore it, for example on a new phone. An import replaces the data, and a file that does not agree with itself (a transaction on a missing account, two opening deposits on one account…) is refused whole. The files are not encrypted.
+- **Automatic backup**: every week WorkManager writes a copy into a folder you chose and keeps the last five.
+- Export the transactions as **CSV** for a spreadsheet (French format; it cannot be re-imported).
+- The onboarding is shown once.
 - Amounts are integers in cents (never floating point), in euros.
 - Light and dark themes, following the system.
 
 ## Not built yet
 
 These are planned, and are not in the app today:
-- Category budgets and alerts before overspending.
 - Foreign currencies with live exchange rates (the [Frankfurter](https://frankfurter.dev) API is the intended source). Accounts are in euros for now.
 
 ## Architecture
@@ -52,7 +65,7 @@ The project follows a **hexagonal architecture** (ports and adapters), split int
 
 | Module | Role |
 |---|---|
-| `:domain` | The business model and rules (`Account`, `Transaction`, `Subcategory`, `Money`…) and the **ports**: the use-case interfaces it offers and the repository interfaces it needs. Pure Kotlin. |
+| `:domain` | The business model and rules (`Account`, `Transaction`, `Subcategory`, `Budget`, `Money`…) and the **ports**: the use-case interfaces it offers and the repository interfaces it needs. Pure Kotlin. |
 | `:application` | The use-case services (open an account, record a transfer, reorder accounts…), written against the ports only. |
 | `:infrastructure` | The adapters of the output ports: the **Room** database (entities, DAOs, mappers, repositories, unit of work) and the id generators. |
 | `:app` | The Android shell: Jetpack Compose screens, view models, and the manual wiring in `AppContainer`. |
@@ -79,7 +92,7 @@ The project is developed test-first, with close to a thousand unit tests, all ru
 
 ## Database and schema evolution
 
-The database schema is versioned and exported to `infrastructure/schemas/`, and those files are checked in. Version 1 is frozen: a test fails if an entity changes without a new version, or if a new version has no migration. A destructive fallback is deliberately not configured, since it would erase the user's accounts. To change the schema, raise the version in `CentsDatabase` and add a `Migration` to `CentsMigrations`.
+The database schema is versioned and exported to `infrastructure/schemas/`, and those files are checked in. Every version that an installed app may carry is frozen: a test fails if an entity changes without a new version, or if a new version has no migration, and the migrations are tested on files built by hand from the exported schemas. The current version is 7. A destructive fallback is deliberately not configured, since it would erase the user's accounts. To change the schema, raise the version in `CentsDatabase` and add a `Migration` to `CentsMigrations`.
 
 ## Getting started
 
@@ -94,3 +107,27 @@ Open the project in a recent Android Studio, or use the Gradle wrapper:
 ```
 
 The app starts with no account and the common subcategories in place.
+
+### Release build
+
+The release build is minified with R8 and signed with an upload key that is not in the repository. Create it once with `keytool` (it asks for a password, then for a few optional details such as a name):
+
+```bash
+keytool -genkeypair -v -keystore cents-upload.jks -alias cents -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Then put its details in a `keystore.properties` file at the project root (both files are git-ignored). The keystore is PKCS12, so the key has the same password as the keystore:
+
+```properties
+storeFile=cents-upload.jks
+storePassword=...
+keyAlias=cents
+keyPassword=...
+```
+
+```bash
+# Signed Android App Bundle, for the Play Console (an unsigned one is produced without the file)
+./gradlew :app:bundleRelease
+```
+
+Back up the `.jks` and its passwords outside the project: Git does not hold them. Raise `versionCode` for every upload, and keep `app/build/outputs/mapping/release/mapping.txt` to read crash reports.
