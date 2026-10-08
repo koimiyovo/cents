@@ -33,7 +33,7 @@ data class BackupSnapshot(
     /**
      * Whether the pieces agree with each other, which reading each one cannot tell: no id twice, no name
      * taken twice (the rule that applies when one is created: active accounts, subcategories of a kind,
-     * projects), and every reference leads to something in the snapshot, of the right kind. The same
+     * projects), no account with more than one opening deposit, and every reference leads to something in the snapshot, of the right kind. The same
      * guarantees the app keeps one write at a time and the database keeps with its keys.
      *
      * @throws InvalidBackupException on the first thing that does not agree.
@@ -46,6 +46,8 @@ data class BackupSnapshot(
         requireUnique(recurringTransactions.map { it.id })
         requireUnique(projects.map { it.id })
         requireUnique(budgets.map { it.subcategoryId to it.month })
+        // Account opening creates exactly one deposit, and nothing else can create another.
+        requireUnique(transactions.filter { it.category == TransactionCategory.INITIAL_DEPOSIT }.map { it.accountId })
 
         requireNoNameTwice(accounts.filter { it.archivedAt == null }.map { it.name }, AccountName::matches)
         RecordableTransactionCategory.entries.forEach { kind ->

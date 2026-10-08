@@ -37,7 +37,8 @@ class BackupSnapshotConsistencyTest
         kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE
     ) = Subcategory(SubcategoryId(uuid(100 + n)), kind, SubcategoryName(name), emoji = null)
 
-    private fun project(n: Int, name: String) = Project(ProjectId(uuid(200 + n)), ProjectName(name), null, null)
+    private fun project(n: Int, name: String) =
+        Project(ProjectId(uuid(200 + n)), ProjectName(name), null, null)
 
     private fun transaction(
         n: Int,
@@ -75,7 +76,13 @@ class BackupSnapshotConsistencyTest
         recurringTransactions: List<RecurringTransaction> = emptyList(),
         projects: List<Project> = emptyList()
     ) = BackupSnapshot(
-        accounts, subcategories, transactions, budgets, BudgetCalendar(), recurringTransactions, projects
+        accounts,
+        subcategories,
+        transactions,
+        budgets,
+        BudgetCalendar(),
+        recurringTransactions,
+        projects
     )
 
     private fun assertRefused(snapshot: BackupSnapshot)
@@ -151,7 +158,12 @@ class BackupSnapshotConsistencyTest
             TransactionCategory.EXPENSE, null, null, Instant.parse("2024-01-01T00:00:00Z"), null
         )
 
-        assertThatCode { snapshot(accounts = listOf(current), transactions = listOf(old)).requireConsistent() }
+        assertThatCode {
+            snapshot(
+                accounts = listOf(current),
+                transactions = listOf(old)
+            ).requireConsistent()
+        }
             .doesNotThrowAnyException()
     }
 
@@ -184,7 +196,10 @@ class BackupSnapshotConsistencyTest
     fun `two recurring transactions with the same id are refused`()
     {
         assertRefused(
-            snapshot(accounts = listOf(current), recurringTransactions = listOf(rule(1, current), rule(1, current)))
+            snapshot(
+                accounts = listOf(current),
+                recurringTransactions = listOf(rule(1, current), rule(1, current))
+            )
         )
     }
 
@@ -235,7 +250,14 @@ class BackupSnapshotConsistencyTest
     @Test
     fun `two subcategories of the same kind with the same name are refused, accents and case ignored`()
     {
-        assertRefused(snapshot(subcategories = listOf(subcategory(1, "Education"), subcategory(2, "Éducation"))))
+        assertRefused(
+            snapshot(
+                subcategories = listOf(
+                    subcategory(1, "Education"),
+                    subcategory(2, "Éducation")
+                )
+            )
+        )
     }
 
     @Test
@@ -244,19 +266,60 @@ class BackupSnapshotConsistencyTest
         assertRefused(snapshot(projects = listOf(project(1, "Été 2027"), project(2, "ete 2027"))))
     }
 
+    // ---- one opening deposit per account
+
+    private fun deposit(n: Int, account: Account) = Transaction.openingDeposit(
+        TransactionId(uuid(500 + n)),
+        account.id,
+        Money(5_000),
+        Instant.parse("2026-01-01T00:00:00Z")
+    )
+
+    @Test
+    fun `an account with two opening deposits is refused`()
+    {
+        assertRefused(
+            snapshot(
+                accounts = listOf(current),
+                transactions = listOf(deposit(1, current), deposit(2, current))
+            )
+        )
+    }
+
+    @Test
+    fun `each account may have its own opening deposit`()
+    {
+        val savings = account(2, "Livret")
+
+        assertThatCode {
+            snapshot(
+                accounts = listOf(current, savings),
+                transactions = listOf(deposit(1, current), deposit(2, savings))
+            ).requireConsistent()
+        }.doesNotThrowAnyException()
+    }
+
     // ---- references that lead nowhere
 
     @Test
     fun `a transaction on an account that is not in the file is refused`()
     {
-        assertRefused(snapshot(accounts = listOf(account(2, "Livret")), transactions = listOf(transaction(1, current))))
+        assertRefused(
+            snapshot(
+                accounts = listOf(account(2, "Livret")),
+                transactions = listOf(transaction(1, current))
+            )
+        )
     }
 
     @Test
     fun `a transaction with a subcategory that is not in the file is refused`()
     {
         assertRefused(
-            snapshot(accounts = listOf(current), transactions = listOf(transaction(1, current, subcategory = groceries)))
+            snapshot(
+                accounts = listOf(current),
+                transactions = listOf(transaction(1, current, subcategory = groceries))
+            )
         )
     }
 
@@ -264,7 +327,10 @@ class BackupSnapshotConsistencyTest
     fun `a transaction with a project that is not in the file is refused`()
     {
         assertRefused(
-            snapshot(accounts = listOf(current), transactions = listOf(transaction(1, current, project = japan)))
+            snapshot(
+                accounts = listOf(current),
+                transactions = listOf(transaction(1, current, project = japan))
+            )
         )
     }
 
@@ -273,19 +339,40 @@ class BackupSnapshotConsistencyTest
     {
         // An expense filed under an income subcategory: recording one is refused, so a file may not hold one.
         val misfiled = Transaction.restored(
-            TransactionId(uuid(360)), current.id, Money(1_000), TransactionTitle("Achat"),
-            TransactionCategory.EXPENSE, salary.id, null, Instant.parse("2026-03-01T00:00:00Z"), null
+            TransactionId(uuid(360)),
+            current.id,
+            Money(1_000),
+            TransactionTitle("Achat"),
+            TransactionCategory.EXPENSE,
+            salary.id,
+            null,
+            Instant.parse("2026-03-01T00:00:00Z"),
+            null
         )
 
         assertRefused(
-            snapshot(accounts = listOf(current), subcategories = listOf(salary), transactions = listOf(misfiled))
+            snapshot(
+                accounts = listOf(current),
+                subcategories = listOf(salary),
+                transactions = listOf(misfiled)
+            )
         )
     }
 
     @Test
     fun `a budget on a subcategory that is not in the file is refused`()
     {
-        assertRefused(snapshot(budgets = listOf(Budget(groceries.id, YearMonth.of(2026, 9), Money(30_000)))))
+        assertRefused(
+            snapshot(
+                budgets = listOf(
+                    Budget(
+                        groceries.id,
+                        YearMonth.of(2026, 9),
+                        Money(30_000)
+                    )
+                )
+            )
+        )
     }
 
     @Test
@@ -309,7 +396,10 @@ class BackupSnapshotConsistencyTest
     fun `a recurring transaction with a subcategory that is not in the file is refused`()
     {
         assertRefused(
-            snapshot(accounts = listOf(current), recurringTransactions = listOf(rule(1, current, subcategory = groceries)))
+            snapshot(
+                accounts = listOf(current),
+                recurringTransactions = listOf(rule(1, current, subcategory = groceries))
+            )
         )
     }
 
@@ -320,7 +410,14 @@ class BackupSnapshotConsistencyTest
             snapshot(
                 accounts = listOf(current),
                 subcategories = listOf(salary),
-                recurringTransactions = listOf(rule(1, current, RecordableTransactionCategory.EXPENSE, salary))
+                recurringTransactions = listOf(
+                    rule(
+                        1,
+                        current,
+                        RecordableTransactionCategory.EXPENSE,
+                        salary
+                    )
+                )
             )
         )
     }
@@ -328,10 +425,16 @@ class BackupSnapshotConsistencyTest
     @Test
     fun `checking does not change the snapshot`()
     {
-        val whole = snapshot(accounts = listOf(current), transactions = listOf(transaction(1, current)))
+        val whole =
+            snapshot(accounts = listOf(current), transactions = listOf(transaction(1, current)))
 
         whole.requireConsistent()
 
-        assertThat(whole).isEqualTo(snapshot(accounts = listOf(current), transactions = listOf(transaction(1, current))))
+        assertThat(whole).isEqualTo(
+            snapshot(
+                accounts = listOf(current),
+                transactions = listOf(transaction(1, current))
+            )
+        )
     }
 }
