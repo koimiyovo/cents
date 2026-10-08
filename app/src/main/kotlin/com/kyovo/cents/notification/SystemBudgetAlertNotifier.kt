@@ -58,6 +58,7 @@ class SystemBudgetAlertNotifier(
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.budget_alert_title))
             .setContentText(context.getString(bodyRes, emoji, subcategory.name.value))
+            .setContentIntent(openAppPendingIntent(context, NotificationTarget.Budget))
             .setAutoCancel(true)
             .build()
 

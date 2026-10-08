@@ -1,5 +1,6 @@
 package com.kyovo.cents
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.kyovo.cents.notification.NotificationTarget
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.backup.AutomaticBackupViewModel
@@ -38,6 +40,11 @@ class MainActivity : ComponentActivity() {
     private val appContainer by lazy { (application as CentsApplication).appContainer }
 
     private val onboardingSeen by lazy { OnboardingSeen(applicationContext.onboardingDataStore) }
+
+    // The tab a tapped notification asked for, until the home screen has shown it. Read from the launching
+    // intent (only the first time: after a rotation the same intent would navigate again) and from
+    // onNewIntent when the app was already running.
+    private var notificationTarget by mutableStateOf<NotificationTarget?>(null)
 
     // Scoped to the Activity's ViewModelStore, which outlives rotations: the form being typed
     // survives them. The factory is needed because the ViewModel takes constructor arguments.
@@ -173,6 +180,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null)
+        {
+            notificationTarget = targetOf(intent)
+        }
         setContent {
             var screen by rememberSaveable { mutableStateOf(AppScreen.Splash) }
             val scope = rememberCoroutineScope()
@@ -214,8 +225,21 @@ class MainActivity : ComponentActivity() {
                     projectsViewModel = projectsViewModel,
                     dataBackupViewModel = dataBackupViewModel,
                     automaticBackupViewModel = automaticBackupViewModel,
+                    notificationTarget = notificationTarget,
+                    onNotificationTargetHandled = { notificationTarget = null },
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent)
+    {
+        super.onNewIntent(intent)
+        notificationTarget = targetOf(intent)
+    }
+
+    private fun targetOf(intent: Intent?): NotificationTarget?
+    {
+        return NotificationTarget.from(intent?.getStringExtra(NotificationTarget.EXTRA))
     }
 }
