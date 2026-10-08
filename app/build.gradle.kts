@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.compose)
@@ -19,11 +21,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // The upload key stays out of git: keystore.properties (storeFile, storePassword, keyAlias,
+    // keyPassword) at the project root. Without it the release build is simply left unsigned.
+    val keystoreFile = rootProject.file("keystore.properties")
+    val keystoreProperties = Properties()
+    if (keystoreFile.exists())
+    {
+        keystoreFile.inputStream().use { keystoreProperties.load(it) }
+    }
+
+    signingConfigs {
+        if (keystoreFile.exists())
+        {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
