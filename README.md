@@ -107,27 +107,3 @@ Open the project in a recent Android Studio, or use the Gradle wrapper:
 ```
 
 The app starts with no account and the common subcategories in place.
-
-### Release build
-
-The release build is minified with R8 and signed with an upload key that is not in the repository. Create it once with `keytool` (it asks for a password, then for a few optional details such as a name):
-
-```bash
-keytool -genkeypair -v -keystore cents-upload.jks -alias cents -keyalg RSA -keysize 2048 -validity 10000
-```
-
-Then put its details in a `keystore.properties` file at the project root (both files are git-ignored). The keystore is PKCS12, so the key has the same password as the keystore:
-
-```properties
-storeFile=cents-upload.jks
-storePassword=...
-keyAlias=cents
-keyPassword=...
-```
-
-```bash
-# Signed Android App Bundle, for the Play Console (an unsigned one is produced without the file)
-./gradlew :app:bundleRelease
-```
-
-Back up the `.jks` and its passwords outside the project: Git does not hold them. Raise `versionCode` for every upload, and keep `app/build/outputs/mapping/release/mapping.txt` to read crash reports.
