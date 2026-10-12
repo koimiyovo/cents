@@ -1,4 +1,4 @@
-# Cents
+# Centimes
 
 A personal budget manager for Android, built as a learning project to explore modern Android
 development with Kotlin. It keeps track of your accounts and of every euro that moves between them,
@@ -7,7 +7,7 @@ internet permission.
 
 The user interface is in French.
 
-**Website:** [cents-app.fr](https://cents-app.fr)
+**Website:** [centimes.fr](https://centsimes.fr)
 
 ## Features
 
