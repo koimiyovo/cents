@@ -56,12 +56,12 @@ class DataBackupViewModel(
 
     fun exportFileName(): String
     {
-        return "cents-sauvegarde-${LocalDate.now(clock)}.json"
+        return "centimes-sauvegarde-${LocalDate.now(clock)}.json"
     }
 
     fun csvFileName(): String
     {
-        return "cents-transactions-${LocalDate.now(clock)}.csv"
+        return "centimes-transactions-${LocalDate.now(clock)}.csv"
     }
 
     fun exportTo(location: String)

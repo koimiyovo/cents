@@ -55,7 +55,7 @@ class DataBackupViewModelTest
     @Test
     fun `the file offered for an export is named after today`()
     {
-        assertThat(viewModel.exportFileName()).isEqualTo("cents-sauvegarde-2026-09-26.json")
+        assertThat(viewModel.exportFileName()).isEqualTo("centimes-sauvegarde-2026-09-26.json")
     }
 
     @Test
@@ -83,7 +83,7 @@ class DataBackupViewModelTest
     @Test
     fun `the file offered for the CSV is named after today`()
     {
-        assertThat(viewModel.csvFileName()).isEqualTo("cents-transactions-2026-09-26.csv")
+        assertThat(viewModel.csvFileName()).isEqualTo("centimes-transactions-2026-09-26.csv")
     }
 
     @Test
