@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Cents</string>
+    <string name="app_name">Centimes</string>
 
     <string name="splash_tagline">Votre argent, simplement suivi</string>
     <string name="splash_privacy_badge" formatted="false">100% sur l\'appareil &amp; privé</string>
@@ -41,7 +41,7 @@
     <string name="onboarding_page3_caption">⚡ Prêt en 30 secondes</string>
 
     <!-- Accounts (home) screen -->
-    <string name="accounts_kicker">CENTS</string>
+    <string name="accounts_kicker">CENTIMES</string>
     <string name="accounts_title">Comptes</string>
     <string name="accounts_greeting_day">Bonjour 👋</string>
     <string name="accounts_greeting_evening">Bonsoir 👋</string>
@@ -55,7 +55,7 @@
     <string name="accounts_status_archived">Archivé</string>
     <string name="accounts_archived_section">Comptes archivés (%1$d)</string>
     <string name="budgets_notification_title">Autoriser la notification sur les budgets</string>
-    <string name="budgets_notification_body">Cents vous enverra des notifications à l\'approche et lors du dépassement de budget</string>
+    <string name="budgets_notification_body">Centimes vous enverra des notifications à l\'approche et lors du dépassement de budget</string>
     <string name="budgets_notification_confirm">Autoriser</string>
     <string name="budgets_notification_delay">Plus tard</string>
     <string name="budget_alert_channel_name">Alertes budgétaires</string>
@@ -63,7 +63,7 @@
     <string name="budget_alert_close_body">%1$s %2$s approche de sa limite mensuelle.</string>
     <string name="budget_alert_over_body">%1$s %2$s a dépassé sa limite mensuelle.</string>
     <string name="recurring_notification_title">Autoriser les notifications des transactions récurrentes</string>
-    <string name="recurring_notification_body">Cents vous préviendra le jour où une transaction récurrente est enregistrée.</string>
+    <string name="recurring_notification_body">Centimes vous préviendra le jour où une transaction récurrente est enregistrée.</string>
     <string name="recurring_channel_name">Transactions récurrentes</string>
     <string name="recurring_expense_title">Dépense récurrente</string>
     <string name="recurring_expense_body">🔁 %1$s (%2$s) est enregistrée aujourd\'hui.</string>
@@ -403,7 +403,7 @@
     <string name="backup_csv_button">Exporter les transactions (CSV)</string>
     <string name="backup_exporting">Export en cours…</string>
     <string name="backup_import_title">Importer</string>
-    <string name="backup_import_hint">Restaure vos données depuis un fichier exporté par Cents, par exemple sur un nouveau téléphone.</string>
+    <string name="backup_import_hint">Restaure vos données depuis un fichier exporté par Centimes, par exemple sur un nouveau téléphone.</string>
     <string name="backup_import_button">Importer un fichier</string>
     <string name="backup_importing">Import en cours…</string>
     <string name="backup_import_confirm_title">Remplacer vos données ?</string>
@@ -424,11 +424,11 @@
         <item quantity="other">%d transactions</item>
     </plurals>
     <string name="backup_result_export_failed">L\'export a échoué : le fichier n\'a pas pu être écrit.</string>
-    <string name="backup_result_import_not_a_backup">Ce fichier n\'est pas une sauvegarde Cents valide. Vos données n\'ont pas été modifiées.</string>
+    <string name="backup_result_import_not_a_backup">Ce fichier n\'est pas une sauvegarde Centimes valide. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_unreadable">Ce fichier n\'a pas pu être lu. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_storage">L\'import a échoué. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_auto_title">Sauvegarde automatique</string>
-    <string name="backup_auto_hint">Chaque semaine, Cents enregistre une copie de vos données dans le dossier de votre choix et garde les 5 dernières. Ces copies ne sont pas chiffrées : choisissez un dossier que vous maîtrisez.</string>
+    <string name="backup_auto_hint">Chaque semaine, Centimes enregistre une copie de vos données dans le dossier de votre choix et garde les 5 dernières. Ces copies ne sont pas chiffrées : choisissez un dossier que vous maîtrisez.</string>
     <string name="backup_auto_choose">Choisir un dossier</string>
     <string name="backup_auto_folder">Dossier : %1$s</string>
     <string name="backup_auto_now">Sauvegarder maintenant</string>
