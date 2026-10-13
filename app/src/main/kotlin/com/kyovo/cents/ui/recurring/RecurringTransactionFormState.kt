@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.recurring
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -62,15 +63,21 @@ data class RecurringTransactionFormState(
     val startDate: LocalDate,
     val hasEndDate: Boolean = false,
     val endDate: LocalDate,
+    /** The currency of the chosen account: how many decimals the amount takes. */
+    val currency: AccountCurrency = AccountCurrency.EUR,
 )
 {
     val isEditing: Boolean get() = editingId != null
 
     companion object
     {
-        fun creating(accountId: AccountId?, today: LocalDate): RecurringTransactionFormState
+        fun creating(
+            accountId: AccountId?,
+            today: LocalDate,
+            currency: AccountCurrency = AccountCurrency.EUR,
+        ): RecurringTransactionFormState
         {
-            return RecurringTransactionFormState(accountId = accountId, startDate = today, endDate = today)
+            return RecurringTransactionFormState(accountId = accountId, startDate = today, endDate = today, currency = currency)
         }
 
         /**
@@ -83,6 +90,7 @@ data class RecurringTransactionFormState(
             recurringTransaction: RecurringTransaction,
             subcategory: Subcategory?,
             accountName: String,
+            currency: AccountCurrency = AccountCurrency.EUR,
         ): RecurringTransactionFormState
         {
             return RecurringTransactionFormState(
@@ -90,7 +98,7 @@ data class RecurringTransactionFormState(
                 accountId = recurringTransaction.accountId,
                 accountName = accountName,
                 category = recurringTransaction.category,
-                amountText = formatCentsForInput(recurringTransaction.amount.value),
+                amountText = formatCentsForInput(recurringTransaction.amount.value, currency.fractionDigits),
                 title = recurringTransaction.title.value,
                 subcategory = subcategory,
                 frequency = recurringTransaction.frequency,
@@ -98,6 +106,7 @@ data class RecurringTransactionFormState(
                 startDate = recurringTransaction.startDate,
                 hasEndDate = recurringTransaction.endDate != null,
                 endDate = recurringTransaction.endDate ?: recurringTransaction.startDate,
+                currency = currency,
             )
         }
     }
@@ -108,7 +117,8 @@ data class RecurringTransactionFormState(
 
     fun withSubcategory(subcategory: Subcategory?): RecurringTransactionFormState = copy(subcategory = subcategory)
 
-    fun withAccount(id: AccountId): RecurringTransactionFormState = copy(accountId = id)
+    fun withAccount(id: AccountId, currency: AccountCurrency = this.currency): RecurringTransactionFormState =
+        copy(accountId = id, currency = currency)
 
     /**
      * Switches between expense and income, keeping everything typed except a subcategory of the other kind.
@@ -153,7 +163,7 @@ data class RecurringTransactionFormState(
     {
         val errors = mutableSetOf<RecurringTransactionFormError>()
 
-        val amountCents = parseAmountToCents(amountText)
+        val amountCents = parseAmountToCents(amountText, fractionDigits = currency.fractionDigits)
         if (amountCents == null) errors += RecurringTransactionFormError.AMOUNT_INVALID
         if (title.isBlank()) errors += RecurringTransactionFormError.TITLE_REQUIRED
         if (accountId == null) errors += RecurringTransactionFormError.ACCOUNT_REQUIRED

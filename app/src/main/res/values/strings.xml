@@ -156,6 +156,7 @@
     <string name="transaction_form_error_account">Choisissez un compte.</string>
     <string name="transaction_form_error_destination">Choisissez le compte de destination.</string>
     <string name="transaction_form_error_same_account">Les deux comptes doivent être différents.</string>
+    <string name="transaction_form_error_different_currencies">Les deux comptes doivent avoir la même devise.</string>
     <string name="transaction_form_error_subcategory">Cette sous-catégorie ne correspond pas au type choisi.</string>
     <string name="transaction_form_date_other">📅 Autre date</string>
     <string name="transaction_form_date_title">Sélectionnez une date</string>
@@ -170,6 +171,7 @@
     <string name="account_form_title">Nouveau compte</string>
     <string name="account_form_name_placeholder">Nom du compte</string>
     <string name="account_form_type_label">Type de compte</string>
+    <string name="account_form_currency_label">Devise</string>
     <string name="account_form_initial_amount_label">Solde initial (facultatif)</string>
     <string name="account_form_description_placeholder">Description (facultatif)</string>
     <string name="account_form_submit">Créer le compte</string>
@@ -196,6 +198,9 @@
 
     <!-- Settings and subcategory management -->
     <string name="settings_button_description">Réglages</string>
+    <string name="main_currency_description">Devise principale</string>
+    <string name="main_currency_choice_title">Votre devise principale</string>
+    <string name="main_currency_choice_body">Les totaux s\'affichent dans cette devise. Vous pourrez la changer à tout moment.</string>
     <string name="transactions_export_description">Exporter les transactions (CSV)</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_subcategories">Sous-catégories</string>

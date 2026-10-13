@@ -14,8 +14,10 @@ import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryNameException
 import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
+import com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlert
 import com.kyovo.cents.domain.model.BudgetAlertLevel
@@ -66,6 +68,7 @@ enum class SubmitFailure
     ACCOUNT_NOT_FOUND,
     ARCHIVED_ACCOUNT,
     SAME_ACCOUNT,
+    DIFFERENT_CURRENCIES,
 
     /** Editing: the transaction is gone, or is one the domain won't let be changed. */
     TRANSACTION_UNAVAILABLE,
@@ -78,7 +81,11 @@ enum class SubmitFailure
  * What the deletion dialog says about the transaction it is about to erase: taken from the
  * transaction as it was when the edit began, not from the fields the user may have changed since.
  */
-data class TransactionToDelete(val title: String, val signedAmountCents: Long)
+data class TransactionToDelete(
+    val title: String,
+    val signedAmountCents: Long,
+    val currency: AccountCurrency = AccountCurrency.EUR,
+)
 
 /** Why the new subcategory is refused. */
 enum class NewSubcategoryError
@@ -183,11 +190,19 @@ class TransactionFormViewModel(
 
     private var accountRequest: AccountRequest? = null
 
+    // The currency of each account the form has heard of (also an archived one being edited): what its amount is
+    // read with. Unknown accounts read as 2 decimals, like the euro.
+    private var currencies: Map<AccountId, AccountCurrency> = emptyMap()
+
+    private fun fractionDigitsOf(form: TransactionFormState): Int =
+        form.accountId?.let { currencies[it] }?.fractionDigits ?: 2
+
     /** Opens a fresh form. Called when the user asks for a new transaction, never on recomposition. */
     fun open(accounts: List<Account>, preselectedAccountId: AccountId?, project: Project? = null)
     {
         editedTransaction = null
         accountRequest = null
+        currencies = accounts.associate { it.id to it.currency }
         // With a single active account there is nothing to choose: skip the step.
         val onlyAccountId = selectableAccounts(accounts).singleOrNull()?.id
         _uiState.value = TransactionFormUiState(
@@ -204,14 +219,22 @@ class TransactionFormViewModel(
      * Opens the form pre-filled with [transaction]'s values, to change them. [subcategory] and [project] are
      * the ones it points to (null when it has none).
      */
-    fun openForEdit(transaction: Transaction, subcategory: Subcategory?, project: Project?)
+    fun openForEdit(
+        transaction: Transaction,
+        subcategory: Subcategory?,
+        project: Project?,
+        // Every account, archived ones included: the transaction's own decides how its amount is written.
+        accounts: List<Account> = emptyList(),
+    )
     {
         // Only incomes and expenses can be edited; anything else (a transfer, an opening deposit) is ignored.
         if (!canEditTransaction(transaction)) return
         editedTransaction = transaction
         accountRequest = null
+        currencies = accounts.associate { it.id to it.currency }
+        val digits = currencies[transaction.accountId]?.fractionDigits ?: 2
         _uiState.value =
-            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory, project))
+            TransactionFormUiState(form = TransactionFormState.editing(transaction, subcategory, project, digits))
     }
 
     /**
@@ -231,6 +254,7 @@ class TransactionFormViewModel(
     fun accountsChanged(accounts: List<Account>)
     {
         val form = _uiState.value.form ?: return
+        currencies = currencies + accounts.associate { it.id to it.currency }
         var updated = form
 
         val request = accountRequest
@@ -257,6 +281,7 @@ class TransactionFormViewModel(
     {
         editedTransaction = null
         accountRequest = null
+        currencies = emptyMap()
         _uiState.value = TransactionFormUiState()
     }
 
@@ -408,7 +433,8 @@ class TransactionFormViewModel(
             it.copy(
                 confirmingDelete = TransactionToDelete(
                     original.title.value,
-                    original.signedAmount
+                    original.signedAmount,
+                    currencies[original.accountId] ?: AccountCurrency.EUR,
                 )
             )
         }
@@ -476,7 +502,7 @@ class TransactionFormViewModel(
     private suspend fun save()
     {
         val form = _uiState.value.form ?: return
-        val submission = form.stampedAt(now(), zone).submit(zone)
+        val submission = form.stampedAt(now(), zone).submit(zone, fractionDigitsOf(form))
         // The project this save may bring up a band, and where it stood before: told about only if the save goes through.
         val watched = form.project.takeIf { submission is FormSubmission.Record || submission is FormSubmission.Update }
         val levelBefore = watched?.let { alertLevelOf(it) }
@@ -502,6 +528,10 @@ class TransactionFormViewModel(
         } catch (_: CannotRecordTransactionOnArchivedAccountException)
         {
             _uiState.update { it.copy(failure = SubmitFailure.ARCHIVED_ACCOUNT) }
+            return
+        } catch (_: TransferBetweenDifferentCurrenciesException)
+        {
+            _uiState.update { it.copy(failure = SubmitFailure.DIFFERENT_CURRENCIES) }
             return
         } catch (_: TransferToSameAccountException)
         {

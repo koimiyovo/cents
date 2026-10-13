@@ -69,6 +69,7 @@ import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetFormSheet
@@ -163,6 +164,7 @@ fun HomeScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
+    val mainCurrency = LocalMainCurrency.current
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
@@ -211,14 +213,17 @@ fun HomeScreen(
         when (transactionTapTarget(transaction))
         {
             TransactionTapTarget.INITIAL_DEPOSIT_FORM -> initialDepositFormViewModel.openForEdit(
-                transaction
+                transaction,
+                (accounts + archivedAccounts).find { it.id == transaction.accountId }?.currency ?: mainCurrency,
             )
 
             TransactionTapTarget.TRANSACTION_FORM     ->
                 formViewModel.openForEdit(
                     transaction,
                     subcategories.find { it.id == transaction.subcategoryId },
-                    projects.find { it.id == transaction.projectId })
+                    projects.find { it.id == transaction.projectId },
+                    accounts + archivedAccounts,
+                )
 
             TransactionTapTarget.NONE                 -> Unit
         }
@@ -610,7 +615,10 @@ fun HomeScreen(
                 listArchivedAccounts = listArchivedAccounts,
                 listSubcategories = listSubcategories,
                 onBack = { destination = HomeDestination.Settings },
-                onCreate = { recurringTransactionsViewModel.openCreate(accounts.singleOrNull()?.id) },
+                onCreate = {
+                    val only = accounts.singleOrNull()
+                    recurringTransactionsViewModel.openCreate(only?.id, currency = only?.currency ?: mainCurrency)
+                },
                 onEdit = { row ->
                     recurringTransactionsViewModel.openForEdit(
                         row,
@@ -666,7 +674,7 @@ fun HomeScreen(
                             getAccountBalance,
                             listTransactions,
                             onAccountClick = { openedAccountUuid = it.value.toString() },
-                            onNewAccountClick = accountFormViewModel::open,
+                            onNewAccountClick = { accountFormViewModel.open(mainCurrency) },
                             onArchiveAccount = archive,
                             onUnarchiveAccount = unarchive,
                             onEditAccount = accountFormViewModel::openForEdit,
@@ -775,7 +783,7 @@ fun HomeScreen(
             onCreateAccount = { field ->
                 // Remember which accounts exist, to recognise the new one and choose it for that field.
                 formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
-                accountFormViewModel.open()
+                accountFormViewModel.open(mainCurrency)
             },
             onDismiss = formViewModel::close,
         )

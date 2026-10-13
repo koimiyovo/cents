@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.recurring
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.RecurringTransactionNotFoundException
@@ -39,7 +40,7 @@ private fun aRecurringTransaction(id: RecurringTransactionId = RecurringTransact
     startDate = TODAY,
 )
 
-private fun aRow(rule: RecurringTransaction = aRecurringTransaction()) = RecurringTransactionRow(rule, "Compte courant", null)
+private fun aRow(rule: RecurringTransaction = aRecurringTransaction()) = RecurringTransactionRow(rule, "Compte courant", null, AccountCurrency.EUR)
 
 /** Records what it is asked to create; can be told to refuse it. */
 private class RecordingCreate : CreateRecurringTransactionUseCase

@@ -88,6 +88,7 @@ fun BudgetFormSheet(
                 value = form.limitText,
                 onValueChange = onLimitChange,
                 error = error == BudgetFormError.LIMIT_INVALID,
+                currency = form.currency,
                 focusRequester = limitFocus,
             )
 

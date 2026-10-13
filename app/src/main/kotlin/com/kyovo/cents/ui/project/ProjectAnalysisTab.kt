@@ -38,7 +38,8 @@ import com.kyovo.cents.ui.budget.SpendingLegendRow
 import com.kyovo.cents.ui.budget.SpendingPie
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import java.time.LocalDate
 import java.time.ZoneId
@@ -170,7 +171,7 @@ private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdo
     if (breakdown.refunds.isNotZero())
     {
         Text(
-            text = stringResource(R.string.project_analysis_refunds, formatEuroCents(breakdown.refunds.value)),
+            text = stringResource(R.string.project_analysis_refunds, formatMoney(breakdown.refunds.value, LocalMainCurrency.current)),
             color = palette.textSecondary,
             fontSize = 14.sp,
         )
@@ -201,7 +202,7 @@ private fun TopExpensesSection(palette: AccountsPalette, expenses: List<Transact
                     Text(text = day.format(dayFormat), color = palette.textMuted, fontSize = 12.sp)
                 }
                 Text(
-                    text = formatEuroCents(expense.amount.value),
+                    text = formatMoney(expense.amount.value, LocalMainCurrency.current),
                     color = palette.textPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

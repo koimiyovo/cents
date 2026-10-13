@@ -60,7 +60,7 @@ import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
 import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
 import java.time.Instant
 import java.time.LocalDate
 
@@ -212,6 +212,7 @@ fun AccountDetailsScreen(
             expenseCents = totalExpenseCents,
             incomeCents = totalIncomeCents,
             netCents = totalIncomeCents - totalExpenseCents,
+            currency = account.currency,
         )
         SearchField(palette, searchQuery) { searchQuery = it }
         Row(
@@ -259,6 +260,7 @@ fun AccountDetailsScreen(
                         subcategoriesById = subcategoriesById,
                         onTransactionClick = onTransactionClick,
                         projectsById = projectsById,
+                        fallbackCurrency = account.currency,
                     )
                 }
             }
@@ -353,7 +355,7 @@ private fun AccountSummaryCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = formatEuroCents(balanceCents),
+                text = formatMoney(balanceCents, account.currency),
                 color = palette.heroOnCardPrimary,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
@@ -538,7 +540,8 @@ internal fun ArchiveConfirmationDialog(
             }
         },
     )
-}
+}
+
 
 /** The account a page asked for, or none if there is no such account (as opposed to "not loaded yet"). */
 private class AccountLookup(val account: Account?)

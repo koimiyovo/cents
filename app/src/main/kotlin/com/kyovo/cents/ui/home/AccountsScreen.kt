@@ -80,8 +80,10 @@ import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.common.IconTone
-import com.kyovo.cents.ui.common.formatEuroCents
-import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.ui.settings.LocalMainCurrency
+import com.kyovo.cents.ui.settings.MainCurrencyPill
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.ui.common.formatSignedMoney
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -162,16 +164,19 @@ fun AccountsScreen(
         .collectAsStateWithLifecycle(initialValue = emptyMap())
     // The consolidated figures cover the active accounts only: an archived account is closed, so
     // it counts neither in the total nor in the income/expense lines below.
-    val totalCents = remember(accounts, balanceByAccountId) {
-        accounts.sumOf { balanceByAccountId[it.id] ?: 0L }
+    // Without exchange rates, they cover the accounts held in the main currency only.
+    val mainCurrency = LocalMainCurrency.current
+    val mainAccounts = remember(accounts, mainCurrency) { accounts.filter { it.currency == mainCurrency } }
+    val totalCents = remember(mainAccounts, balanceByAccountId) {
+        mainAccounts.sumOf { balanceByAccountId[it.id] ?: 0L }
     }
     // The use case only filters by subcategory now, so category-level aggregates are computed
     // here from the full list rather than via a query parameter.
     val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
     )
-    val allTransactions = remember(everyTransaction, accounts) {
-        val activeIds = accounts.map { it.id }.toSet()
+    val allTransactions = remember(everyTransaction, mainAccounts) {
+        val activeIds = mainAccounts.map { it.id }.toSet()
         everyTransaction.filter { it.accountId in activeIds }
     }
     val incomeCents = remember(allTransactions) {
@@ -383,6 +388,9 @@ internal fun HomeTopBar(
         }
         if (onSettingsClick != null)
         {
+            // The tabs' headers (the ones with a gear) also carry the currency the totals are shown in.
+            MainCurrencyPill(palette)
+            Spacer(Modifier.width(8.dp))
             val description = stringResource(R.string.settings_button_description)
             Box(
                 modifier = Modifier
@@ -471,7 +479,7 @@ private fun TotalBalanceCard(
             )
         }
         Text(
-            text = if (visible) formatEuroCents(totalCents) else hidden,
+            text = if (visible) formatMoney(totalCents, LocalMainCurrency.current) else hidden,
             color = palette.heroOnCardPrimary,
             fontSize = if (compact) 24.sp else 34.sp,
             fontWeight = FontWeight.Bold,
@@ -480,7 +488,7 @@ private fun TotalBalanceCard(
             HeroStatPill(
                 modifier = Modifier.weight(1f),
                 label = stringResource(R.string.accounts_income_label),
-                amount = if (visible) formatSignedEuroCents(incomeCents) else hidden,
+                amount = if (visible) formatSignedMoney(incomeCents, LocalMainCurrency.current) else hidden,
                 accent = palette.heroIncomeAccent,
                 palette = palette,
                 compact = compact,
@@ -488,7 +496,7 @@ private fun TotalBalanceCard(
             HeroStatPill(
                 modifier = Modifier.weight(1f),
                 label = stringResource(R.string.accounts_expense_label),
-                amount = if (visible) formatSignedEuroCents(-expenseCents) else hidden,
+                amount = if (visible) formatSignedMoney(-expenseCents, LocalMainCurrency.current) else hidden,
                 accent = palette.heroExpenseAccent,
                 palette = palette,
                 compact = compact,
@@ -680,7 +688,7 @@ private fun AccountRow(
         }
         val hidden = stringResource(R.string.accounts_hidden_balance)
         Text(
-            text = if (visible) formatEuroCents(balanceCents) else hidden,
+            text = if (visible) formatMoney(balanceCents, account.currency) else hidden,
             color = palette.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,

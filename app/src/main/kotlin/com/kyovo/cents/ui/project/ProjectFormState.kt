@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
@@ -55,20 +56,23 @@ data class ProjectFormState(
     val thresholdPercent: Int = AlertThreshold.DEFAULT.percent,
     /** Set when an existing project is being edited instead of a new one created. */
     val editingId: ProjectId? = null,
+    /** The currency of the target (the main one): how many decimals the field takes. */
+    val currency: AccountCurrency = AccountCurrency.EUR,
 )
 {
     val isEditing: Boolean get() = editingId != null
 
     companion object
     {
-        fun creating(): ProjectFormState = ProjectFormState()
+        fun creating(currency: AccountCurrency = AccountCurrency.EUR): ProjectFormState = ProjectFormState(currency = currency)
 
-        fun editing(project: Project): ProjectFormState = ProjectFormState(
+        fun editing(project: Project, currency: AccountCurrency = AccountCurrency.EUR): ProjectFormState = ProjectFormState(
             name = project.name.value,
             emoji = project.emoji?.value,
-            targetText = project.target?.let { formatCentsForInput(it.value) }.orEmpty(),
+            targetText = project.target?.let { formatCentsForInput(it.value, currency.fractionDigits) }.orEmpty(),
             thresholdPercent = project.alertThreshold.percent,
             editingId = project.id,
+            currency = currency,
         )
     }
 
@@ -81,7 +85,7 @@ data class ProjectFormState(
     /** An edit that would break the shape of an amount (letters, a third decimal...) is dropped. */
     fun withTarget(text: String): ProjectFormState
     {
-        if (!acceptsAmountInput(text)) return this
+        if (!acceptsAmountInput(text, currency.fractionDigits)) return this
         return copy(targetText = text)
     }
 
@@ -114,7 +118,7 @@ data class ProjectFormState(
         }
 
         // Blank means "no target"; anything else must be a positive amount.
-        val parsedTarget = if (targetText.isBlank()) null else parseAmountToCents(targetText)
+        val parsedTarget = if (targetText.isBlank()) null else parseAmountToCents(targetText, fractionDigits = currency.fractionDigits)
         if (targetText.isNotBlank() && parsedTarget == null) errors += ProjectFormError.TARGET_INVALID
 
         if (errors.isNotEmpty()) return ProjectSubmission.Invalid(errors)

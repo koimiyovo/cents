@@ -82,8 +82,9 @@ fun InitialDepositFormSheet(
                 palette = palette,
                 value = form.amountText,
                 // Edits that would break the amount's shape (letters, a third decimal...) are dropped.
-                onValueChange = { if (acceptsAmountInput(it)) onFormChange(form.copy(amountText = it)) },
+                onValueChange = { if (acceptsAmountInput(it, form.currency.fractionDigits)) onFormChange(form.copy(amountText = it)) },
                 error = amountInvalid,
+                currency = form.currency,
                 focusRequester = amountFocus,
             )
             if (amountInvalid)

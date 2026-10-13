@@ -71,7 +71,9 @@ import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectOptionRows
 import com.kyovo.cents.ui.common.SelectableOptionRow
-import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.ui.common.formatSignedMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.transaction.reactsToTap
 import java.time.Instant
 import java.time.LocalDate
@@ -137,12 +139,17 @@ fun TransactionsScreen(
     val transactionsInPeriod = remember(allTransactions, periodFrom, periodTo) {
         transactionsWithinRange(allTransactions, periodFrom, periodTo)
     }
-    val totalIncomeCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.INCOME }
+    // The totals are in the main currency: without exchange rates, only the accounts held in it count.
+    val mainCurrency = LocalMainCurrency.current
+    val transactionsInMainCurrency = remember(transactionsInPeriod, accountsById, mainCurrency) {
+        transactionsInPeriod.filter { accountsById[it.accountId]?.currency == mainCurrency }
+    }
+    val totalIncomeCents = remember(transactionsInMainCurrency) {
+        transactionsInMainCurrency.filter { it.category == TransactionCategory.INCOME }
             .sumOf { it.amount.value }
     }
-    val totalExpenseCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.EXPENSE }
+    val totalExpenseCents = remember(transactionsInMainCurrency) {
+        transactionsInMainCurrency.filter { it.category == TransactionCategory.EXPENSE }
             .sumOf { it.amount.value }
     }
     val netCents = totalIncomeCents - totalExpenseCents
@@ -200,7 +207,8 @@ fun TransactionsScreen(
             palette,
             expenseCents = totalExpenseCents,
             incomeCents = totalIncomeCents,
-            netCents = netCents
+            netCents = netCents,
+            currency = mainCurrency,
         )
         SearchField(palette, searchQuery) { searchQuery = it }
         Text(
@@ -458,28 +466,29 @@ internal fun StatsRow(
     palette: AccountsPalette,
     expenseCents: Long,
     incomeCents: Long,
-    netCents: Long
+    netCents: Long,
+    currency: AccountCurrency,
 )
 {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_expense_label),
-            amount = formatSignedEuroCents(-expenseCents),
+            amount = formatSignedMoney(-expenseCents, currency),
             accent = palette.heroExpenseAccent,
             palette = palette,
         )
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_income_label),
-            amount = formatSignedEuroCents(incomeCents),
+            amount = formatSignedMoney(incomeCents, currency),
             accent = palette.heroIncomeAccent,
             palette = palette,
         )
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_net_label),
-            amount = formatSignedEuroCents(netCents),
+            amount = formatSignedMoney(netCents, currency),
             accent = palette.statusActiveColor,
             palette = palette,
         )
@@ -763,6 +772,8 @@ internal fun DayGroup(
     onTransactionClick: ((Transaction) -> Unit)? = null,
     // Left empty on a project's own page, where every row is in that project and repeating it would be noise.
     projectsById: Map<ProjectId, Project> = emptyMap(),
+    // The currency of a row whose account is not looked up (the account's own page: every row is in it).
+    fallbackCurrency: AccountCurrency? = null,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -776,14 +787,19 @@ internal fun DayGroup(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            val dayNetCents = transactions.sumOf { it.signedAmount }
-            Text(
-                text = formatSignedEuroCents(dayNetCents),
-                color = palette.textMuted,
-                fontSize = 13.sp
-            )
+            // A day's net only means something in one currency: a day spread over several shows none.
+            val dayCurrencies = transactions.map { accountsById[it.accountId]?.currency ?: fallbackCurrency }.distinct()
+            val dayCurrency = dayCurrencies.singleOrNull() ?: LocalMainCurrency.current.takeIf { dayCurrencies.isEmpty() }
+            if (dayCurrency != null)
+            {
+                Text(
+                    text = formatSignedMoney(transactions.sumOf { it.signedAmount }, dayCurrency),
+                    color = palette.textMuted,
+                    fontSize = 13.sp
+                )
+            }
         }
-        TransactionListCard(palette, transactions, accountsById, subcategoriesById, projectsById, onTransactionClick)
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, projectsById, onTransactionClick, fallbackCurrency)
     }
 }
 
@@ -799,6 +815,7 @@ private fun TransactionListCard(
     subcategoriesById: Map<SubcategoryId, Subcategory>,
     projectsById: Map<ProjectId, Project>,
     onTransactionClick: ((Transaction) -> Unit)?,
+    fallbackCurrency: AccountCurrency?,
 )
 {
     Column(
@@ -812,6 +829,7 @@ private fun TransactionListCard(
                 palette = palette,
                 transaction = transaction,
                 account = accountsById[transaction.accountId],
+                currency = accountsById[transaction.accountId]?.currency ?: fallbackCurrency ?: LocalMainCurrency.current,
                 subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
                 project = transaction.projectId?.let(projectsById::get),
                 // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
@@ -838,6 +856,7 @@ private fun TransactionRow(
     palette: AccountsPalette,
     transaction: Transaction,
     account: Account?,
+    currency: AccountCurrency,
     subcategory: Subcategory?,
     project: Project?,
     onClick: (() -> Unit)?,
@@ -889,7 +908,7 @@ private fun TransactionRow(
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = formatSignedEuroCents(transaction.signedAmount),
+                text = formatSignedMoney(transaction.signedAmount, currency),
                 color = if (transaction.signedAmount >= 0) palette.heroIncomeAccent else palette.heroExpenseAccent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,

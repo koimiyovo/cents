@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.port.input.OpenAccountUseCase
 import com.kyovo.cents.domain.port.input.UpdateAccountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,10 +38,13 @@ class AccountFormViewModel(
     private val _uiState = MutableStateFlow(AccountFormUiState())
     val uiState: StateFlow<AccountFormUiState> = _uiState.asStateFlow()
 
-    /** Opens an empty form. Called when the user asks for a new account, never on recomposition. */
-    fun open()
+    /**
+     * Opens an empty form, in [currency] (the main one, which the user can change in the form). Called when the
+     * user asks for a new account, never on recomposition.
+     */
+    fun open(currency: AccountCurrency = DEFAULT_ACCOUNT_CURRENCY)
     {
-        _uiState.value = AccountFormUiState(form = AccountFormState())
+        _uiState.value = AccountFormUiState(form = AccountFormState(currency = currency))
     }
 
     /** Opens the form pre-filled with [account]'s values, to change them. */

@@ -1,5 +1,6 @@
 package com.kyovo.cents.notification
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,7 +13,7 @@ import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.port.output.RecurringTransactionNotifier
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
 import java.time.LocalDate
 
 private const val CHANNEL_ID = "recurring_expenses"
@@ -42,7 +43,7 @@ class SystemRecurringTransactionNotifier(
         NotificationManagerCompat.from(context).createNotificationChannel(channel)
     }
 
-    override suspend fun notify(recurringTransaction: RecurringTransaction)
+    override suspend fun notify(recurringTransaction: RecurringTransaction, currency: AccountCurrency)
     {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
         {
@@ -58,7 +59,7 @@ class SystemRecurringTransactionNotifier(
                 context.getString(
                     if (income) R.string.recurring_income_body else R.string.recurring_expense_body,
                     recurringTransaction.title.value,
-                    formatEuroCents(recurringTransaction.amount.value),
+                    formatMoney(recurringTransaction.amount.value, currency),
                 ),
             )
             .setOnlyAlertOnce(true)

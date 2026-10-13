@@ -10,14 +10,9 @@ import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.port.input.OpenAccountCommand
 import com.kyovo.cents.domain.port.input.UpdateAccountCommand
 import com.kyovo.cents.ui.common.parseAmountToCents
-import java.util.Currency
 
-/**
- * Every account is opened in euros for now: amounts are formatted as euros throughout the UI, so
- * offering another currency here would display its balance with the wrong symbol. A currency picker
- * comes with the exchange-rate work.
- */
-val DEFAULT_ACCOUNT_CURRENCY = AccountCurrency(Currency.getInstance("EUR"))
+/** The currency a form starts in when the caller says nothing: the app opens it with the main currency instead. */
+val DEFAULT_ACCOUNT_CURRENCY = AccountCurrency.EUR
 
 enum class AccountFormError
 {
@@ -48,6 +43,8 @@ data class AccountFormState(
     val initialAmountText: String = "",
     val description: String = "",
     val editingId: AccountId? = null,
+    /** Chosen when the account is opened (the main currency is proposed), fixed afterwards. */
+    val currency: AccountCurrency = DEFAULT_ACCOUNT_CURRENCY,
 )
 {
     companion object
@@ -60,11 +57,30 @@ data class AccountFormState(
                 type = account.type,
                 description = account.description?.value.orEmpty(),
                 editingId = account.id,
+                currency = account.currency,
             )
         }
     }
 
     val isEditing: Boolean get() = editingId != null
+
+    /**
+     * Another currency for the new account. What was typed as the opening balance is kept, cut to the number of
+     * decimals the new currency has (switching to the CFA franc drops the cents).
+     */
+    fun withCurrency(newCurrency: AccountCurrency): AccountFormState
+    {
+        if (isEditing) return this
+        val digits = newCurrency.fractionDigits
+        val separator = initialAmountText.indexOfFirst { it == ',' || it == '.' }
+        val kept = when
+        {
+            separator == -1 -> initialAmountText
+            digits == 0 -> initialAmountText.substring(0, separator)
+            else -> initialAmountText.take(separator + 1 + digits)
+        }
+        return copy(currency = newCurrency, initialAmountText = kept)
+    }
 
     fun submit(): AccountFormSubmission
     {
@@ -88,7 +104,7 @@ data class AccountFormState(
 
         // An account may start empty: a blank field means 0, and an explicit 0 is fine too.
         val initialCents =
-            if (initialAmountText.isBlank()) 0L else parseAmountToCents(initialAmountText, allowZero = true)
+            if (initialAmountText.isBlank()) 0L else parseAmountToCents(initialAmountText, allowZero = true, fractionDigits = currency.fractionDigits)
         if (initialCents == null) errors += AccountFormError.INITIAL_AMOUNT_INVALID
 
         if (errors.isNotEmpty() || initialCents == null) return AccountFormSubmission.Invalid(errors)
@@ -97,7 +113,7 @@ data class AccountFormState(
             OpenAccountCommand(
                 name = AccountName(name),
                 type = type,
-                currency = DEFAULT_ACCOUNT_CURRENCY,
+                currency = currency,
                 initialAmount = Money(initialCents),
                 description = AccountDescription.of(description),
             ),

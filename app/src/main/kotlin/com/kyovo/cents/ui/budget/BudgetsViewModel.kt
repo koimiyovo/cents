@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.InvalidBudgetSubcategoryException
@@ -90,6 +91,8 @@ class BudgetsViewModel(
     getBudgetCalendar: GetBudgetCalendarUseCase,
     private val setBudget: SetBudgetUseCase,
     private val clock: Clock = Clock.systemDefaultZone(),
+    // The currency limits are set in: the main one.
+    private val mainCurrency: StateFlow<AccountCurrency> = MutableStateFlow(AccountCurrency.EUR),
 ) : ViewModel()
 {
     /** What the user chose: the month, the account filter, the tab and the form. Not what is read from storage. */
@@ -226,7 +229,7 @@ class BudgetsViewModel(
     {
         chosen.update {
             it.copy(
-                form = BudgetFormState.setting(row, it.month ?: currentCycle.value),
+                form = BudgetFormState.setting(row, it.month ?: currentCycle.value, mainCurrency.value),
                 error = null
             )
         }

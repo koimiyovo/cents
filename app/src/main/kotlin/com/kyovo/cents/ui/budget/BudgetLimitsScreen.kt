@@ -27,7 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.ui.common.ChevronDownIcon
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.BackButton
 import com.kyovo.cents.ui.home.DarkAccountsPalette
@@ -156,7 +157,7 @@ private fun LimitRow(palette: AccountsPalette, row: BudgetRow, onClick: () -> Un
                 else
                     stringResource(
                         R.string.budget_limits_row_set,
-                        formatEuroCents(progress.limit.value),
+                        formatMoney(progress.limit.value, LocalMainCurrency.current),
                         progress.alertThreshold.percent,
                     ),
                 color = if (progress == null) palette.textMuted else palette.textSecondary,

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.recurring
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.AccountNotFoundException
@@ -53,16 +54,21 @@ class RecurringTransactionsViewModel(
     val uiState: StateFlow<RecurringTransactionsUiState> = _uiState.asStateFlow()
 
     /** Opens an empty form for a new rule, preselecting [accountId] when there is one obvious choice. */
-    fun openCreate(accountId: AccountId?, today: LocalDate = LocalDate.now())
+    fun openCreate(
+        accountId: AccountId?,
+        today: LocalDate = LocalDate.now(),
+        currency: AccountCurrency = AccountCurrency.EUR,
+    )
     {
-        _uiState.value = RecurringTransactionsUiState(form = RecurringTransactionFormState.creating(accountId, today))
+        _uiState.value =
+            RecurringTransactionsUiState(form = RecurringTransactionFormState.creating(accountId, today, currency))
     }
 
     /** Opens the form pre-filled with [row]'s rule, to change it. [subcategory] is the one it points to. */
     fun openForEdit(row: RecurringTransactionRow, subcategory: Subcategory?)
     {
         _uiState.value = RecurringTransactionsUiState(
-            form = RecurringTransactionFormState.editing(row.recurringTransaction, subcategory, row.accountName),
+            form = RecurringTransactionFormState.editing(row.recurringTransaction, subcategory, row.accountName, row.currency),
         )
     }
 

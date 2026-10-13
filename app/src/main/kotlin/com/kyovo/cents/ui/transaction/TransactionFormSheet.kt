@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -102,6 +103,8 @@ fun TransactionFormSheet(
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val selectable = remember(accounts, form.originalAccountId) { form.accountChoices(accounts) }
+    // The amount is written in the chosen account's currency (the euro while none is chosen).
+    val currency = accounts.firstOrNull { it.id == form.accountId }?.currency ?: AccountCurrency.EUR
 
     // Opens straight on the details when the edited transaction already has some.
     var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
@@ -110,7 +113,7 @@ fun TransactionFormSheet(
     val endDateFormatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     val errors = if (showErrors)
     {
-        (form.submit() as? FormSubmission.Invalid)?.errors.orEmpty()
+        (form.submit(fractionDigits = accounts.firstOrNull { it.id == form.accountId }?.currency?.fractionDigits ?: 2) as? FormSubmission.Invalid)?.errors.orEmpty()
     } else
     {
         emptySet()
@@ -166,8 +169,9 @@ fun TransactionFormSheet(
                 palette = palette,
                 value = form.amountText,
                 // Edits that would break the amount's shape (letters, a third decimal...) are dropped.
-                onValueChange = { if (acceptsAmountInput(it)) onFormChange(form.copy(amountText = it)) },
+                onValueChange = { if (acceptsAmountInput(it, currency.fractionDigits)) onFormChange(form.copy(amountText = it)) },
                 error = FormError.AMOUNT_INVALID in errors,
+                currency = currency,
                 focusRequester = amountFocus,
             )
             FieldError(palette, FormError.AMOUNT_INVALID in errors, FormError.AMOUNT_INVALID)
@@ -319,6 +323,7 @@ fun TransactionFormSheet(
                             SubmitFailure.ACCOUNT_NOT_FOUND       -> R.string.transaction_form_failure_account_not_found
                             SubmitFailure.ARCHIVED_ACCOUNT        -> R.string.transaction_form_failure_archived
                             SubmitFailure.SAME_ACCOUNT            -> R.string.transaction_form_error_same_account
+                            SubmitFailure.DIFFERENT_CURRENCIES    -> R.string.transaction_form_error_different_currencies
                             SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
                             SubmitFailure.PROJECT_NOT_FOUND       -> R.string.transaction_form_failure_project_gone
                         },

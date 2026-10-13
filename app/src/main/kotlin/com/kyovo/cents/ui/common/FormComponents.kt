@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 
 // Field building blocks shared by the bottom-sheet forms (new transaction, new account).
@@ -39,6 +40,7 @@ internal fun AmountField(
     value: String,
     onValueChange: (String) -> Unit,
     error: Boolean,
+    currency: AccountCurrency,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     textSize: TextUnit = 32.sp,
@@ -71,7 +73,7 @@ internal fun AmountField(
                     if (value.isEmpty())
                     {
                         Text(
-                            text = stringResource(R.string.transaction_form_amount_placeholder),
+                            text = if (currency.fractionDigits == 0) "0" else stringResource(R.string.transaction_form_amount_placeholder),
                             color = palette.textMuted,
                             fontSize = textSize,
                             fontWeight = FontWeight.Bold,
@@ -82,7 +84,7 @@ internal fun AmountField(
             },
         )
         Spacer(Modifier.width(8.dp))
-        Text(text = "€", color = palette.textSecondary, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+        Text(text = currency.value.getSymbol(java.util.Locale.FRANCE), color = palette.textSecondary, fontSize = 24.sp, fontWeight = FontWeight.Medium)
     }
 }
 

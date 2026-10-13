@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.kyovo.cents.R
-import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.ui.common.formatSignedMoney
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DestructiveButton
 import com.kyovo.cents.ui.home.DialogCancelButton
@@ -53,7 +53,7 @@ internal fun DeleteTransactionDialog(
                 text = stringResource(
                     R.string.transaction_delete_body,
                     transaction.title,
-                    formatSignedEuroCents(transaction.signedAmountCents),
+                    formatSignedMoney(transaction.signedAmountCents, transaction.currency),
                 ),
                 color = palette.textSecondary,
                 fontSize = 14.sp,

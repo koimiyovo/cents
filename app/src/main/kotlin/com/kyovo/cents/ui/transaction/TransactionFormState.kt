@@ -115,14 +115,20 @@ data class TransactionFormState(
          * [subcategory] and [project] are the ones the transaction points to (null when it has none). They are
          * required arguments, not defaults: forgetting one would silently drop it on saving.
          */
-        fun editing(transaction: Transaction, subcategory: Subcategory?, project: Project?): TransactionFormState
+        fun editing(
+            transaction: Transaction,
+            subcategory: Subcategory?,
+            project: Project?,
+            // The currency of the account the transaction sits on: its amount is shown with that many decimals.
+            fractionDigits: Int = 2,
+        ): TransactionFormState
         {
             require(canEditTransaction(transaction)) { "Only an income or an expense can be edited" }
             return TransactionFormState(
                 type = if (transaction.category == TransactionCategory.INCOME) TransactionFormType.INCOME
                 else TransactionFormType.EXPENSE,
                 accountId = transaction.accountId,
-                amountText = formatCentsForInput(transaction.amount.value),
+                amountText = formatCentsForInput(transaction.amount.value, fractionDigits),
                 title = transaction.title.value,
                 subcategory = subcategory,
                 description = transaction.description?.value.orEmpty(),
@@ -153,11 +159,15 @@ data class TransactionFormState(
         }
     }
 
-    fun submit(zone: ZoneId = ZoneId.systemDefault()): FormSubmission
+    /**
+     * [fractionDigits] is the number of decimals of the chosen account's currency (2 for the euro, 0 for the
+     * CFA franc): what the amount is read with.
+     */
+    fun submit(zone: ZoneId = ZoneId.systemDefault(), fractionDigits: Int = 2): FormSubmission
     {
         val errors = mutableSetOf<FormError>()
 
-        val amountCents = parseAmountToCents(amountText)
+        val amountCents = parseAmountToCents(amountText, fractionDigits = fractionDigits)
         if (amountCents == null) errors += FormError.AMOUNT_INVALID
         if (title.isBlank()) errors += FormError.TITLE_REQUIRED
         if (accountId == null) errors += FormError.ACCOUNT_REQUIRED
@@ -401,13 +411,16 @@ data class TransactionFormState(
     fun sourceChoices(selectable: List<Account>): List<Account>
     {
         if (type != TransactionFormType.TRANSFER) return selectable
-        return selectable.filter { it.id != toAccountId }
+        // Without exchange rates, money only moves between accounts of the same currency.
+        val currency = selectable.firstOrNull { it.id == toAccountId }?.currency
+        return selectable.filter { it.id != toAccountId && (currency == null || it.currency == currency) }
     }
 
     /** Accounts a transfer can go to: every selectable one except the chosen source. */
     fun destinationChoices(selectable: List<Account>): List<Account>
     {
-        return selectable.filter { it.id != accountId }
+        val currency = selectable.firstOrNull { it.id == accountId }?.currency
+        return selectable.filter { it.id != accountId && (currency == null || it.currency == currency) }
     }
 }
 

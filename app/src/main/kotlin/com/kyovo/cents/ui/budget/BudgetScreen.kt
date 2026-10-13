@@ -45,7 +45,8 @@ import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.HomeTopBar
@@ -264,8 +265,8 @@ private fun SummaryCard(palette: AccountsPalette, summary: BudgetSummary)
         Text(
             text = stringResource(
                 R.string.budget_summary_spent_of,
-                formatEuroCents(summary.totalSpent.value),
-                formatEuroCents(summary.totalLimit.value),
+                formatMoney(summary.totalSpent.value, LocalMainCurrency.current),
+                formatMoney(summary.totalLimit.value, LocalMainCurrency.current),
             ),
             color = palette.heroOnCardPrimary,
             fontSize = 18.sp,
@@ -278,9 +279,9 @@ private fun SummaryCard(palette: AccountsPalette, summary: BudgetSummary)
         )
         Text(
             text = if (summary.isOverspent)
-                stringResource(R.string.budget_summary_over, formatEuroCents(-summary.remaining))
+                stringResource(R.string.budget_summary_over, formatMoney(-summary.remaining, LocalMainCurrency.current))
             else
-                stringResource(R.string.budget_summary_left, formatEuroCents(summary.remaining)),
+                stringResource(R.string.budget_summary_left, formatMoney(summary.remaining, LocalMainCurrency.current)),
             color = color,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -340,8 +341,8 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
             Text(
                 text = stringResource(
                     R.string.budget_row_spent_of,
-                    formatEuroCents(progress.spent.value),
-                    formatEuroCents(progress.limit.value),
+                    formatMoney(progress.spent.value, LocalMainCurrency.current),
+                    formatMoney(progress.limit.value, LocalMainCurrency.current),
                 ),
                 color = palette.textMuted,
                 fontSize = 13.sp,
@@ -351,8 +352,8 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
             Text(
                 text = when (remaining)
                 {
-                    is BudgetRemaining.Left -> stringResource(R.string.budget_row_left, formatEuroCents(remaining.cents))
-                    is BudgetRemaining.Over -> stringResource(R.string.budget_row_over, formatEuroCents(remaining.cents))
+                    is BudgetRemaining.Left -> stringResource(R.string.budget_row_left, formatMoney(remaining.cents, LocalMainCurrency.current))
+                    is BudgetRemaining.Over -> stringResource(R.string.budget_row_over, formatMoney(remaining.cents, LocalMainCurrency.current))
                     null                    -> ""
                 },
                 color = if (remaining is BudgetRemaining.Over) palette.error else palette.textSecondary,
@@ -366,7 +367,7 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
         if (projection != null && projection.isPacingToExceed && row.status != BudgetStatus.OVER)
         {
             Text(
-                text = stringResource(R.string.budget_row_pacing_to_exceed, formatEuroCents(projection.projectedSpend.value - projection.limit.value)),
+                text = stringResource(R.string.budget_row_pacing_to_exceed, formatMoney(projection.projectedSpend.value - projection.limit.value, LocalMainCurrency.current)),
                 color = palette.iconToneGold,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
@@ -473,7 +474,7 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
             }
         }
         Text(
-            text = stringResource(R.string.budget_overview_total_spent, formatEuroCents(breakdown.total.value)),
+            text = stringResource(R.string.budget_overview_total_spent, formatMoney(breakdown.total.value, LocalMainCurrency.current)),
             color = palette.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -514,7 +515,7 @@ internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: Spen
         Column(horizontalAlignment = Alignment.End)
         {
             Text(
-                text = formatEuroCents(slice.amount.value),
+                text = formatMoney(slice.amount.value, LocalMainCurrency.current),
                 color = palette.textPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
@@ -562,7 +563,7 @@ private fun BudgetTrendTab(palette: AccountsPalette, trend: SpendingTrend)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp))
     {
         Text(
-            text = stringResource(R.string.budget_trend_average, formatEuroCents(trend.average.value)),
+            text = stringResource(R.string.budget_trend_average, formatMoney(trend.average.value, LocalMainCurrency.current)),
             color = palette.textSecondary,
             fontSize = 14.sp,
         )
@@ -585,7 +586,7 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
     {
         Text(
-            text = formatEuroCents(bar.total.value),
+            text = formatMoney(bar.total.value, LocalMainCurrency.current),
             color = if (bar.isSelected) palette.textPrimary else palette.textMuted,
             fontSize = 11.sp,
             fontWeight = if (bar.isSelected) FontWeight.Bold else FontWeight.Medium,

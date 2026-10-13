@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.recurring
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.RecurrenceFrequency
@@ -11,6 +12,7 @@ data class RecurringTransactionRow(
     val recurringTransaction: RecurringTransaction,
     val accountName: String,
     val subcategoryName: String?,
+    val currency: AccountCurrency,
 )
 {
     /** Positive for an income, negative for an expense: which way the money goes, like the transactions list. */
@@ -34,12 +36,15 @@ fun recurringTransactionRows(
 ): List<RecurringTransactionRow>
 {
     val accountNameById = accounts.associate { it.id to it.name.value }
+    val currencyById = accounts.associate { it.id to it.currency }
     val subcategoryNameById = subcategories.associate { it.id to it.name.value }
     return recurringTransactions.map { rule ->
         RecurringTransactionRow(
             recurringTransaction = rule,
             accountName = accountNameById[rule.accountId].orEmpty(),
             subcategoryName = rule.subcategoryId?.let { subcategoryNameById[it] },
+            // A rule on an account that is gone has no row to show anyway: the euro is only a fallback.
+            currency = currencyById[rule.accountId] ?: AccountCurrency.EUR,
         )
     }
 }

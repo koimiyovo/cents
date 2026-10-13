@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.common
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -27,7 +28,7 @@ class MoneyFormatTest
     )
     fun `writes cents as euros with a comma and two decimals`(cents: Long, expected: String)
     {
-        assertThat(plain(formatEuroCents(cents))).isEqualTo(expected)
+        assertThat(plain(formatMoney(cents, AccountCurrency.EUR))).isEqualTo(expected)
     }
 
     @ParameterizedTest
@@ -40,7 +41,7 @@ class MoneyFormatTest
     )
     fun `groups the thousands`(cents: Long, expected: String)
     {
-        assertThat(plain(formatEuroCents(cents))).isEqualTo(expected)
+        assertThat(plain(formatMoney(cents, AccountCurrency.EUR))).isEqualTo(expected)
     }
 
     // The amount fields take nine digits before the comma at most: that is the largest amount that can
@@ -48,13 +49,13 @@ class MoneyFormatTest
     @Test
     fun `the largest amount the app accepts is written exactly`()
     {
-        assertThat(plain(formatEuroCents(99_999_999_999L))).isEqualTo("999 999 999,99 €")
+        assertThat(plain(formatMoney(99_999_999_999L, AccountCurrency.EUR))).isEqualTo("999 999 999,99 €")
     }
 
     @Test
     fun `puts the euro sign after the amount`()
     {
-        val text = plain(formatEuroCents(1_250))
+        val text = plain(formatMoney(1_250, AccountCurrency.EUR))
 
         assertThat(text).endsWith(" €")
         assertThat(text).doesNotContain("$")
@@ -63,7 +64,7 @@ class MoneyFormatTest
     @Test
     fun `a negative amount is written with a minus sign`()
     {
-        assertThat(plain(formatEuroCents(-1_250))).isEqualTo("-12,50 €")
+        assertThat(plain(formatMoney(-1_250, AccountCurrency.EUR))).isEqualTo("-12,50 €")
     }
 
     @ParameterizedTest
@@ -77,33 +78,33 @@ class MoneyFormatTest
     )
     fun `a signed amount always shows its sign`(cents: Long, expected: String)
     {
-        assertThat(plain(formatSignedEuroCents(cents))).isEqualTo(expected)
+        assertThat(plain(formatSignedMoney(cents, AccountCurrency.EUR))).isEqualTo(expected)
     }
 
     // Zero is neither a gain nor a loss: what a total shows when nothing happened is "0,00 €".
     @Test
     fun `zero is written without a sign`()
     {
-        assertThat(plain(formatSignedEuroCents(0))).isEqualTo("0,00 €")
+        assertThat(plain(formatSignedMoney(0, AccountCurrency.EUR))).isEqualTo("0,00 €")
     }
 
     @Test
     fun `zero is written like the plain amount`()
     {
-        assertThat(formatSignedEuroCents(0)).isEqualTo(formatEuroCents(0))
+        assertThat(formatSignedMoney(0, AccountCurrency.EUR)).isEqualTo(formatMoney(0, AccountCurrency.EUR))
     }
 
     @Test
     fun `a signed amount is its sign followed by the plain amount`()
     {
-        assertThat(formatSignedEuroCents(-214_025)).isEqualTo("-" + formatEuroCents(214_025))
-        assertThat(formatSignedEuroCents(214_025)).isEqualTo("+" + formatEuroCents(214_025))
+        assertThat(formatSignedMoney(-214_025, AccountCurrency.EUR)).isEqualTo("-" + formatMoney(214_025, AccountCurrency.EUR))
+        assertThat(formatSignedMoney(214_025, AccountCurrency.EUR)).isEqualTo("+" + formatMoney(214_025, AccountCurrency.EUR))
     }
 
     @Test
     fun `an amount and its opposite differ only by the sign`()
     {
-        assertThat(formatSignedEuroCents(-99_999_999_999L).substring(1))
-            .isEqualTo(formatSignedEuroCents(99_999_999_999L).substring(1))
+        assertThat(formatSignedMoney(-99_999_999_999L, AccountCurrency.EUR).substring(1))
+            .isEqualTo(formatSignedMoney(99_999_999_999L, AccountCurrency.EUR).substring(1))
     }
 }

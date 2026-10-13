@@ -1,5 +1,13 @@
 package com.kyovo.cents
 
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import com.kyovo.cents.domain.model.AccountCurrency
 import android.content.Context
 import com.kyovo.cents.application.usecase.SetDefaultBudgetStartDayService
 import com.kyovo.cents.application.usecase.SetBudgetCycleStartService
@@ -23,6 +31,7 @@ import com.kyovo.cents.application.usecase.GetProjectProgressService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
+import com.kyovo.cents.application.usecase.MainCurrencyTransactionRepository
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
 import com.kyovo.cents.application.usecase.ListProjectsService
 import com.kyovo.cents.application.usecase.ListRecurringTransactionsService
@@ -103,6 +112,10 @@ import com.kyovo.cents.ui.backup.AndroidBackupFolder
 import com.kyovo.cents.ui.backup.BackupFiles
 import com.kyovo.cents.ui.backup.DataStoreAutomaticBackupSettings
 import com.kyovo.cents.ui.backup.automaticBackupDataStore
+import com.kyovo.cents.domain.port.output.MainCurrencyRepository
+import com.kyovo.cents.domain.port.output.TransactionRepository
+import com.kyovo.cents.ui.settings.DataStoreMainCurrency
+import com.kyovo.cents.ui.settings.mainCurrencyDataStore
 import com.kyovo.cents.notification.SystemBudgetAlertNotifier
 import com.kyovo.cents.notification.SystemRecurringTransactionNotifier
 import java.time.Clock
@@ -126,6 +139,18 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     private val projectRepository = persistence.projects
     private val transactionIdGenerator = UuidTransactionIdGenerator()
     private val unitOfWork = persistence.unitOfWork
+
+    val mainCurrency: MainCurrencyRepository = DataStoreMainCurrency(context.mainCurrencyDataStore)
+
+    // The main currency as a value, for the view models that need it when a form opens (the euro until it is read).
+    val mainCurrencyState: StateFlow<AccountCurrency> = mainCurrency.observe()
+        .map { it ?: AccountCurrency.EUR }
+        .stateIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Eagerly, AccountCurrency.EUR)
+
+    // What the totals (budgets, spending, projects) read: only the accounts held in the main currency, since
+    // without exchange rates amounts of different currencies cannot be added.
+    private val totalsTransactionRepository: TransactionRepository =
+        MainCurrencyTransactionRepository(transactionRepository, accountRepository, mainCurrency)
 
     val listAccounts: ListAccountsUseCase = ListAccountsService(accountRepository)
     val listArchivedAccounts: ListArchivedAccountsUseCase =
@@ -172,7 +197,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     // device's), so an expense lands in the same month for both.
     val getBudgetProgress: GetBudgetProgressUseCase =
         GetBudgetProgressService(
-            budgetRepository, transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault()
+            budgetRepository, totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault()
         )
     val getBudgetCalendar: GetBudgetCalendarUseCase = GetBudgetCalendarService(persistence.budgetCalendar)
     val setDefaultBudgetStartDay: SetDefaultBudgetStartDayUseCase = SetDefaultBudgetStartDayService(persistence.budgetCalendar)
@@ -186,9 +211,9 @@ class AppContainer(context: Context, persistence: RoomPersistence)
             SystemBudgetAlertNotifier(context, subcategoryRepository)
         )
     val getSpendingBreakdown: GetSpendingBreakdownUseCase =
-        GetSpendingBreakdownService(transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
+        GetSpendingBreakdownService(totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val getSpendingTrend: GetSpendingTrendUseCase =
-        GetSpendingTrendService(transactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
+        GetSpendingTrendService(totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val openAccount: OpenAccountUseCase = OpenAccountService(
         accountRepository,
         UuidAccountIdGenerator(),
@@ -219,7 +244,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     val deleteProject: DeleteProjectUseCase =
         DeleteProjectService(projectRepository, transactionRepository, unitOfWork)
     val getProjectProgress: GetProjectProgressUseCase =
-        GetProjectProgressService(projectRepository, transactionRepository)
+        GetProjectProgressService(projectRepository, totalsTransactionRepository)
 
     val listRecurringTransactions: ListRecurringTransactionsUseCase =
         ListRecurringTransactionsService(recurringTransactionRepository)
@@ -281,7 +306,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
 
     // The automatic backup: the chosen folder lives in DataStore (the screen will read and change it
     // through this same object), the copies are written with the content resolver.
-    val automaticBackupSettings = DataStoreAutomaticBackupSettings(context.automaticBackupDataStore)
+    val automaticBackupSettings =DataStoreAutomaticBackupSettings(context.automaticBackupDataStore)
     val runAutomaticBackup: RunAutomaticBackupUseCase = AutomaticBackupService(
         exportData,
         automaticBackupSettings,
