@@ -51,6 +51,22 @@ class SchemaGuardTest
             .isEqualTo(V1_IDENTITY_HASH)
     }
 
+    // Version 7 (the budget calendar) is installed on phones with the released app: a promise from now on.
+    @Test
+    fun `version 7 of the schema is still the one that was installed`()
+    {
+        val file = schemaFiles[7] ?: error("schemas/.../7.json is missing: it must stay in git")
+
+        assertThat(identityHashOf(file))
+            .describedAs(
+                "The schema of version 7 changed, but version 7 may be installed on a real phone. Do not edit " +
+                    "the entities of an installed version: restore schemas/.../7.json from git, undo the change, " +
+                    "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+            )
+            .isEqualTo(V7_IDENTITY_HASH)
+    }
+
     // Version 6 (the projects) is a promise too since version 7 was made a version of its own.
     @Test
     fun `version 6 of the schema is still the one that was installed`()
@@ -120,5 +136,6 @@ class SchemaGuardTest
         const val V1_IDENTITY_HASH = "6443675907e21e5be77fbe107eff03cc"
         const val V5_IDENTITY_HASH = "959f22002575ed2103f61203f7ef5c9d"
         const val V6_IDENTITY_HASH = "ad2200012b41c2ed01ec67a56d4409ac"
+        const val V7_IDENTITY_HASH = "77a9917cff57f4806915fa3c1f84dfd0"
     }
 }

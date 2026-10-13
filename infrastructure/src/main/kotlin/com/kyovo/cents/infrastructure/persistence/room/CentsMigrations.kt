@@ -178,6 +178,24 @@ object CentsMigrations
         )
     }
 
+    /**
+     * Version 8 adds the cache of the exchange rates: one new, empty table, so nothing existing is touched, and
+     * until the first fetch the app converts nothing. The SQL is the one Room exported for version 8
+     * (`schemas/.../8.json`), word for word.
+     */
+    val MIGRATION_7_8 = Migration(7, 8)
+    { connection ->
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `exchange_rates` (" +
+                    "`id` INTEGER NOT NULL, " +
+                    "`epochDay` INTEGER NOT NULL, " +
+                    "`rates` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`id`))"
+        )
+    }
+
     val ALL: List<Migration> =
-        listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+        listOf(
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+        )
 }
