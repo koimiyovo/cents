@@ -62,6 +62,7 @@ class SystemRecurringTransactionNotifier(
                 ),
             )
             .setOnlyAlertOnce(true)
+            .setContentIntent(openAppPendingIntent(context, NotificationTarget.Transactions))
             .setAutoCancel(true)
             .build()
 

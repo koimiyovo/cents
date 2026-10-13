@@ -18,3 +18,8 @@ local.properties
 
 # Personal Claude context (never versioned)
 CLAUDE.local.md
+
+# Release signing (never versioned)
+keystore.properties
+*.jks
+*.keystore

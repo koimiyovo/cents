@@ -57,6 +57,7 @@ import com.kyovo.cents.domain.exception.DuplicateAccountNameException
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Transaction
+import com.kyovo.cents.notification.NotificationTarget
 import com.kyovo.cents.domain.port.input.ArchiveAccountUseCase
 import com.kyovo.cents.domain.port.input.DeleteAccountUseCase
 import com.kyovo.cents.domain.port.input.GetAccountBalanceUseCase
@@ -156,6 +157,8 @@ fun HomeScreen(
     projectsViewModel: ProjectsViewModel,
     dataBackupViewModel: DataBackupViewModel,
     automaticBackupViewModel: AutomaticBackupViewModel,
+    notificationTarget: NotificationTarget? = null,
+    onNotificationTargetHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
 )
 {
@@ -396,6 +399,29 @@ fun HomeScreen(
                     snackbarHostState.showSnackbar(resources.getString(backupResultMessage(it)))
                 }
             }
+    }
+
+    // A tapped notification: leave whatever is open (a settings screen, an account page) and show the tab it
+    // is about. Held by the activity until shown, so it also works when the app was not running.
+    LaunchedEffect(notificationTarget)
+    {
+        val target = notificationTarget ?: return@LaunchedEffect
+        destination = HomeDestination.Tabs
+        openedAccountUuid = null
+        openedProjectUuid = null
+        projectOpenedFromTab = false
+        analysedProjectUuid = null
+        when (target)
+        {
+            NotificationTarget.Budget ->
+            {
+                budgetSection = BudgetSection.MONTH
+                pagerState.scrollToPage(HomeTab.Budget.ordinal)
+            }
+
+            NotificationTarget.Transactions -> pagerState.scrollToPage(HomeTab.Transactions.ordinal)
+        }
+        onNotificationTargetHandled()
     }
 
     // After an import everything the screens pointed to may be gone (the opened account, the project being
