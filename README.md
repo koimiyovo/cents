@@ -82,15 +82,19 @@ The user interface is in French.
   last five.
 - Export the transactions as **CSV** for a spreadsheet (French format; it cannot be re-imported).
 - The onboarding is shown once.
-- Amounts are integers in cents (never floating point), in euros.
+- Amounts are integers in the smallest unit of their currency (never floating point): cents for the euro and the
+  dollar, whole francs for the CFA franc. Accounts can be held in euros, US or Canadian dollars, pounds or CFA francs; the totals (balance,
+  budgets, projects) are shown in the main currency chosen at the first launch (changed from the top bar) and only
+  count the accounts held in it.
 - Light and dark themes, following the system.
 
 ## Not built yet
 
 These are planned, and are not in the app today:
 
-- Foreign currencies with live exchange rates (the [Frankfurter](https://frankfurter.dev) API is the
-  intended source). Accounts are in euros for now.
+- Converting between currencies with live exchange rates (the [Frankfurter](https://frankfurter.dev) API is the
+  intended source). Until then a transfer needs two accounts in the same currency, and the totals leave out the
+  accounts held in another currency than the main one.
 
 ## Architecture
 
