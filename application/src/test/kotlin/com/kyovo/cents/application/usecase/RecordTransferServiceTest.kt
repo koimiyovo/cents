@@ -7,6 +7,7 @@ import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.SequentialTransactionIdGenerator
+import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aRecordTransferCommand
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -17,6 +18,7 @@ import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
+import com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.output.TransactionIdGenerator
@@ -162,6 +164,87 @@ class RecordTransferServiceTest
         // WHEN / THEN
         assertThatThrownBySuspending { service.record(command) }
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
+    }
+
+    // Without exchange rates, 100 dollars cannot become "100 euros" by moving them: until conversion exists, money only
+    // moves between accounts held in the same currency.
+    @Test
+    fun `refuses a transfer between accounts of different currencies and saves neither leg`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("EUR")))
+        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("USD")))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = aRecordTransferService(
+            accountRepository = accountRepository,
+            transactionRepository = transactionRepository,
+        )
+
+        // WHEN / THEN
+        assertThatThrownBySuspending {
+            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
+        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
+        assertThat(transactionRepository.saved).isEmpty()
+    }
+
+    @Test
+    fun `refuses between the euro and the CFA franc too, in both directions`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("XOF")))
+        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("EUR")))
+        val service = aRecordTransferService(accountRepository = accountRepository)
+
+        // WHEN / THEN
+        assertThatThrownBySuspending {
+            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
+        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
+        assertThatThrownBySuspending {
+            service.record(aRecordTransferCommand(fromAccountId = toAccountId, toAccountId = fromAccountId))
+        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
+    }
+
+    @Test
+    fun `refuses between two kinds of dollars, which are not the same currency`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("USD")))
+        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("CAD")))
+        val service = aRecordTransferService(accountRepository = accountRepository)
+
+        // WHEN / THEN
+        assertThatThrownBySuspending {
+            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
+        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
+    }
+
+    @Test
+    fun `a transfer between two accounts in the same foreign currency is recorded`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("XOF")))
+        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("XOF")))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = aRecordTransferService(
+            accountRepository = accountRepository,
+            transactionRepository = transactionRepository,
+            transactionIdGenerator = SequentialTransactionIdGenerator(
+                listOf(
+                    aTransactionId("33333333-3333-3333-3333-333333333333"),
+                    aTransactionId("44444444-4444-4444-4444-444444444444"),
+                ),
+            ),
+        )
+
+        // WHEN
+        service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId, amount = aMoney(500)))
+
+        // THEN
+        assertThat(transactionRepository.saved).hasSize(2)
     }
 
     // Same rule as recording an income or an expense: a movement of nothing is refused, and since a

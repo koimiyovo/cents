@@ -2,6 +2,7 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
+import com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransferResult
@@ -33,6 +34,8 @@ class RecordTransferService(
 
         if (fromAccount.archivedAt != null || toAccount.archivedAt != null)
             throw CannotRecordTransactionOnArchivedAccountException()
+
+        if (fromAccount.currency != toAccount.currency) throw TransferBetweenDifferentCurrenciesException()
 
         return unitOfWork.execute {
             val debit = Transaction.transferOut(

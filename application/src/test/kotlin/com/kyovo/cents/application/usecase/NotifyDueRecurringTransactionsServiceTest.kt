@@ -2,11 +2,13 @@ package com.kyovo.cents.application.usecase
 
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryRecurringTransactionRepository
+import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.aRecurringTransaction
 import com.kyovo.cents.application.fakes.aRecurringTransactionId
 import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.anInstant
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.RecurrenceFrequency
 import com.kyovo.cents.domain.model.RecurringTransaction
 import com.kyovo.cents.domain.port.output.RecurringTransactionNotifier
@@ -20,10 +22,12 @@ import java.time.LocalDate
 private class RecordingRecurringTransactionNotifier : RecurringTransactionNotifier
 {
     val notified = mutableListOf<RecurringTransaction>()
+    val currencies = mutableListOf<AccountCurrency>()
 
-    override suspend fun notify(recurringTransaction: RecurringTransaction)
+    override suspend fun notify(recurringTransaction: RecurringTransaction, currency: AccountCurrency)
     {
         notified += recurringTransaction
+        currencies += currency
     }
 }
 
@@ -226,5 +230,19 @@ class NotifyDueRecurringTransactionsServiceTest
 
         // THEN
         assertThat(notifier.notified).containsExactly(rent)
+    }
+
+    @Test
+    fun `the notifier is told the currency of the rule's account`() = runTest()
+    {
+        // GIVEN a rule due today on an account held in CFA francs
+        accountRepository.save(anAccount(id = accountId, currency = aCurrency("XOF")))
+        givenRuleStartingOn(today)
+
+        // WHEN
+        service.notify(today)
+
+        // THEN
+        assertThat(notifier.currencies).containsExactly(AccountCurrency.XOF)
     }
 }

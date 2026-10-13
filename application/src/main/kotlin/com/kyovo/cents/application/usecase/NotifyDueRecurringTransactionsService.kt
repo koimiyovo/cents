@@ -23,7 +23,7 @@ class NotifyDueRecurringTransactionsService(
             val account = accountRepository.findById(rule.accountId) ?: continue
             if (account.archivedAt != null) continue
 
-            notifier.notify(rule)
+            notifier.notify(rule, account.currency)
         }
     }
 }
