@@ -166,7 +166,13 @@
     <string name="transaction_form_error_account">Choisissez un compte.</string>
     <string name="transaction_form_error_destination">Choisissez le compte de destination.</string>
     <string name="transaction_form_error_same_account">Les deux comptes doivent être différents.</string>
-    <string name="transaction_form_error_different_currencies">Les deux comptes doivent avoir la même devise.</string>
+    <string name="transaction_form_error_destination_amount">Saisissez un montant reçu valide, ou laissez vide.</string>
+    <string name="transaction_form_failure_rate_unavailable">Aucun taux de change disponible : saisissez le montant reçu.</string>
+    <string name="transfer_received_label">Montant reçu (facultatif)</string>
+    <string name="transfer_received_hint_estimate">≈ %1$s au taux de la BCE (%2$s). Saisissez le montant exact donné par votre banque pour l\'utiliser à la place.</string>
+    <string name="transfer_received_fixed_rate">taux fixe</string>
+    <string name="transfer_received_hint_empty">Laissez vide pour utiliser le taux de la BCE.</string>
+    <string name="transfer_received_hint_no_rate">Aucun taux de la BCE pour ces devises : saisissez le montant reçu.</string>
     <string name="transaction_form_error_subcategory">Cette sous-catégorie ne correspond pas au type choisi.</string>
     <string name="transaction_form_date_other">📅 Autre date</string>
     <string name="transaction_form_date_title">Sélectionnez une date</string>

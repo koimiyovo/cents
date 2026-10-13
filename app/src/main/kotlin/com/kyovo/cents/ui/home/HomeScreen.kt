@@ -170,6 +170,7 @@ fun HomeScreen(
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val mainCurrency = LocalMainCurrency.current
+    val exchangeRates by remember { getExchangeRates.observe() }.collectAsStateWithLifecycle(initialValue = null)
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
@@ -784,6 +785,7 @@ fun HomeScreen(
             subcategories = subcategories,
             projects = projects,
             form = form,
+            exchangeRates = exchangeRates,
             showErrors = formState.showErrors,
             failure = formState.failure,
             onFormChange = formViewModel::update,

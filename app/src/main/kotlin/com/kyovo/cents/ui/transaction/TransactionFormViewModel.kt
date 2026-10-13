@@ -14,7 +14,8 @@ import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryNameException
 import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.exception.TransactionNotFoundException
-import com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException
+import com.kyovo.cents.domain.exception.ExchangeRateUnavailableException
+import com.kyovo.cents.domain.exception.InvalidTransferDestinationAmountException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountCurrency
@@ -68,7 +69,9 @@ enum class SubmitFailure
     ACCOUNT_NOT_FOUND,
     ARCHIVED_ACCOUNT,
     SAME_ACCOUNT,
-    DIFFERENT_CURRENCIES,
+
+    /** A transfer between two currencies with no amount received typed, and no exchange rate to work it out. */
+    RATE_UNAVAILABLE,
 
     /** Editing: the transaction is gone, or is one the domain won't let be changed. */
     TRANSACTION_UNAVAILABLE,
@@ -196,6 +199,14 @@ class TransactionFormViewModel(
 
     private fun fractionDigitsOf(form: TransactionFormState): Int =
         form.accountId?.let { currencies[it] }?.fractionDigits ?: 2
+
+    // The decimals of the destination's currency when a transfer goes from one currency to another, else null.
+    private fun destinationFractionDigitsOf(form: TransactionFormState): Int?
+    {
+        val from = form.accountId?.let { currencies[it] } ?: return null
+        val to = form.toAccountId?.let { currencies[it] } ?: return null
+        return if (from != to) to.fractionDigits else null
+    }
 
     /** Opens a fresh form. Called when the user asks for a new transaction, never on recomposition. */
     fun open(accounts: List<Account>, preselectedAccountId: AccountId?, project: Project? = null)
@@ -502,7 +513,7 @@ class TransactionFormViewModel(
     private suspend fun save()
     {
         val form = _uiState.value.form ?: return
-        val submission = form.stampedAt(now(), zone).submit(zone, fractionDigitsOf(form))
+        val submission = form.stampedAt(now(), zone).submit(zone, fractionDigitsOf(form), destinationFractionDigitsOf(form))
         // The project this save may bring up a band, and where it stood before: told about only if the save goes through.
         val watched = form.project.takeIf { submission is FormSubmission.Record || submission is FormSubmission.Update }
         val levelBefore = watched?.let { alertLevelOf(it) }
@@ -529,9 +540,14 @@ class TransactionFormViewModel(
         {
             _uiState.update { it.copy(failure = SubmitFailure.ARCHIVED_ACCOUNT) }
             return
-        } catch (_: TransferBetweenDifferentCurrenciesException)
+        } catch (_: ExchangeRateUnavailableException)
         {
-            _uiState.update { it.copy(failure = SubmitFailure.DIFFERENT_CURRENCIES) }
+            _uiState.update { it.copy(failure = SubmitFailure.RATE_UNAVAILABLE) }
+            return
+        } catch (_: InvalidTransferDestinationAmountException)
+        {
+            // Not reachable from this form (the field is ignored within one currency), but never a crash.
+            _uiState.update { it.copy(failure = SubmitFailure.TRANSACTION_UNAVAILABLE) }
             return
         } catch (_: TransferToSameAccountException)
         {

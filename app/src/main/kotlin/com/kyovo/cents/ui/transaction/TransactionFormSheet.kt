@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.domain.model.ExchangeRates
 import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,6 +92,8 @@ fun TransactionFormSheet(
     subcategories: List<Subcategory>,
     projects: List<Project>,
     form: TransactionFormState,
+    // The ECB's rates kept on the device: what a transfer between two currencies suggests for the amount received.
+    exchangeRates: ExchangeRates?,
     showErrors: Boolean,
     failure: SubmitFailure?,
     onFormChange: (TransactionFormState) -> Unit,
@@ -105,6 +109,11 @@ fun TransactionFormSheet(
     val selectable = remember(accounts, form.originalAccountId) { form.accountChoices(accounts) }
     // The amount is written in the chosen account's currency (the euro while none is chosen).
     val currency = accounts.firstOrNull { it.id == form.accountId }?.currency ?: AccountCurrency.EUR
+    val sourceCurrency = accounts.firstOrNull { it.id == form.accountId }?.currency
+    val destinationCurrency = accounts.firstOrNull { it.id == form.toAccountId }?.currency
+    // A transfer between two currencies has an amount received of its own, in the destination's currency.
+    val crossCurrency = form.type == TransactionFormType.TRANSFER && sourceCurrency != null &&
+        destinationCurrency != null && sourceCurrency != destinationCurrency
 
     // Opens straight on the details when the edited transaction already has some.
     var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
@@ -113,7 +122,10 @@ fun TransactionFormSheet(
     val endDateFormatter = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     val errors = if (showErrors)
     {
-        (form.submit(fractionDigits = accounts.firstOrNull { it.id == form.accountId }?.currency?.fractionDigits ?: 2) as? FormSubmission.Invalid)?.errors.orEmpty()
+        (form.submit(
+            fractionDigits = currency.fractionDigits,
+            destinationFractionDigits = if (crossCurrency) destinationCurrency?.fractionDigits else null
+        ) as? FormSubmission.Invalid)?.errors.orEmpty()
     } else
     {
         emptySet()
@@ -245,6 +257,18 @@ fun TransactionFormSheet(
                         FormError.DESTINATION_ACCOUNT_REQUIRED,
                     )
                     FieldError(palette, FormError.SAME_ACCOUNT in errors, FormError.SAME_ACCOUNT)
+                    if (crossCurrency && sourceCurrency != null && destinationCurrency != null)
+                    {
+                        DestinationAmountField(
+                            palette = palette,
+                            form = form,
+                            source = sourceCurrency,
+                            destination = destinationCurrency,
+                            rates = exchangeRates,
+                            invalid = FormError.DESTINATION_AMOUNT_INVALID in errors,
+                            onFormChange = onFormChange,
+                        )
+                    }
                 }
             }
 
@@ -323,7 +347,7 @@ fun TransactionFormSheet(
                             SubmitFailure.ACCOUNT_NOT_FOUND       -> R.string.transaction_form_failure_account_not_found
                             SubmitFailure.ARCHIVED_ACCOUNT        -> R.string.transaction_form_failure_archived
                             SubmitFailure.SAME_ACCOUNT            -> R.string.transaction_form_error_same_account
-                            SubmitFailure.DIFFERENT_CURRENCIES    -> R.string.transaction_form_error_different_currencies
+                            SubmitFailure.RATE_UNAVAILABLE        -> R.string.transaction_form_failure_rate_unavailable
                             SubmitFailure.TRANSACTION_UNAVAILABLE -> R.string.transaction_form_failure_unavailable
                             SubmitFailure.PROJECT_NOT_FOUND       -> R.string.transaction_form_failure_project_gone
                         },
@@ -472,6 +496,55 @@ private fun ArchivedAccountNotice(palette: AccountsPalette, accountName: String)
     )
 }
 
+/**
+ * The amount received by the destination of a transfer between two currencies, optional: left empty, the ECB's rate is
+ * used. Under it, what that rate would give, so the user can compare it with what their bank gave and type the
+ * bank's figure instead.
+ */
+@Composable
+private fun DestinationAmountField(
+    palette: AccountsPalette,
+    form: TransactionFormState,
+    source: AccountCurrency,
+    destination: AccountCurrency,
+    rates: ExchangeRates?,
+    invalid: Boolean,
+    onFormChange: (TransactionFormState) -> Unit,
+)
+{
+    val dayFormat = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
+    val estimate = transferEstimate(form.amountText, source, destination, rates)
+    // The franc is tied to the euro, so they convert even before any rate is fetched.
+    val convertible = (rates ?: ExchangeRates(LocalDate.ofEpochDay(0), emptyMap())).canConvert(source, destination)
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.transfer_received_label))
+        AmountField(
+            palette = palette,
+            value = form.destinationAmountText,
+            onValueChange = { onFormChange(form.withDestinationAmount(it, destination.fractionDigits)) },
+            error = invalid,
+            currency = destination,
+            textSize = 22.sp,
+        )
+        FieldError(palette, invalid, FormError.DESTINATION_AMOUNT_INVALID)
+        Text(
+            text = when
+            {
+                estimate != null -> stringResource(
+                    R.string.transfer_received_hint_estimate,
+                    formatMoney(estimate.value, destination),
+                    rates?.date?.format(dayFormat) ?: stringResource(R.string.transfer_received_fixed_rate),
+                )
+                !convertible     -> stringResource(R.string.transfer_received_hint_no_rate)
+                else             -> stringResource(R.string.transfer_received_hint_empty)
+            },
+            color = if (convertible) palette.textMuted else palette.error,
+            fontSize = 12.sp,
+        )
+    }
+}
+
 @Composable
 private fun AccountPicker(
     palette: AccountsPalette,
@@ -562,6 +635,7 @@ private fun FieldError(palette: AccountsPalette, visible: Boolean, error: FormEr
             when (error)
             {
                 FormError.AMOUNT_INVALID               -> R.string.transaction_form_error_amount
+                FormError.DESTINATION_AMOUNT_INVALID   -> R.string.transaction_form_error_destination_amount
                 FormError.TITLE_REQUIRED               -> R.string.transaction_form_error_title
                 FormError.ACCOUNT_REQUIRED             -> R.string.transaction_form_error_account
                 FormError.DESTINATION_ACCOUNT_REQUIRED -> R.string.transaction_form_error_destination

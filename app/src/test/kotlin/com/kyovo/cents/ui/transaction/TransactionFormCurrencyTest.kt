@@ -91,31 +91,6 @@ class TransactionFormCurrencyTest
     }
 
     @Test
-    fun `a transfer can only go to an account in the same currency`()
-    {
-        val form = TransactionFormState(
-            type = TransactionFormType.TRANSFER,
-            accountId = francs.id,
-            date = NOW,
-        )
-
-        assertThat(form.destinationChoices(everyAccount)).containsExactly(otherFrancs)
-    }
-
-    @Test
-    fun `a transfer can only leave an account in the destination's currency`()
-    {
-        val form = TransactionFormState(
-            type = TransactionFormType.TRANSFER,
-            accountId = null,
-            toAccountId = dollars.id,
-            date = NOW,
-        )
-
-        assertThat(form.sourceChoices(everyAccount)).isEmpty()
-    }
-
-    @Test
     fun `with no source chosen yet, every account is a possible destination`()
     {
         val form = TransactionFormState(type = TransactionFormType.TRANSFER, accountId = null, date = NOW)

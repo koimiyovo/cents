@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
@@ -72,6 +73,11 @@ data class TransactionFormState(
     val accountId: AccountId?,
     val toAccountId: AccountId? = null,
     val amountText: String = "",
+    /**
+     * For a transfer between two currencies: what the destination receives, typed by the user (their bank's rate,
+     * which is not the ECB's). Empty leaves it to the exchange rates. Ignored when both accounts have the same currency.
+     */
+    val destinationAmountText: String = "",
     val title: String = "",
     val subcategory: Subcategory? = null,
     val description: String = "",
@@ -163,7 +169,13 @@ data class TransactionFormState(
      * [fractionDigits] is the number of decimals of the chosen account's currency (2 for the euro, 0 for the
      * CFA franc): what the amount is read with.
      */
-    fun submit(zone: ZoneId = ZoneId.systemDefault(), fractionDigits: Int = 2): FormSubmission
+    fun submit(
+        zone: ZoneId = ZoneId.systemDefault(),
+        fractionDigits: Int = 2,
+        // The decimals of the destination's currency when it is not the source's (a transfer between two
+        // currencies): null means the same currency on both sides, where there is no amount received of its own.
+        destinationFractionDigits: Int? = null,
+    ): FormSubmission
     {
         val errors = mutableSetOf<FormError>()
 
@@ -173,6 +185,12 @@ data class TransactionFormState(
         if (accountId == null) errors += FormError.ACCOUNT_REQUIRED
 
         val category = type.recordableCategory()
+        val readsDestinationAmount =
+            category == null && destinationFractionDigits != null && destinationAmountText.isNotBlank()
+        val destinationAmountCents =
+            if (readsDestinationAmount) parseAmountToCents(destinationAmountText, fractionDigits = destinationFractionDigits!!) else null
+        if (readsDestinationAmount && destinationAmountCents == null) errors += FormError.DESTINATION_AMOUNT_INVALID
+
         if (category == null)
         {
             if (toAccountId == null) errors += FormError.DESTINATION_ACCOUNT_REQUIRED
@@ -245,6 +263,7 @@ data class TransactionFormState(
                     amount = amount,
                     title = cleanTitle,
                     date = date,
+                    destinationAmount = destinationAmountCents?.let { Money(it) },
                 ),
             )
         }
@@ -296,6 +315,13 @@ data class TransactionFormState(
     {
         if (!canHaveProject || projectLocked) return this
         return copy(project = project)
+    }
+
+    /** The amount received of a transfer, as typed: an edit that would not be an amount is dropped, like the amount sent. */
+    fun withDestinationAmount(text: String, fractionDigits: Int): TransactionFormState
+    {
+        if (!acceptsAmountInput(text, fractionDigits)) return this
+        return copy(destinationAmountText = text)
     }
 
     /** The projects this form offers: all of them, or none when it cannot have one. */
@@ -350,6 +376,8 @@ data class TransactionFormState(
         val keptProject = project.takeUnless { type == TransactionFormType.TRANSFER }
         return copy(
             type = type,
+            // The amount received only exists for a transfer.
+            destinationAmountText = if (type == TransactionFormType.TRANSFER) destinationAmountText else "",
             subcategory = keptSubcategory,
             toAccountId = keptDestination,
             repeat = keptRepeat,
@@ -411,16 +439,13 @@ data class TransactionFormState(
     fun sourceChoices(selectable: List<Account>): List<Account>
     {
         if (type != TransactionFormType.TRANSFER) return selectable
-        // Without exchange rates, money only moves between accounts of the same currency.
-        val currency = selectable.firstOrNull { it.id == toAccountId }?.currency
-        return selectable.filter { it.id != toAccountId && (currency == null || it.currency == currency) }
+        return selectable.filter { it.id != toAccountId }
     }
 
     /** Accounts a transfer can go to: every selectable one except the chosen source. */
     fun destinationChoices(selectable: List<Account>): List<Account>
     {
-        val currency = selectable.firstOrNull { it.id == accountId }?.currency
-        return selectable.filter { it.id != accountId && (currency == null || it.currency == currency) }
+        return selectable.filter { it.id != accountId }
     }
 }
 

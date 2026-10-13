@@ -1047,22 +1047,110 @@ class TransactionFormViewModelTest
         assertThat(recordTransaction.commands.single().amount).isEqualTo(Money(1_500))
     }
 
-    @Test
-    fun `a transfer between two currencies refused by the domain is explained on screen`()
+    private fun openATransfer(from: Account, to: Account)
     {
-        // GIVEN
-        val dollars = anAccount(currency = AccountCurrency.USD)
-        viewModel.open(listOf(checking, dollars), preselectedAccountId = checking.id)
+        viewModel.open(listOf(from, to), preselectedAccountId = from.id)
         viewModel.update(
-            form!!.withType(TransactionFormType.TRANSFER).copy(toAccountId = dollars.id, amountText = "10", title = "Change"),
+            form!!.withType(TransactionFormType.TRANSFER).copy(toAccountId = to.id, amountText = "100", title = "Change")
         )
-        recordTransfer.failWith = com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException()
+    }
+
+    @Test
+    fun `a transfer between two currencies carries the amount received that was typed`()
+    {
+        // GIVEN 100,00 EUR sent to a dollar account, and what the bank gave typed in
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+        viewModel.update(form!!.withDestinationAmount("109,50", fractionDigits = 2))
 
         // WHEN
         viewModel.submit()
 
-        // THEN the sheet stays open and says why
-        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.DIFFERENT_CURRENCIES)
+        // THEN
+        val command = recordTransfer.commands.single()
+        assertThat(command.amount).isEqualTo(Money(10_000))
+        assertThat(command.destinationAmount).isEqualTo(Money(10_950))
+    }
+
+    @Test
+    fun `an amount received in CFA francs is read as whole francs`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        openATransfer(checking, francs)
+        viewModel.update(form!!.withDestinationAmount("65000", fractionDigits = 0))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isEqualTo(Money(65_000))
+    }
+
+    @Test
+    fun `a transfer between two currencies with no amount typed leaves it to the exchange rates`()
+    {
+        // GIVEN
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isNull()
+    }
+
+    @Test
+    fun `an amount left in the field is ignored when both accounts are in the same currency`()
+    {
+        // GIVEN a transfer that was between two currencies, then the destination changed to a euro account
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        viewModel.open(listOf(checking, savings, dollars), preselectedAccountId = checking.id)
+        viewModel.update(
+            form!!.withType(TransactionFormType.TRANSFER)
+                .copy(toAccountId = dollars.id, amountText = "100", title = "Change")
+                .withDestinationAmount("109,50", fractionDigits = 2)
+        )
+        viewModel.update(form!!.copy(toAccountId = savings.id))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isNull()
+    }
+
+    @Test
+    fun `an invalid amount received keeps the form open and says so`()
+    {
+        // GIVEN
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+        viewModel.update(form!!.copy(destinationAmountText = "0"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands).isEmpty()
+        assertThat(viewModel.uiState.value.showErrors).isTrue()
+        assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `a transfer that needs a rate nobody has is explained on screen`()
+    {
+        // GIVEN the use case cannot convert: no amount typed, and no rate for the currency
+        val canadian = anAccount(currency = AccountCurrency.CAD)
+        openATransfer(checking, canadian)
+        recordTransfer.failWith = com.kyovo.cents.domain.exception.ExchangeRateUnavailableException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN the sheet stays open and asks for the amount received
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.RATE_UNAVAILABLE)
         assertThat(form).isNotNull()
     }
 
