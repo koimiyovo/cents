@@ -101,10 +101,11 @@ fun aRecordTransferCommand(
     toAccountId: AccountId = anAccountId("22222222-2222-2222-2222-222222222222"),
     amount: Money = aMoney(1_000),
     title: TransactionTitle = aTransactionTitle(),
-    date: Instant = anInstant()
+    date: Instant = anInstant(),
+    destinationAmount: Money? = null
 ): RecordTransferCommand
 {
-    return RecordTransferCommand(fromAccountId, toAccountId, amount, title, date)
+    return RecordTransferCommand(fromAccountId, toAccountId, amount, title, date, destinationAmount)
 }
 
 fun anUpdateTransactionCommand(

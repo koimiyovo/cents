@@ -4,6 +4,7 @@ import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryExchangeRateRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.SequentialTransactionIdGenerator
@@ -18,7 +19,6 @@ import com.kyovo.cents.application.fakes.anInstant
 import com.kyovo.cents.domain.exception.AccountNotFoundException
 import com.kyovo.cents.domain.exception.CannotRecordTransactionOnArchivedAccountException
 import com.kyovo.cents.domain.exception.InvalidTransactionAmountException
-import com.kyovo.cents.domain.exception.TransferBetweenDifferentCurrenciesException
 import com.kyovo.cents.domain.exception.TransferToSameAccountException
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.output.TransactionIdGenerator
@@ -166,61 +166,6 @@ class RecordTransferServiceTest
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
-    // Without exchange rates, 100 dollars cannot become "100 euros" by moving them: until conversion exists, money only
-    // moves between accounts held in the same currency.
-    @Test
-    fun `refuses a transfer between accounts of different currencies and saves neither leg`() = runTest()
-    {
-        // GIVEN
-        val accountRepository = InMemoryAccountRepository()
-        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("EUR")))
-        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("USD")))
-        val transactionRepository = InMemoryTransactionRepository()
-        val service = aRecordTransferService(
-            accountRepository = accountRepository,
-            transactionRepository = transactionRepository,
-        )
-
-        // WHEN / THEN
-        assertThatThrownBySuspending {
-            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
-        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
-        assertThat(transactionRepository.saved).isEmpty()
-    }
-
-    @Test
-    fun `refuses between the euro and the CFA franc too, in both directions`() = runTest()
-    {
-        // GIVEN
-        val accountRepository = InMemoryAccountRepository()
-        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("XOF")))
-        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("EUR")))
-        val service = aRecordTransferService(accountRepository = accountRepository)
-
-        // WHEN / THEN
-        assertThatThrownBySuspending {
-            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
-        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
-        assertThatThrownBySuspending {
-            service.record(aRecordTransferCommand(fromAccountId = toAccountId, toAccountId = fromAccountId))
-        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
-    }
-
-    @Test
-    fun `refuses between two kinds of dollars, which are not the same currency`() = runTest()
-    {
-        // GIVEN
-        val accountRepository = InMemoryAccountRepository()
-        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("USD")))
-        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("CAD")))
-        val service = aRecordTransferService(accountRepository = accountRepository)
-
-        // WHEN / THEN
-        assertThatThrownBySuspending {
-            service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId))
-        }.isInstanceOf(TransferBetweenDifferentCurrenciesException::class.java)
-    }
-
     @Test
     fun `a transfer between two accounts in the same foreign currency is recorded`() = runTest()
     {
@@ -295,14 +240,16 @@ class RecordTransferServiceTest
         accountRepository: InMemoryAccountRepository,
         transactionRepository: InMemoryTransactionRepository = InMemoryTransactionRepository(),
         transactionIdGenerator: TransactionIdGenerator = FixedTransactionIdGenerator(aTransactionId()),
-        unitOfWork: InMemoryUnitOfWork = InMemoryUnitOfWork()
+        unitOfWork: InMemoryUnitOfWork = InMemoryUnitOfWork(),
+        exchangeRateRepository: InMemoryExchangeRateRepository = InMemoryExchangeRateRepository()
     ): RecordTransferService
     {
         return RecordTransferService(
             accountRepository,
             transactionRepository,
             transactionIdGenerator,
-            unitOfWork
+            unitOfWork,
+            exchangeRateRepository
         )
     }
 }
