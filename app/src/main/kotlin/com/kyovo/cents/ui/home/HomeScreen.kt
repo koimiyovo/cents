@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.home
 
+import com.kyovo.cents.domain.port.input.GetExchangeRatesUseCase
+import com.kyovo.cents.domain.port.input.GetTotalBalanceUseCase
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -144,6 +146,9 @@ fun HomeScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    listConvertedTransactions: ListTransactionsUseCase,
+    getTotalBalance: GetTotalBalanceUseCase,
+    getExchangeRates: GetExchangeRatesUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     listRecurringTransactions: ListRecurringTransactionsUseCase,
     listProjects: ListProjectsUseCase,
@@ -572,6 +577,7 @@ fun HomeScreen(
                         listProjects = listProjects,
                         getProjectProgress = getProjectProgress,
                         listTransactions = listTransactions,
+                        listConvertedTransactions = listConvertedTransactions,
                         accounts = accounts + archivedAccounts,
                         subcategories = subcategories,
                         onBack = closeProjectPage,
@@ -673,6 +679,9 @@ fun HomeScreen(
                             listArchivedAccounts,
                             getAccountBalance,
                             listTransactions,
+                            listConvertedTransactions,
+                            getTotalBalance,
+                            getExchangeRates,
                             onAccountClick = { openedAccountUuid = it.value.toString() },
                             onNewAccountClick = { accountFormViewModel.open(mainCurrency) },
                             onArchiveAccount = archive,
@@ -688,6 +697,8 @@ fun HomeScreen(
                                 listAccounts,
                                 listArchivedAccounts,
                                 listTransactions,
+                                listConvertedTransactions,
+                                getExchangeRates,
                                 listSubcategories,
                                 projects = projects,
                                 onTransactionClick = openTransaction,

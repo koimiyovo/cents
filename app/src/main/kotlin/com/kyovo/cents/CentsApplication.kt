@@ -1,5 +1,9 @@
 package com.kyovo.cents
 
+import java.io.IOException
+import com.kyovo.cents.work.ExchangeRatesWorker
+import com.kyovo.cents.infrastructure.exchange.MalformedExchangeRatesException
+import androidx.work.NetworkType
 import android.app.Application
 import androidx.work.Configuration
 import androidx.work.Constraints
@@ -49,6 +53,20 @@ class CentsApplication : Application(), Configuration.Provider {
             appContainer.generateRecurringTransactions.generate()
         }
 
+        // Fetches the exchange rates as soon as the app opens, so that the totals are converted from the first
+        // screen: off the main thread, and a failure (no network, a server down) is no news, the rates kept
+        // on the device stay. The daily work below keeps them fresh when the app is not opened.
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            try
+            {
+                appContainer.refreshExchangeRates.refresh()
+            } catch (_: IOException)
+            {
+            } catch (_: MalformedExchangeRatesException)
+            {
+            }
+        }
+
         val workManager = WorkManager.getInstance(this)
 
         // The 6-hourly budget check this replaced may still be scheduled on a phone that ran an older
@@ -70,6 +88,16 @@ class CentsApplication : Application(), Configuration.Provider {
                 .build(),
         )
 
+        // Once a day, when there is a connection (WorkManager waits for one instead of failing): the exchange
+        // rates are published once a working day. KEEP, like the others.
+        workManager.enqueueUniquePeriodicWork(
+            EXCHANGE_RATES_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<ExchangeRatesWorker>(1, TimeUnit.DAYS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build(),
+        )
+
         // Once a week, whenever the phone is not low on battery (the exact day does not matter, unlike the
         // morning check above). Scheduled even when no folder is chosen: the worker then does nothing, and
         // choosing one later needs no scheduling. KEEP for the same reason as above.
@@ -84,6 +112,7 @@ class CentsApplication : Application(), Configuration.Provider {
 
     private companion object {
         const val AUTOMATIC_BACKUP_WORK_NAME = "automatic-backup-weekly"
+        const val EXCHANGE_RATES_WORK_NAME = "exchange-rates-daily"
 
         // The name of the work as it was first scheduled, kept as is: renaming it would enqueue a second
         // periodic work next to the one already scheduled on the phone.

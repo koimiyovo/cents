@@ -1,5 +1,9 @@
 package com.kyovo.cents
 
+import com.kyovo.cents.infrastructure.exchange.FrankfurterExchangeRateProvider
+import com.kyovo.cents.domain.port.input.RefreshExchangeRatesUseCase
+import com.kyovo.cents.domain.port.input.GetTotalBalanceUseCase
+import com.kyovo.cents.domain.port.input.GetExchangeRatesUseCase
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +35,10 @@ import com.kyovo.cents.application.usecase.GetProjectProgressService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
-import com.kyovo.cents.application.usecase.MainCurrencyTransactionRepository
+import com.kyovo.cents.application.usecase.ConvertedTransactionRepository
+import com.kyovo.cents.application.usecase.GetExchangeRatesService
+import com.kyovo.cents.application.usecase.GetTotalBalanceService
+import com.kyovo.cents.application.usecase.RefreshExchangeRatesService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
 import com.kyovo.cents.application.usecase.ListProjectsService
 import com.kyovo.cents.application.usecase.ListRecurringTransactionsService
@@ -130,6 +137,11 @@ import java.time.ZoneId
  */
 class AppContainer(context: Context, persistence: RoomPersistence)
 {
+    private companion object
+    {
+        const val FRANKFURTER_URL = "https://api.frankfurter.dev"
+    }
+
     private val accountRepository = persistence.accounts
     private val transactionRepository = persistence.transactions
     private val subcategoryRepository = persistence.subcategories
@@ -147,10 +159,18 @@ class AppContainer(context: Context, persistence: RoomPersistence)
         .map { it ?: AccountCurrency.EUR }
         .stateIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Eagerly, AccountCurrency.EUR)
 
-    // What the totals (budgets, spending, projects) read: only the accounts held in the main currency, since
-    // without exchange rates amounts of different currencies cannot be added.
+    private val exchangeRateRepository = persistence.exchangeRates
+
+    // What the totals (budgets, spending, projects) read: every transaction with its amount in the main currency,
+    // converted with the exchange rates kept on the device.
     private val totalsTransactionRepository: TransactionRepository =
-        MainCurrencyTransactionRepository(transactionRepository, accountRepository, mainCurrency)
+        ConvertedTransactionRepository(transactionRepository, accountRepository, mainCurrency, exchangeRateRepository)
+
+    val getExchangeRates: GetExchangeRatesUseCase = GetExchangeRatesService(exchangeRateRepository)
+    val getTotalBalance: GetTotalBalanceUseCase =
+        GetTotalBalanceService(accountRepository, transactionRepository, mainCurrency, exchangeRateRepository)
+    val refreshExchangeRates: RefreshExchangeRatesUseCase =
+        RefreshExchangeRatesService(FrankfurterExchangeRateProvider(FRANKFURTER_URL), exchangeRateRepository)
 
     val listAccounts: ListAccountsUseCase = ListAccountsService(accountRepository)
     val listArchivedAccounts: ListArchivedAccountsUseCase =
@@ -177,6 +197,10 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     val getAccountBalance: GetAccountBalanceUseCase =
         GetAccountBalanceService(accountRepository, transactionRepository)
     val listTransactions: ListTransactionsUseCase = ListTransactionsService(transactionRepository)
+
+    // The same transactions with their amounts in the main currency (the ones that cannot be converted are left
+    // out): what a total adds up, while the rows keep showing each transaction in its own account's currency.
+    val listConvertedTransactions: ListTransactionsUseCase = ListTransactionsService(totalsTransactionRepository)
     val listSubcategories: ListSubcategoriesUseCase =
         ListSubcategoriesService(subcategoryRepository)
     val createSubcategory: CreateSubcategoryUseCase =
@@ -235,6 +259,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
         transactionRepository,
         transactionIdGenerator,
         unitOfWork,
+        exchangeRateRepository,
     )
 
     val listProjects: ListProjectsUseCase = ListProjectsService(projectRepository)

@@ -1,5 +1,12 @@
 package com.kyovo.cents.ui.home
 
+import java.time.LocalDate
+import com.kyovo.cents.ui.common.foreignAccountCount
+import com.kyovo.cents.ui.common.ratesNote
+import com.kyovo.cents.ui.common.RatesNoteText
+import com.kyovo.cents.ui.common.RatesNote
+import com.kyovo.cents.domain.port.input.GetExchangeRatesUseCase
+import com.kyovo.cents.domain.port.input.GetTotalBalanceUseCase
 import android.content.res.Configuration
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Canvas
@@ -99,6 +106,9 @@ fun AccountsScreen(
     listArchivedAccounts: ListArchivedAccountsUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    listConvertedTransactions: ListTransactionsUseCase,
+    getTotalBalance: GetTotalBalanceUseCase,
+    getExchangeRates: GetExchangeRatesUseCase,
     onAccountClick: (AccountId) -> Unit,
     onNewAccountClick: () -> Unit,
     onArchiveAccount: (AccountId) -> Unit,
@@ -162,22 +172,22 @@ fun AccountsScreen(
         getAccountBalance.observeAll().map { balances -> balances.mapValues { it.value.value } }
     }
         .collectAsStateWithLifecycle(initialValue = emptyMap())
-    // The consolidated figures cover the active accounts only: an archived account is closed, so
-    // it counts neither in the total nor in the income/expense lines below.
-    // Without exchange rates, they cover the accounts held in the main currency only.
+    // The consolidated figures cover the active accounts only: an archived account is closed, so it counts neither
+    // in the total nor in the income/expense lines below. They are in the main currency: what is held in another
+    // currency is converted with the exchange rates kept on the device.
     val mainCurrency = LocalMainCurrency.current
-    val mainAccounts = remember(accounts, mainCurrency) { accounts.filter { it.currency == mainCurrency } }
-    val totalCents = remember(mainAccounts, balanceByAccountId) {
-        mainAccounts.sumOf { balanceByAccountId[it.id] ?: 0L }
-    }
+    val totalBalance by remember { getTotalBalance.observe() }.collectAsStateWithLifecycle(initialValue = null)
+    val rates by remember { getExchangeRates.observe() }.collectAsStateWithLifecycle(initialValue = null)
+    val totalCents = totalBalance?.amount?.value ?: 0L
     // The use case only filters by subcategory now, so category-level aggregates are computed
-    // here from the full list rather than via a query parameter.
-    val everyTransaction by remember { listTransactions.observe() }.collectAsStateWithLifecycle(
+    // here from the full list rather than via a query parameter. The transactions are the converted ones: their
+    // amounts are in the main currency already.
+    val convertedTransactions by remember { listConvertedTransactions.observe() }.collectAsStateWithLifecycle(
         initialValue = emptyList()
     )
-    val allTransactions = remember(everyTransaction, mainAccounts) {
-        val activeIds = mainAccounts.map { it.id }.toSet()
-        everyTransaction.filter { it.accountId in activeIds }
+    val allTransactions = remember(convertedTransactions, accounts) {
+        val activeIds = accounts.map { it.id }.toSet()
+        convertedTransactions.filter { it.accountId in activeIds }
     }
     val incomeCents = remember(allTransactions) {
         allTransactions.filter { it.category == TransactionCategory.INCOME }
@@ -187,6 +197,12 @@ fun AccountsScreen(
         allTransactions.filter { it.category == TransactionCategory.EXPENSE }
             .sumOf { it.amount.value }
     }
+    val ratesNote = ratesNote(
+        foreignAccounts = foreignAccountCount(accounts, mainCurrency),
+        unconvertedAccounts = totalBalance?.unconvertedAccounts ?: 0,
+        rates = rates,
+        today = LocalDate.now(),
+    )
 
     Column(
         modifier = modifier
@@ -214,6 +230,7 @@ fun AccountsScreen(
             totalCents = totalCents,
             incomeCents = incomeCents,
             expenseCents = expenseCents,
+            ratesNote = ratesNote,
             visible = balancesVisible,
             onToggleVisibility = { balancesVisible = !balancesVisible },
             compact = isCompact,
@@ -444,6 +461,7 @@ private fun TotalBalanceCard(
     totalCents: Long,
     incomeCents: Long,
     expenseCents: Long,
+    ratesNote: RatesNote,
     visible: Boolean,
     onToggleVisibility: () -> Unit,
     compact: Boolean,
@@ -502,6 +520,8 @@ private fun TotalBalanceCard(
                 compact = compact,
             )
         }
+        // Which exchange rates the figures above were converted with, or that they leave accounts out.
+        RatesNoteText(ratesNote, normal = palette.heroOnCardSecondary, warning = palette.heroExpenseAccent)
     }
 }
 
