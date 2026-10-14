@@ -37,7 +37,11 @@ class FrankfurterExchangeRateProvider(
     override suspend fun fetchLatest(): ExchangeRates
     {
         val request = Request.Builder()
-            .url("${baseUrl.trimEnd('/')}/v1/latest?base=EUR")
+            // providers=ecb: without it Frankfurter blends several sources, and the app's rates are the ECB's.
+            .url(
+                "${baseUrl.trimEnd('/')}/v2/rates" +
+                    "?base=${FrankfurterRatesParser.BASE}&quotes=${FrankfurterRatesParser.QUOTES}&providers=ecb"
+            )
             .build()
 
         // executeAsync suspends instead of blocking a thread, and cancels the call if the coroutine is cancelled.

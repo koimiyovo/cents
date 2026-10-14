@@ -2,11 +2,10 @@ package com.kyovo.cents.infrastructure.exchange
 
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.ExchangeRates
-import com.kyovo.cents.infrastructure.exchange.*
 import com.kyovo.cents.infrastructure.persistence.realTime
+import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -48,7 +47,11 @@ class FrankfurterExchangeRateProviderTest
             MockResponse.Builder()
                 .code(200)
                 .addHeader("Content-Type", "application/json")
-                .body("""{"amount":1.0,"base":"EUR","date":"2026-10-12","rates":{"CAD":1.5,"GBP":0.85,"USD":1.1}}""")
+                .body(
+                    """[{"date":"2026-10-12","base":"EUR","quote":"CAD","rate":1.5},""" +
+                        """{"date":"2026-10-12","base":"EUR","quote":"GBP","rate":0.85},""" +
+                        """{"date":"2026-10-12","base":"EUR","quote":"USD","rate":1.1}]"""
+                )
                 .build()
         )
 
@@ -77,7 +80,10 @@ class FrankfurterExchangeRateProviderTest
             MockResponse.Builder()
                 .code(200)
                 .addHeader("Content-Type", "application/json")
-                .body("""{"amount":1.0,"base":"EUR","date":"2026-10-13","rates":{"GBP":0.86712,"USD":1.16345}}""")
+                .body(
+                    """[{"date":"2026-10-13","base":"EUR","quote":"GBP","rate":0.86712},""" +
+                        """{"date":"2026-10-13","base":"EUR","quote":"USD","rate":1.16345}]"""
+                )
                 .build()
         )
 
@@ -101,7 +107,7 @@ class FrankfurterExchangeRateProviderTest
     private fun anAnswer() = MockResponse.Builder()
         .code(200)
         .addHeader("Content-Type", "application/json")
-        .body("""{"amount":1.0,"base":"EUR","date":"2026-10-12","rates":{"USD":1.1}}""")
+        .body("""[{"date":"2026-10-12","base":"EUR","quote":"USD","rate":1.1}]""")
         .build()
 
     @Test
@@ -116,8 +122,8 @@ class FrankfurterExchangeRateProviderTest
         // THEN
         val request = server.takeRequest()
         assertThat(request.method).isEqualTo("GET")
-        assertThat(request.url.encodedPath).isEqualTo("/v1/latest")
-        assertThat(request.url.query).isEqualTo("base=EUR")
+        assertThat(request.url.encodedPath).isEqualTo("/v2/rates")
+        assertThat(request.url.query).isEqualTo("base=EUR&quotes=CAD,GBP,USD&providers=ecb")
         assertThat(request.body).isNull()
         assertThat(server.requestCount).isEqualTo(1)
     }
@@ -135,8 +141,8 @@ class FrankfurterExchangeRateProviderTest
         FrankfurterExchangeRateProvider(baseUrl = "$withoutSlash/").fetchLatest()
 
         // THEN both reach the same path
-        assertThat(server.takeRequest().url.encodedPath).isEqualTo("/v1/latest")
-        assertThat(server.takeRequest().url.encodedPath).isEqualTo("/v1/latest")
+        assertThat(server.takeRequest().url.encodedPath).isEqualTo("/v2/rates")
+        assertThat(server.takeRequest().url.encodedPath).isEqualTo("/v2/rates")
     }
 
     // --- What goes wrong -------------------------------------------------------------------------------------
@@ -147,7 +153,9 @@ class FrankfurterExchangeRateProviderTest
     fun `fails with the status when the server answers with an error`() = realTime()
     {
         // GIVEN
-        server.enqueue(MockResponse.Builder().code(500).body("<html>Internal Server Error</html>").build())
+        server.enqueue(
+            MockResponse.Builder().code(500).body("<html>Internal Server Error</html>").build()
+        )
 
         // WHEN / THEN
         assertThatThrownBy { runBlocking { provider().fetchLatest() } }
@@ -184,7 +192,9 @@ class FrankfurterExchangeRateProviderTest
     fun `refuses an answer that is a success but cannot be read`() = realTime()
     {
         // GIVEN a captive portal or a proxy answering 200 with a page
-        server.enqueue(MockResponse.Builder().code(200).body("<html>Please log in to the Wi-Fi</html>").build())
+        server.enqueue(
+            MockResponse.Builder().code(200).body("<html>Please log in to the Wi-Fi</html>").build()
+        )
 
         // WHEN / THEN
         assertThatThrownBy { runBlocking { provider().fetchLatest() } }
@@ -221,7 +231,7 @@ class FrankfurterExchangeRateProviderTest
         server.enqueue(
             MockResponse.Builder()
                 .code(200)
-                .body("""{"base":"EUR","date":"2026-10-12","rates":{}}""")
+                .body("""[{"date":"2026-10-12","base":"EUR","quote":"USD","rate":1.1}]""")
                 .headersDelay(3, TimeUnit.SECONDS)
                 .build()
         )
