@@ -2,6 +2,7 @@ package com.kyovo.cents.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
+import com.kyovo.cents.ui.home.DarkAccountsPalette
+import com.kyovo.cents.ui.home.LightAccountsPalette
 
 /**
  * The currency the totals are shown in. A CompositionLocal rather than a parameter: every screen with a total
@@ -97,28 +100,42 @@ internal fun MainCurrencyPill(palette: AccountsPalette)
 @Composable
 fun MainCurrencyChoiceScreen(onChosen: (AccountCurrency) -> Unit)
 {
+    // The palette of the other screens: this one has no Surface behind it, so without it the text keeps the default
+    // (dark) colour and cannot be read on the dark background.
+    val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(palette.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
     ) {
         Text(
             text = stringResource(R.string.main_currency_choice_title),
+            color = palette.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(text = stringResource(R.string.main_currency_choice_body), fontSize = 15.sp)
+        Text(
+            text = stringResource(R.string.main_currency_choice_body),
+            color = palette.textSecondary,
+            fontSize = 15.sp,
+        )
         AccountCurrency.SUPPORTED.forEach { currency ->
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant)
+                    .background(palette.surface)
                     .clickable { onChosen(currency) }
                     .padding(horizontal = 20.dp, vertical = 18.dp),
             ) {
-                Text(text = currency.label(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = currency.label(),
+                    color = palette.textPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
