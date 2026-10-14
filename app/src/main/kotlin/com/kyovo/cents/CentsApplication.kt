@@ -5,6 +5,13 @@ import com.kyovo.cents.work.ExchangeRatesWorker
 import com.kyovo.cents.infrastructure.exchange.MalformedExchangeRatesException
 import androidx.work.NetworkType
 import android.app.Application
+import android.os.Build
+import com.kyovo.cents.crash.CrashHandler
+import com.kyovo.cents.crash.CrashReportStore
+import com.kyovo.cents.crash.DeviceInfo
+import com.kyovo.cents.crash.crashReport
+import java.io.File
+import java.time.Instant
 import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -44,8 +51,27 @@ class CentsApplication : Application(), Configuration.Provider {
             .setWorkerFactory(CentsWorkerFactory(appContainer))
             .build()
 
+    /** The report of the last crash, kept in the private storage until the user has been asked about it. */
+    val crashReportStore: CrashReportStore by lazy { CrashReportStore(File(filesDir, "last-crash.txt")) }
+
     override fun onCreate() {
         super.onCreate()
+
+        // First of all, so that a crash while starting is reported too. The previous handler (the system's) still
+        // gets every crash, so Android vitals keeps working.
+        val device = DeviceInfo(
+            versionName = BuildConfig.VERSION_NAME,
+            versionCode = BuildConfig.VERSION_CODE,
+            androidSdk = Build.VERSION.SDK_INT,
+            model = "${Build.MANUFACTURER} ${Build.MODEL}",
+        )
+        Thread.setDefaultUncaughtExceptionHandler(
+            CrashHandler(
+                store = crashReportStore,
+                report = { crashReport(it, Instant.now(), device) },
+                next = Thread.getDefaultUncaughtExceptionHandler(),
+            )
+        )
 
         // Catches every recurring transaction up as soon as the app opens, off the main thread: safe to run
         // every time, since an occurrence already generated is never redone.

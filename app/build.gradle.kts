@@ -5,6 +5,16 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
+// The address a crash report is sent to: `supportEmail` in local.properties (never versioned). Without it the
+// e-mail opens with no recipient and the user chooses one.
+val localFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localFile.exists())
+{
+    localFile.inputStream().use { localProperties.load(it) }
+}
+val supportEmail = localProperties.getProperty("supportEmail", "")
+
 android {
     namespace = "com.kyovo.cents"
     compileSdk {
@@ -17,6 +27,7 @@ android {
         targetSdk = 37
         versionCode = 4
         versionName = "1.0"
+        buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

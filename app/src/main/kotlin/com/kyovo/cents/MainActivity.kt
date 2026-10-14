@@ -21,6 +21,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.kyovo.cents.crash.CrashReportDialog
+import com.kyovo.cents.crash.sendCrashReportByEmail
 import com.kyovo.cents.notification.NotificationTarget
 import com.kyovo.cents.ui.SplashScreen
 import com.kyovo.cents.ui.account.AccountFormViewModel
@@ -53,6 +55,11 @@ class MainActivity : ComponentActivity() {
     // intent (only the first time: after a rotation the same intent would navigate again) and from
     // onNewIntent when the app was already running.
     private var notificationTarget by mutableStateOf<NotificationTarget?>(null)
+
+    private val crashReportStore by lazy { (application as CentsApplication).crashReportStore }
+
+    // The report of the crash that closed the app last time, until the user has answered the question.
+    private var pendingCrashReport by mutableStateOf<String?>(null)
 
     // Scoped to the Activity's ViewModelStore, which outlives rotations: the form being typed
     // survives them. The factory is needed because the ViewModel takes constructor arguments.
@@ -194,6 +201,9 @@ class MainActivity : ComponentActivity() {
         {
             notificationTarget = targetOf(intent)
         }
+        // Read from the file each time the Activity is created: it stays there until the user has answered, so the
+        // question survives a rotation. A few lines of text, read once.
+        pendingCrashReport = crashReportStore.read()
         setContent {
             var screen by rememberSaveable { mutableStateOf(AppScreen.Splash) }
             val scope = rememberCoroutineScope()
@@ -267,7 +277,26 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+
+            // Asked once the app is usable, not over the splash.
+            val crashReport = pendingCrashReport
+            if (screen == AppScreen.Home && crashReport != null)
+            {
+                CrashReportDialog(
+                    onSend = {
+                        sendCrashReportByEmail(this, crashReport)
+                        answerCrashReport()
+                    },
+                    onIgnore = ::answerCrashReport,
+                )
+            }
         }
+    }
+
+    private fun answerCrashReport()
+    {
+        crashReportStore.clear()
+        pendingCrashReport = null
     }
 
     override fun onNewIntent(intent: Intent)
