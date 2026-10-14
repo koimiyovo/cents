@@ -1,8 +1,9 @@
 # Centimes
 
 A personal budget manager for Android, built as a learning project to explore modern Android
-development with Kotlin. It keeps track of your accounts and of every euro that moves between them,
-entirely on your phone: no account to create, no server of its own. The only thing it uses the internet
+development with Kotlin. It keeps track of your accounts and of every cents that moves between them,
+entirely on your phone: no account to create, no server of its own. The only thing it uses the
+internet
 for is downloading the exchange rates (one request to a public API, which carries nothing of yours).
 
 The user interface is in French.
@@ -73,8 +74,10 @@ The user interface is in French.
 ### Data and privacy
 
 - Everything is stored in a local database on the device and kept from one launch to the next. The
-  app sends none of it over the network: its only request is a `GET` of the day's exchange rates from
-  [Frankfurter](https://frankfurter.dev), with no identifier and no cookie. The database is left out of
+  app sends none of it over the network: its only request is a `GET` of the day's exchange rates
+  from
+  [Frankfurter](https://frankfurter.dev), with no identifier and no cookie. The database is left out
+  of
   Android's cloud backup.
 - **Export and import**: save everything (accounts, transactions, budgets, projects…) to a JSON file
   and restore it, for example on a new phone. An import replaces the data, and a file that does not
@@ -84,18 +87,28 @@ The user interface is in French.
   last five.
 - Export the transactions as **CSV** for a spreadsheet (French format; it cannot be re-imported).
 - The onboarding is shown once.
-- Amounts are integers in the smallest unit of their currency (never floating point): cents for the euro, the
-  dollars and the pound, whole francs for the CFA franc. Accounts can be held in euros, US or Canadian dollars,
-  pounds or CFA francs. The totals (consolidated balance, income and expense, budgets, projects) are shown in
-  the **main currency**, chosen at the first launch and changed from the top bar: what is held in another
+- Amounts are integers in the smallest unit of their currency (never floating point): cents for the
+  euro, the
+  dollars and the pound, whole francs for the CFA franc. Accounts can be held in euros, US or
+  Canadian dollars,
+  pounds or CFA francs. The totals (consolidated balance, income and expense, budgets, projects) are
+  shown in
+  the **main currency**, chosen at the first launch and changed from the top bar: what is held in
+  another
   currency is converted with the day's exchange rates.
-- **Exchange rates** come from the [Frankfurter](https://frankfurter.dev) API (the ECB's reference rates, against the
-  euro), fetched when the app opens and once a day in the background, and kept on the device so that the totals
-  convert offline. The CFA franc is not published but is tied to the euro by treaty at 655.957, so it is built
-  in. The rates are the latest ones for every date (no historical rates), and the screens say which day they
+- **Exchange rates** come from the [Frankfurter](https://frankfurter.dev) API (the ECB's reference
+  rates, against the
+  euro), fetched when the app opens and once a day in the background, and kept on the device so that
+  the totals
+  convert offline. The CFA franc is not published but is tied to the euro by treaty at 655.957, so
+  it is built
+  in. The rates are the latest ones for every date (no historical rates), and the screens say which
+  day they
   are from, or that they are old, or that an account could not be converted.
-- **Transfers between currencies**: the amount received is optional. Left empty, the ECB's rate decides it; the
-  user can type what their bank actually gave instead (the form shows the ECB's figure to compare). Within one
+- **Transfers between currencies**: the amount received is optional. Left empty, the ECB's rate
+  decides it; the
+  user can type what their bank actually gave instead (the form shows the ECB's figure to compare).
+  Within one
   currency, what is received is what is sent.
 - Light and dark themes, following the system.
 
@@ -103,7 +116,8 @@ The user interface is in French.
 
 These are planned, and are not in the app today:
 
-- Rates by day: a purchase in dollars is converted today at the latest rate, not at the rate of the day it was made.
+- Rates by day: a purchase in dollars is converted today at the latest rate, not at the rate of the
+  day it was made.
 
 ## Architecture
 

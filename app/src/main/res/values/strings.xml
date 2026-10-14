@@ -24,7 +24,7 @@
 
     <!-- Onboarding — page 2 -->
     <string name="onboarding_page2_badge">Vos comptes</string>
-    <string name="onboarding_page2_title">Chaque euro à sa place</string>
+    <string name="onboarding_page2_title">Chaque centime à sa place</string>
     <string name="onboarding_page2_feature2_title">Aucune connexion bancaire</string>
     <string name="onboarding_page2_feature2_description">Vous saisissez vos opérations vous-même.</string>
     <string name="onboarding_page2_feature3_title">Vos données restent chez vous</string>
