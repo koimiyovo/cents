@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Subcategory
@@ -33,6 +34,8 @@ data class BudgetFormState(
     val month: YearMonth,
     val limitText: String,
     val thresholdPercent: Int = AlertThreshold.DEFAULT.percent,
+    /** The currency of the limit (the main one): how many decimals the field takes. */
+    val currency: AccountCurrency = AccountCurrency.EUR,
 )
 {
     companion object
@@ -42,13 +45,14 @@ data class BudgetFormState(
          * over from an earlier month — its limit and its alert threshold are pre-filled, since that is what is
          * being changed; otherwise the field starts empty and the threshold is the default, 80 %.
          */
-        fun setting(row: BudgetRow, month: YearMonth): BudgetFormState
+        fun setting(row: BudgetRow, month: YearMonth, currency: AccountCurrency = AccountCurrency.EUR): BudgetFormState
         {
             return BudgetFormState(
                 subcategory = row.subcategory,
                 month = month,
-                limitText = row.progress?.let { formatCentsForInput(it.limit.value) } ?: "",
+                limitText = row.progress?.let { formatCentsForInput(it.limit.value, currency.fractionDigits) } ?: "",
                 thresholdPercent = row.progress?.alertThreshold?.percent ?: AlertThreshold.DEFAULT.percent,
+                currency = currency,
             )
         }
     }
@@ -56,7 +60,7 @@ data class BudgetFormState(
     /** What was typed, unless it would leave the shape of an amount (see [acceptsAmountInput]): then nothing changes. */
     fun withLimit(text: String): BudgetFormState
     {
-        return if (acceptsAmountInput(text)) copy(limitText = text) else this
+        return if (acceptsAmountInput(text, currency.fractionDigits)) copy(limitText = text) else this
     }
 
     /**
@@ -73,7 +77,7 @@ data class BudgetFormState(
     /** Zero is refused (see [parseAmountToCents]): the limit has to be an amount above nothing. */
     fun submit(): BudgetSubmission
     {
-        val cents = parseAmountToCents(limitText) ?: return BudgetSubmission.Invalid
+        val cents = parseAmountToCents(limitText, fractionDigits = currency.fractionDigits) ?: return BudgetSubmission.Invalid
         return BudgetSubmission.Set(
             SetBudgetCommand(subcategory.id, month, Money(cents), AlertThreshold(thresholdPercent))
         )

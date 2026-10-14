@@ -57,6 +57,8 @@ fun ProjectDetailsScreen(
     listProjects: ListProjectsUseCase,
     getProjectProgress: GetProjectProgressUseCase,
     listTransactions: ListTransactionsUseCase,
+    // The same transactions with their amounts in the main currency: what a day that mixes currencies adds up.
+    listConvertedTransactions: ListTransactionsUseCase,
     accounts: List<Account>,
     subcategories: List<Subcategory>,
     onBack: () -> Unit,
@@ -71,6 +73,9 @@ fun ProjectDetailsScreen(
     val progress by remember(projectId) { getProjectProgress.observe(projectId) }
         .collectAsStateWithLifecycle(initialValue = null)
     val allTransactions by remember { listTransactions.observe() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val convertedTransactions by remember { listConvertedTransactions.observe() }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val convertedById = remember(convertedTransactions) { convertedTransactions.associateBy { it.id } }
 
     val loaded = projects ?: run {
         Box(modifier = modifier.fillMaxSize().background(palette.background))
@@ -150,6 +155,7 @@ fun ProjectDetailsScreen(
                         accountsById = accountsById,
                         subcategoriesById = subcategoriesById,
                         onTransactionClick = onTransactionClick,
+                        convertedById = convertedById,
                     )
                 }
             }

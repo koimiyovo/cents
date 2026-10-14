@@ -1,5 +1,7 @@
 package com.kyovo.cents.ui.home
 
+import com.kyovo.cents.domain.port.input.GetExchangeRatesUseCase
+import com.kyovo.cents.domain.port.input.GetTotalBalanceUseCase
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -69,6 +71,7 @@ import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ReorderAccountsUseCase
 import com.kyovo.cents.domain.port.input.UnarchiveAccountUseCase
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.account.AccountFormSheet
 import com.kyovo.cents.ui.account.AccountFormViewModel
 import com.kyovo.cents.ui.budget.BudgetFormSheet
@@ -143,6 +146,9 @@ fun HomeScreen(
     getAccount: GetAccountUseCase,
     getAccountBalance: GetAccountBalanceUseCase,
     listTransactions: ListTransactionsUseCase,
+    listConvertedTransactions: ListTransactionsUseCase,
+    getTotalBalance: GetTotalBalanceUseCase,
+    getExchangeRates: GetExchangeRatesUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     listRecurringTransactions: ListRecurringTransactionsUseCase,
     listProjects: ListProjectsUseCase,
@@ -163,6 +169,8 @@ fun HomeScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
+    val mainCurrency = LocalMainCurrency.current
+    val exchangeRates by remember { getExchangeRates.observe() }.collectAsStateWithLifecycle(initialValue = null)
     val pagerState = rememberPagerState(pageCount = { HomeTab.entries.size })
     val coroutineScope = rememberCoroutineScope()
     val formState by formViewModel.uiState.collectAsStateWithLifecycle()
@@ -211,14 +219,17 @@ fun HomeScreen(
         when (transactionTapTarget(transaction))
         {
             TransactionTapTarget.INITIAL_DEPOSIT_FORM -> initialDepositFormViewModel.openForEdit(
-                transaction
+                transaction,
+                (accounts + archivedAccounts).find { it.id == transaction.accountId }?.currency ?: mainCurrency,
             )
 
             TransactionTapTarget.TRANSACTION_FORM     ->
                 formViewModel.openForEdit(
                     transaction,
                     subcategories.find { it.id == transaction.subcategoryId },
-                    projects.find { it.id == transaction.projectId })
+                    projects.find { it.id == transaction.projectId },
+                    accounts + archivedAccounts,
+                )
 
             TransactionTapTarget.NONE                 -> Unit
         }
@@ -567,6 +578,7 @@ fun HomeScreen(
                         listProjects = listProjects,
                         getProjectProgress = getProjectProgress,
                         listTransactions = listTransactions,
+                        listConvertedTransactions = listConvertedTransactions,
                         accounts = accounts + archivedAccounts,
                         subcategories = subcategories,
                         onBack = closeProjectPage,
@@ -610,7 +622,10 @@ fun HomeScreen(
                 listArchivedAccounts = listArchivedAccounts,
                 listSubcategories = listSubcategories,
                 onBack = { destination = HomeDestination.Settings },
-                onCreate = { recurringTransactionsViewModel.openCreate(accounts.singleOrNull()?.id) },
+                onCreate = {
+                    val only = accounts.singleOrNull()
+                    recurringTransactionsViewModel.openCreate(only?.id, currency = only?.currency ?: mainCurrency)
+                },
                 onEdit = { row ->
                     recurringTransactionsViewModel.openForEdit(
                         row,
@@ -665,8 +680,11 @@ fun HomeScreen(
                             listArchivedAccounts,
                             getAccountBalance,
                             listTransactions,
+                            listConvertedTransactions,
+                            getTotalBalance,
+                            getExchangeRates,
                             onAccountClick = { openedAccountUuid = it.value.toString() },
-                            onNewAccountClick = accountFormViewModel::open,
+                            onNewAccountClick = { accountFormViewModel.open(mainCurrency) },
                             onArchiveAccount = archive,
                             onUnarchiveAccount = unarchive,
                             onEditAccount = accountFormViewModel::openForEdit,
@@ -680,6 +698,8 @@ fun HomeScreen(
                                 listAccounts,
                                 listArchivedAccounts,
                                 listTransactions,
+                                listConvertedTransactions,
+                                getExchangeRates,
                                 listSubcategories,
                                 projects = projects,
                                 onTransactionClick = openTransaction,
@@ -765,6 +785,7 @@ fun HomeScreen(
             subcategories = subcategories,
             projects = projects,
             form = form,
+            exchangeRates = exchangeRates,
             showErrors = formState.showErrors,
             failure = formState.failure,
             onFormChange = formViewModel::update,
@@ -775,7 +796,7 @@ fun HomeScreen(
             onCreateAccount = { field ->
                 // Remember which accounts exist, to recognise the new one and choose it for that field.
                 formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
-                accountFormViewModel.open()
+                accountFormViewModel.open(mainCurrency)
             },
             onDismiss = formViewModel::close,
         )

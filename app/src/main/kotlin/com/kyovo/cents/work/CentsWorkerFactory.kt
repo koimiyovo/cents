@@ -33,6 +33,8 @@ class CentsWorkerFactory(private val appContainer: AppContainer) : WorkerFactory
                 )
             AutomaticBackupWorker::class.java.name ->
                 AutomaticBackupWorker(appContext, workerParameters, appContainer.runAutomaticBackup)
+            ExchangeRatesWorker::class.java.name ->
+                ExchangeRatesWorker(appContext, workerParameters, appContainer.refreshExchangeRates)
             else -> null
         }
     }

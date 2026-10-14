@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.ExportTransactionsCsvUseCase
@@ -29,13 +30,13 @@ class ExportTransactionsCsvService(
         const val BOM = "﻿"
         const val SEPARATOR = ";"
         const val NEW_LINE = "\r\n"
-        val HEADER = listOf("Date", "Compte", "Type", "Titre", "Montant", "Sous-catégorie", "Projet", "Description")
+        val HEADER = listOf("Date", "Compte", "Type", "Titre", "Montant", "Devise", "Sous-catégorie", "Projet", "Description")
     }
 
     override suspend fun export(): String
     {
         return unitOfWork.execute {
-            val accounts = accountRepository.findAll().associate { it.id to it.name.value }
+            val accounts = accountRepository.findAll().associateBy { it.id }
             val subcategories = subcategoryRepository.findAll().associate { it.id to it.name.value }
             val projects = projectRepository.findAll().associate { it.id to it.name.value }
 
@@ -43,10 +44,11 @@ class ExportTransactionsCsvService(
             val rows = transactionRepository.findAll().sortedBy { it.date }.map {
                 listOf(
                     it.date.atZone(zone).toLocalDate().toString(),
-                    accounts[it.accountId].orEmpty(),
+                    accounts[it.accountId]?.name?.value.orEmpty(),
                     label(it.category),
                     it.title.value,
-                    formatAmount(it),
+                    formatAmount(it, accounts[it.accountId]?.currency),
+                    accounts[it.accountId]?.currency?.value?.currencyCode.orEmpty(),
                     it.subcategoryId?.let(subcategories::get).orEmpty(),
                     it.projectId?.let(projects::get).orEmpty(),
                     it.description?.value.orEmpty()
@@ -68,11 +70,16 @@ class ExportTransactionsCsvService(
         TransactionCategory.TRANSFER_IN     -> "Virement entrant"
     }
 
-    private fun formatAmount(transaction: Transaction): String
+    /** The amount with its currency's decimals (none for the CFA franc); two when the account is unknown. */
+    private fun formatAmount(transaction: Transaction, currency: AccountCurrency?): String
     {
-        val cents = transaction.signedAmount
-        val sign = if (cents < 0) "-" else ""
-        return "$sign${abs(cents) / 100},${(abs(cents) % 100).toString().padStart(2, '0')}"
+        val units = transaction.signedAmount
+        val sign = if (units < 0) "-" else ""
+        val digits = currency?.fractionDigits ?: 2
+        if (digits == 0) return "$sign${abs(units)}"
+        var factor = 1L
+        repeat(digits) { factor *= 10 }
+        return "$sign${abs(units) / factor},${(abs(units) % factor).toString().padStart(digits, '0')}"
     }
 
     private fun escape(field: String): String

@@ -1,5 +1,8 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import java.math.BigDecimal
+import com.kyovo.cents.domain.model.ExchangeRates
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
@@ -265,6 +268,50 @@ class CentsMigrationsTest
         }
     }
 
+    /**
+     * A version 7 file as the released app leaves it: the tables and indices of `7.json` (a frozen copy -
+     * version 7 is installed on a phone, so it never changes, and `SchemaGuardTest` pins its hash), Room's
+     * bookkeeping (its identity hash and `user_version` = 7), and some real-looking data: a subcategory, an
+     * account, a project, an expense of that account in that subcategory *and* in that project, and a
+     * monthly budget on the subcategory.
+     */
+    private fun createVersion7File()
+    {
+        val at = Instant.parse("2026-09-01T10:00:00Z").toEpochNanos()
+        val connection = BundledSQLiteDriver().open(path)
+        try
+        {
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `subcategories` (`id` BLOB NOT NULL, `kind` TEXT NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `accounts` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `currency` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `archivedAt` INTEGER, `description` TEXT, `position` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_accounts_position` ON `accounts` (`position`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `projects` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT, `targetCents` INTEGER, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `transactions` (`id` BLOB NOT NULL, `accountId` BLOB NOT NULL, `amount` INTEGER NOT NULL, `title` TEXT NOT NULL, `category` TEXT NOT NULL, `subcategoryId` BLOB, `description` TEXT, `date` INTEGER NOT NULL, `projectId` BLOB, PRIMARY KEY(`id`), FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_accountId` ON `transactions` (`accountId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_subcategoryId` ON `transactions` (`subcategoryId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_projectId` ON `transactions` (`projectId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_transactions_date` ON `transactions` (`date`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budgets` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `limitCents` INTEGER NOT NULL, `alertPercent` INTEGER NOT NULL, PRIMARY KEY(`subcategoryId`, `month`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `recurring_transactions` (`id` BLOB NOT NULL, `accountId` BLOB NOT NULL, `category` TEXT NOT NULL, `amount` INTEGER NOT NULL, `title` TEXT NOT NULL, `subcategoryId` BLOB, `description` TEXT, `frequency` TEXT NOT NULL, `interval` INTEGER NOT NULL, `startDate` INTEGER NOT NULL, `endDate` INTEGER, `lastGeneratedDate` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_transactions_accountId` ON `recurring_transactions` (`accountId`)")
+            connection.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_transactions_subcategoryId` ON `recurring_transactions` (`subcategoryId`)")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budget_alerts` (`subcategoryId` BLOB NOT NULL, `month` INTEGER NOT NULL, `level` TEXT NOT NULL, PRIMARY KEY(`subcategoryId`, `month`, `level`), FOREIGN KEY(`subcategoryId`) REFERENCES `subcategories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budget_cycle_starts` (`month` INTEGER NOT NULL, `startEpochDay` INTEGER NOT NULL, PRIMARY KEY(`month`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `budget_settings` (`id` INTEGER NOT NULL, `defaultStartDay` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
+            connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '77a9917cff57f4806915fa3c1f84dfd0')")
+            connection.execSQL("PRAGMA user_version = 7")
+
+            connection.execSQL("INSERT INTO subcategories (id, kind, name, emoji) VALUES (${blob(groceriesId)}, 'EXPENSE', 'Alimentation', '🛒')")
+            connection.execSQL("INSERT INTO accounts (id, name, type, currency, createdAt, archivedAt, description, position) VALUES (${blob(accountId)}, 'Compte courant', 'CHECKING', 'EUR', $at, NULL, NULL, 0)")
+            connection.execSQL("INSERT INTO projects (id, name, emoji, targetCents, alertPercent) VALUES (${blob(japanId)}, 'Voyage au Japon', '✈️', 300000, 80)")
+            connection.execSQL("INSERT INTO transactions (id, accountId, amount, title, category, subcategoryId, description, date, projectId) VALUES (${blob(expenseId)}, ${blob(accountId)}, 1250, 'Courses', 'EXPENSE', ${blob(groceriesId)}, NULL, $at, ${blob(japanId)})")
+            connection.execSQL("INSERT INTO budgets (subcategoryId, month, limitCents, alertPercent) VALUES (${blob(groceriesId)}, 202609, 30000, 80)")
+        } finally
+        {
+            connection.close()
+        }
+    }
+
     /** The courses of a version 5 file, as the domain sees them, in [projectId] (none by default). */
     private fun coursesIn(projectId: ProjectId?) = Transaction.recorded(
         TransactionId(expenseId), AccountId(accountId), Money(1_250), TransactionTitle("Courses"),
@@ -428,7 +475,7 @@ class CentsMigrationsTest
             {
                 first.close()
             }
-            assertThat(userVersionOfTheFile()).isEqualTo(7)
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
 
             // WHEN it is opened again (the migrations must not run a second time, nor fail)
             val second = openMigrated()
@@ -611,7 +658,7 @@ class CentsMigrationsTest
                 assertThat(rent.startDate).isEqualTo(LocalDate.of(2026, 9, 5))
                 assertThat(rent.endDate).isNull()
                 assertThat(rent.lastGeneratedDate).isEqualTo(LocalDate.of(2026, 12, 5))
-                assertThat(userVersionOfTheFile()).isEqualTo(7)
+                assertThat(userVersionOfTheFile()).isEqualTo(8)
             } finally
             {
                 database.close()
@@ -712,7 +759,7 @@ class CentsMigrationsTest
                     .containsExactly(groceries)
                 assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
                     .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
-                assertThat(userVersionOfTheFile()).isEqualTo(7)
+                assertThat(userVersionOfTheFile()).isEqualTo(8)
             } finally
             {
                 database.close()
@@ -868,7 +915,7 @@ class CentsMigrationsTest
             // THEN
             assertThat(RoomProjectRepository(second.projectDao()).findAll()).containsExactly(japan)
             assertThat(RoomTransactionRepository(second.transactionDao()).findAll()).containsExactly(inTheProject)
-            assertThat(userVersionOfTheFile()).isEqualTo(7)
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
         } finally
         {
             second.close()
@@ -894,7 +941,7 @@ class CentsMigrationsTest
             assertThat(RoomSubcategoryRepository(database.subcategoryDao()).findAll()).containsExactly(groceries)
             assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
                 .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
-            assertThat(userVersionOfTheFile()).isEqualTo(7)
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
         } finally
         {
             database.close()
@@ -963,7 +1010,105 @@ class CentsMigrationsTest
         {
             // THEN
             assertThat(RoomBudgetCalendarRepository(second.budgetCalendarDao()).observe().first()).isEqualTo(expected)
-            assertThat(userVersionOfTheFile()).isEqualTo(7)
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
+        } finally
+        {
+            second.close()
+        }
+    }
+
+    // ------------------------------------------------------------------ 7 -> 8: the exchange rates cache
+
+    @Test
+    fun `a version 7 file keeps its accounts, transactions, budgets and calendar`() = realTime()
+    {
+        // GIVEN a phone whose app of version 7 had an expense, a budget and a calendar
+        createVersion7File()
+        val connection = BundledSQLiteDriver().open(path)
+        connection.execSQL("INSERT INTO budget_settings (id, defaultStartDay) VALUES (1, 25)")
+        connection.close()
+
+        // WHEN the app of version 8 opens it
+        val database = openMigrated()
+        try
+        {
+            // THEN nothing was lost
+            assertThat(RoomTransactionRepository(database.transactionDao()).findAll())
+                .containsExactly(coursesIn(japan.id))
+            assertThat(RoomSubcategoryRepository(database.subcategoryDao()).findAll()).containsExactly(groceries)
+            assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
+                .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
+            assertThat(RoomBudgetCalendarRepository(database.budgetCalendarDao()).observe().first())
+                .isEqualTo(BudgetCalendar(BudgetStartDay(25)))
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    // Nothing has been fetched yet: until the first refresh, the totals leave the other currencies out.
+    @Test
+    fun `a migrated file has no exchange rates yet, and the cache works`() = realTime()
+    {
+        // GIVEN a version 7 file, migrated
+        createVersion7File()
+        val database = openMigrated()
+        try
+        {
+            val rates = RoomExchangeRateRepository(database.exchangeRateDao())
+
+            // WHEN / THEN it starts empty
+            assertThat(rates.observe().first()).isNull()
+
+            // AND works: rates can be saved and read back
+            val monday = ExchangeRates(LocalDate.of(2026, 10, 12), mapOf(AccountCurrency.USD to BigDecimal("1.1")))
+            rates.save(monday)
+            assertThat(rates.observe().first()).isEqualTo(monday)
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `the migrated file has the exchange_rates table`() = realTime()
+    {
+        // GIVEN a version 7 file, migrated
+        createVersion7File()
+        val database = openMigrated()
+        RoomExchangeRateRepository(database.exchangeRateDao()).observe().first() // Room opens the file at the first query
+        database.close()
+
+        // WHEN / THEN
+        assertThat(namesInTheFile("table")).contains("exchange_rates")
+    }
+
+    @Test
+    fun `rates saved in a migrated file survive reopening it`() = realTime()
+    {
+        // GIVEN a version 7 file, migrated, with rates saved
+        createVersion7File()
+        val tuesday = ExchangeRates(
+            LocalDate.of(2026, 10, 13),
+            mapOf(AccountCurrency.GBP to BigDecimal("0.86712"), AccountCurrency.USD to BigDecimal("1.10"))
+        )
+        val first = openMigrated()
+        try
+        {
+            RoomExchangeRateRepository(first.exchangeRateDao()).save(tuesday)
+        } finally
+        {
+            first.close()
+        }
+
+        // WHEN it is opened again (the migration must not run a second time, nor fail)
+        val second = openMigrated()
+        try
+        {
+            // THEN
+            assertThat(RoomExchangeRateRepository(second.exchangeRateDao()).observe().first()).isEqualTo(tuesday)
+            assertThat(userVersionOfTheFile()).isEqualTo(8)
         } finally
         {
             second.close()

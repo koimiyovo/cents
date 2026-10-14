@@ -23,8 +23,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kyovo.cents.BuildConfig
 import com.kyovo.cents.R
 import com.kyovo.cents.ui.common.ChevronDownIcon
 import com.kyovo.cents.ui.home.AccountsPalette
@@ -49,61 +51,75 @@ fun SettingsScreen(
 )
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
+    // The version stays at the bottom of the screen: only the entries above it scroll.
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(palette.background)
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BackButton(palette, onBack)
-            Spacer(Modifier.width(12.dp))
-            HomeTopBar(palette, stringResource(R.string.settings_title))
-        }
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(palette.surface),
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SettingsEntry(
-                palette = palette,
-                emoji = "🏷️",
-                title = stringResource(R.string.settings_subcategories),
-                subtitle = stringResource(R.string.settings_subcategories_hint),
-                onClick = onOpenSubcategories,
-            )
-            SettingsEntry(
-                palette = palette,
-                emoji = "🎯",
-                title = stringResource(R.string.settings_budgets),
-                subtitle = stringResource(R.string.settings_budgets_hint),
-                onClick = onOpenBudgets,
-            )
-            SettingsEntry(
-                palette = palette,
-                emoji = "🔁",
-                title = stringResource(R.string.settings_recurring_transactions),
-                subtitle = stringResource(R.string.settings_recurring_transactions_hint),
-                onClick = onOpenRecurringTransactions,
-            )
-            SettingsEntry(
-                palette = palette,
-                emoji = "\uD83D\uDCC1",
-                title = stringResource(R.string.settings_projects),
-                subtitle = stringResource(R.string.settings_projects_hint),
-                onClick = onOpenProjects,
-            )
-            SettingsEntry(
-                palette = palette,
-                emoji = "\uD83D\uDCBE",
-                title = stringResource(R.string.settings_backup),
-                subtitle = stringResource(R.string.settings_backup_hint),
-                onClick = onOpenBackup,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BackButton(palette, onBack)
+                Spacer(Modifier.width(12.dp))
+                HomeTopBar(palette, stringResource(R.string.settings_title))
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(palette.surface),
+            ) {
+                SettingsEntry(
+                    palette = palette,
+                    emoji = "🏷️",
+                    title = stringResource(R.string.settings_subcategories),
+                    subtitle = stringResource(R.string.settings_subcategories_hint),
+                    onClick = onOpenSubcategories,
+                )
+                SettingsEntry(
+                    palette = palette,
+                    emoji = "🎯",
+                    title = stringResource(R.string.settings_budgets),
+                    subtitle = stringResource(R.string.settings_budgets_hint),
+                    onClick = onOpenBudgets,
+                )
+                SettingsEntry(
+                    palette = palette,
+                    emoji = "🔁",
+                    title = stringResource(R.string.settings_recurring_transactions),
+                    subtitle = stringResource(R.string.settings_recurring_transactions_hint),
+                    onClick = onOpenRecurringTransactions,
+                )
+                SettingsEntry(
+                    palette = palette,
+                    emoji = "\uD83D\uDCC1",
+                    title = stringResource(R.string.settings_projects),
+                    subtitle = stringResource(R.string.settings_projects_hint),
+                    onClick = onOpenProjects,
+                )
+                SettingsEntry(
+                    palette = palette,
+                    emoji = "\uD83D\uDCBE",
+                    title = stringResource(R.string.settings_backup),
+                    subtitle = stringResource(R.string.settings_backup_hint),
+                    onClick = onOpenBackup,
+                )
+            }
         }
+        Text(
+            text = stringResource(R.string.app_version, "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"),
+            color = palette.textMuted,
+            fontSize = 13.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

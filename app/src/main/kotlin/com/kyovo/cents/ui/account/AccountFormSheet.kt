@@ -36,6 +36,10 @@ import com.kyovo.cents.ui.common.FormTextField
 import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.common.SectionLabel
 import com.kyovo.cents.ui.common.SubmitButton
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.ui.settings.label
+import com.kyovo.cents.ui.common.SelectDropdown
+import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
@@ -119,6 +123,9 @@ fun AccountFormSheet(
 
             TypePicker(palette, form.type) { onFormChange(form.copy(type = it)) }
 
+            // The currency is fixed once the account exists: only offered when opening one.
+            if (!form.isEditing) CurrencyPicker(palette, form.currency) { onFormChange(form.withCurrency(it)) }
+
             // The opening balance is only asked for when opening: afterwards it is a transaction.
             if (!form.isEditing) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionLabel(palette, stringResource(R.string.account_form_initial_amount_label))
@@ -126,8 +133,9 @@ fun AccountFormSheet(
                     palette = palette,
                     value = form.initialAmountText,
                     // Edits that would break the amount's shape (letters, a third decimal...) are dropped.
-                    onValueChange = { if (acceptsAmountInput(it)) onFormChange(form.copy(initialAmountText = it)) },
+                    onValueChange = { if (acceptsAmountInput(it, form.currency.fractionDigits)) onFormChange(form.copy(initialAmountText = it)) },
                     error = AccountFormError.INITIAL_AMOUNT_INVALID in errors,
+                    currency = form.currency,
                     textSize = 22.sp,
                 )
                 if (AccountFormError.INITIAL_AMOUNT_INVALID in errors)
@@ -151,6 +159,26 @@ fun AccountFormSheet(
                 onSubmit,
             )
         }
+    }
+}
+
+@Composable
+private fun CurrencyPicker(
+    palette: AccountsPalette,
+    selected: AccountCurrency,
+    onSelect: (AccountCurrency) -> Unit,
+)
+{
+    // A dropdown, not chips: the list of currencies grows (five already) and chips would scroll sideways.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionLabel(palette, stringResource(R.string.account_form_currency_label))
+        SelectDropdown(
+            palette = palette,
+            options = AccountCurrency.SUPPORTED.map { SelectOption(it, it.label()) },
+            selected = selected,
+            onSelect = { it?.let(onSelect) },
+            fillWidth = true,
+        )
     }
 }
 

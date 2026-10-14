@@ -100,6 +100,7 @@ fun ProjectFormSheet(
                     value = form.targetText,
                     onValueChange = { onFormChange(form.withTarget(it)) },
                     error = ProjectFormError.TARGET_INVALID in errors,
+                    currency = form.currency,
                     textSize = 22.sp,
                 )
                 Text(

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
@@ -72,6 +73,11 @@ data class TransactionFormState(
     val accountId: AccountId?,
     val toAccountId: AccountId? = null,
     val amountText: String = "",
+    /**
+     * For a transfer between two currencies: what the destination receives, typed by the user (their bank's rate,
+     * which is not the ECB's). Empty leaves it to the exchange rates. Ignored when both accounts have the same currency.
+     */
+    val destinationAmountText: String = "",
     val title: String = "",
     val subcategory: Subcategory? = null,
     val description: String = "",
@@ -115,14 +121,20 @@ data class TransactionFormState(
          * [subcategory] and [project] are the ones the transaction points to (null when it has none). They are
          * required arguments, not defaults: forgetting one would silently drop it on saving.
          */
-        fun editing(transaction: Transaction, subcategory: Subcategory?, project: Project?): TransactionFormState
+        fun editing(
+            transaction: Transaction,
+            subcategory: Subcategory?,
+            project: Project?,
+            // The currency of the account the transaction sits on: its amount is shown with that many decimals.
+            fractionDigits: Int = 2,
+        ): TransactionFormState
         {
             require(canEditTransaction(transaction)) { "Only an income or an expense can be edited" }
             return TransactionFormState(
                 type = if (transaction.category == TransactionCategory.INCOME) TransactionFormType.INCOME
                 else TransactionFormType.EXPENSE,
                 accountId = transaction.accountId,
-                amountText = formatCentsForInput(transaction.amount.value),
+                amountText = formatCentsForInput(transaction.amount.value, fractionDigits),
                 title = transaction.title.value,
                 subcategory = subcategory,
                 description = transaction.description?.value.orEmpty(),
@@ -153,16 +165,32 @@ data class TransactionFormState(
         }
     }
 
-    fun submit(zone: ZoneId = ZoneId.systemDefault()): FormSubmission
+    /**
+     * [fractionDigits] is the number of decimals of the chosen account's currency (2 for the euro, 0 for the
+     * CFA franc): what the amount is read with.
+     */
+    fun submit(
+        zone: ZoneId = ZoneId.systemDefault(),
+        fractionDigits: Int = 2,
+        // The decimals of the destination's currency when it is not the source's (a transfer between two
+        // currencies): null means the same currency on both sides, where there is no amount received of its own.
+        destinationFractionDigits: Int? = null,
+    ): FormSubmission
     {
         val errors = mutableSetOf<FormError>()
 
-        val amountCents = parseAmountToCents(amountText)
+        val amountCents = parseAmountToCents(amountText, fractionDigits = fractionDigits)
         if (amountCents == null) errors += FormError.AMOUNT_INVALID
         if (title.isBlank()) errors += FormError.TITLE_REQUIRED
         if (accountId == null) errors += FormError.ACCOUNT_REQUIRED
 
         val category = type.recordableCategory()
+        val readsDestinationAmount =
+            category == null && destinationFractionDigits != null && destinationAmountText.isNotBlank()
+        val destinationAmountCents =
+            if (readsDestinationAmount) parseAmountToCents(destinationAmountText, fractionDigits = destinationFractionDigits!!) else null
+        if (readsDestinationAmount && destinationAmountCents == null) errors += FormError.DESTINATION_AMOUNT_INVALID
+
         if (category == null)
         {
             if (toAccountId == null) errors += FormError.DESTINATION_ACCOUNT_REQUIRED
@@ -235,6 +263,7 @@ data class TransactionFormState(
                     amount = amount,
                     title = cleanTitle,
                     date = date,
+                    destinationAmount = destinationAmountCents?.let { Money(it) },
                 ),
             )
         }
@@ -286,6 +315,13 @@ data class TransactionFormState(
     {
         if (!canHaveProject || projectLocked) return this
         return copy(project = project)
+    }
+
+    /** The amount received of a transfer, as typed: an edit that would not be an amount is dropped, like the amount sent. */
+    fun withDestinationAmount(text: String, fractionDigits: Int): TransactionFormState
+    {
+        if (!acceptsAmountInput(text, fractionDigits)) return this
+        return copy(destinationAmountText = text)
     }
 
     /** The projects this form offers: all of them, or none when it cannot have one. */
@@ -340,6 +376,8 @@ data class TransactionFormState(
         val keptProject = project.takeUnless { type == TransactionFormType.TRANSFER }
         return copy(
             type = type,
+            // The amount received only exists for a transfer.
+            destinationAmountText = if (type == TransactionFormType.TRANSFER) destinationAmountText else "",
             subcategory = keptSubcategory,
             toAccountId = keptDestination,
             repeat = keptRepeat,

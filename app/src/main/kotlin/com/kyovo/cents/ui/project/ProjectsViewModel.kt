@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kyovo.cents.domain.exception.DuplicateProjectNameException
@@ -41,6 +42,8 @@ class ProjectsViewModel(
     private val createProject: CreateProjectUseCase,
     private val updateProject: UpdateProjectUseCase,
     private val deleteProject: DeleteProjectUseCase,
+    // The currency targets are set in: the main one.
+    private val mainCurrency: StateFlow<AccountCurrency> = MutableStateFlow(AccountCurrency.EUR),
 ) : ViewModel()
 {
     private val _uiState = MutableStateFlow(ProjectsUiState())
@@ -52,7 +55,7 @@ class ProjectsViewModel(
     fun openCreate()
     {
         editedCard = null
-        _uiState.value = ProjectsUiState(form = ProjectFormState.creating())
+        _uiState.value = ProjectsUiState(form = ProjectFormState.creating(mainCurrency.value))
     }
 
     /** Opens the form pre-filled with [card]'s project. */
@@ -60,7 +63,7 @@ class ProjectsViewModel(
     {
         editedCard = card
         _uiState.value = ProjectsUiState(
-            form = ProjectFormState.editing(card.project),
+            form = ProjectFormState.editing(card.project, mainCurrency.value),
             editedTransactionCount = card.transactionCount,
         )
     }

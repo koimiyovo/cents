@@ -4,6 +4,9 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Only to fetch the exchange rates (one GET to api.frankfurter.dev, nothing of the user is sent). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".CentsApplication"
         android:allowBackup="true"

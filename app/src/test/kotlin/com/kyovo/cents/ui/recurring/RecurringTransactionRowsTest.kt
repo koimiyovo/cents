@@ -57,11 +57,12 @@ class RecurringTransactionRowsTest
     {
         // GIVEN
         val accountId = AccountId(UUID.randomUUID())
-        val rent = RecurringTransactionRow(aRecurringTransaction(accountId), "Compte courant", null)
+        val rent = RecurringTransactionRow(aRecurringTransaction(accountId), "Compte courant", null, AccountCurrency.EUR)
         val salary = RecurringTransactionRow(
             aRecurringTransaction(accountId, category = RecordableTransactionCategory.INCOME),
             "Compte courant",
             null,
+            AccountCurrency.EUR,
         )
 
         // WHEN / THEN
@@ -91,7 +92,8 @@ class RecurringTransactionRowsTest
             RecurringTransactionRow(
                 rule,
                 "Compte courant",
-                "Logement"
+                "Logement",
+                AccountCurrency.EUR,
             )
         )
     }

@@ -37,7 +37,7 @@ import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
-import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.ui.common.formatSignedMoney
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.BackButton
 import com.kyovo.cents.ui.home.DarkAccountsPalette
@@ -170,7 +170,7 @@ private fun RecurringTransactionRowItem(palette: AccountsPalette, row: Recurring
         Spacer(Modifier.width(8.dp))
         // Which way the money goes, like the transactions list: minus in the expense colour, plus in the income one.
         Text(
-            text = formatSignedEuroCents(row.signedAmountCents),
+            text = formatSignedMoney(row.signedAmountCents, row.currency),
             color = if (row.signedAmountCents >= 0) palette.heroIncomeAccent else palette.heroExpenseAccent,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,

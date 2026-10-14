@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
 import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.InMemorySubcategoryRepository
@@ -39,7 +40,7 @@ class ExportTransactionsCsvServiceTest
     private val paris = ZoneId.of("Europe/Paris")
 
     private val bom = "﻿"
-    private val header = "Date;Compte;Type;Titre;Montant;Sous-catégorie;Projet;Description"
+    private val header = "Date;Compte;Type;Titre;Montant;Devise;Sous-catégorie;Projet;Description"
 
     private fun service(zone: ZoneId = paris) = ExportTransactionsCsvService(
         accounts,
@@ -82,7 +83,7 @@ class ExportTransactionsCsvServiceTest
         )
 
         // THEN
-        assertThat(lines()).containsExactly("2026-09-22;Courant;Dépense;Restaurant;-38,00;;;")
+        assertThat(lines()).containsExactly("2026-09-22;Courant;Dépense;Restaurant;-38,00;EUR;;;")
     }
 
     @Test
@@ -101,7 +102,7 @@ class ExportTransactionsCsvServiceTest
         )
 
         // THEN
-        assertThat(lines().single()).contains(";Revenu;Salaire;123456,05;")
+        assertThat(lines().single()).contains(";Revenu;Salaire;123456,05;EUR;")
     }
 
     @Test
@@ -156,7 +157,7 @@ class ExportTransactionsCsvServiceTest
 
         // THEN
         assertThat(lines().single())
-            .endsWith(";Courses;-12,50;Alimentation;Voyage au Japon;Marché du samedi")
+            .endsWith(";Courses;-12,50;EUR;Alimentation;Voyage au Japon;Marché du samedi")
     }
 
     @Test
@@ -270,7 +271,7 @@ class ExportTransactionsCsvServiceTest
         )
 
         // THEN
-        assertThat(lines().single().split(";")[5]).isEmpty()
+        assertThat(lines().single().split(";")[6]).isEmpty()
     }
 
     @Test
@@ -288,5 +289,40 @@ class ExportTransactionsCsvServiceTest
         // THEN
         assertThat(accounts.saved).containsExactly(account)
         assertThat(transactions.findAll()).containsExactly(transaction)
+    }
+
+    // Amounts of several currencies end up in one file: each line says which, and a CFA franc has no decimals.
+    @Test
+    fun `each line says its account's currency, and a CFA franc amount has no decimals`() = runTest()
+    {
+        // GIVEN
+        val euros = anAccount(id = anAccountId("11111111-1111-1111-1111-111111111111"), name = AccountName("Euros"))
+        val francs = anAccount(
+            id = anAccountId("22222222-2222-2222-2222-222222222222"),
+            name = AccountName("Francs"),
+            currency = aCurrency("XOF"),
+        )
+        val dollars = anAccount(
+            id = anAccountId("33333333-3333-3333-3333-333333333333"),
+            name = AccountName("Dollars"),
+            currency = aCurrency("USD"),
+        )
+        accounts.save(euros)
+        accounts.save(francs)
+        accounts.save(dollars)
+        transactions.save(
+            aTransaction(aTransactionId("a0000000-0000-0000-0000-000000000001"), euros.id, aMoney(1_250), category = TransactionCategory.EXPENSE),
+        )
+        transactions.save(
+            aTransaction(aTransactionId("a0000000-0000-0000-0000-000000000002"), francs.id, aMoney(150_000), category = TransactionCategory.EXPENSE),
+        )
+        transactions.save(
+            aTransaction(aTransactionId("a0000000-0000-0000-0000-000000000003"), dollars.id, aMoney(1_250), category = TransactionCategory.EXPENSE),
+        )
+
+        // THEN
+        val fields = lines().map { it.split(";") }
+        assertThat(fields.map { it[4] to it[5] })
+            .containsExactlyInAnyOrder("-12,50" to "EUR", "-150000" to "XOF", "-12,50" to "USD")
     }
 }

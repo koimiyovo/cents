@@ -187,6 +187,15 @@ data class Transaction private constructor(
         return copy(projectId = null)
     }
 
+    /**
+     * The same transaction with another amount: what the totals use to show a transaction in the main currency.
+     * Zero is accepted here (unlike when recording), since a small amount can round to nothing once converted.
+     */
+    fun withAmount(amount: Money): Transaction
+    {
+        return copy(amount = amount)
+    }
+
     val signedAmount: Long
         get() = when (category)
         {

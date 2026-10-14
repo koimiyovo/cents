@@ -12,6 +12,7 @@ import com.kyovo.cents.domain.port.output.BackupRestorer
 import com.kyovo.cents.domain.port.output.BudgetAlertRepository
 import com.kyovo.cents.domain.port.output.BudgetCalendarRepository
 import com.kyovo.cents.domain.port.output.BudgetRepository
+import com.kyovo.cents.domain.port.output.ExchangeRateRepository
 import com.kyovo.cents.domain.port.output.ProjectRepository
 import com.kyovo.cents.domain.port.output.RecurringTransactionRepository
 import com.kyovo.cents.domain.port.output.SubcategoryRepository
@@ -39,6 +40,7 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
     val projects: ProjectRepository = RoomProjectRepository(database.projectDao())
     val budgetCalendar: BudgetCalendarRepository =
         RoomBudgetCalendarRepository(database.budgetCalendarDao())
+    val exchangeRates: ExchangeRateRepository = RoomExchangeRateRepository(database.exchangeRateDao())
     val backupRestorer: BackupRestorer = RoomBackupRestorer(database)
     val unitOfWork: UnitOfWork = RoomUnitOfWork(database)
 

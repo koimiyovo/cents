@@ -4,9 +4,11 @@ import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import kotlinx.coroutines.test.runTest
 import com.kyovo.cents.application.fakes.FixedTransactionIdGenerator
 import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryExchangeRateRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.InMemoryUnitOfWork
 import com.kyovo.cents.application.fakes.SequentialTransactionIdGenerator
+import com.kyovo.cents.application.fakes.aCurrency
 import com.kyovo.cents.application.fakes.aMoney
 import com.kyovo.cents.application.fakes.aRecordTransferCommand
 import com.kyovo.cents.application.fakes.aTransactionId
@@ -164,6 +166,32 @@ class RecordTransferServiceTest
             .isInstanceOf(CannotRecordTransactionOnArchivedAccountException::class.java)
     }
 
+    @Test
+    fun `a transfer between two accounts in the same foreign currency is recorded`() = runTest()
+    {
+        // GIVEN
+        val accountRepository = InMemoryAccountRepository()
+        accountRepository.save(anAccount(id = fromAccountId, currency = aCurrency("XOF")))
+        accountRepository.save(anAccount(id = toAccountId, currency = aCurrency("XOF")))
+        val transactionRepository = InMemoryTransactionRepository()
+        val service = aRecordTransferService(
+            accountRepository = accountRepository,
+            transactionRepository = transactionRepository,
+            transactionIdGenerator = SequentialTransactionIdGenerator(
+                listOf(
+                    aTransactionId("33333333-3333-3333-3333-333333333333"),
+                    aTransactionId("44444444-4444-4444-4444-444444444444"),
+                ),
+            ),
+        )
+
+        // WHEN
+        service.record(aRecordTransferCommand(fromAccountId = fromAccountId, toAccountId = toAccountId, amount = aMoney(500)))
+
+        // THEN
+        assertThat(transactionRepository.saved).hasSize(2)
+    }
+
     // Same rule as recording an income or an expense: a movement of nothing is refused, and since a
     // transfer is two legs, neither of them may be left behind.
     @Test
@@ -212,14 +240,16 @@ class RecordTransferServiceTest
         accountRepository: InMemoryAccountRepository,
         transactionRepository: InMemoryTransactionRepository = InMemoryTransactionRepository(),
         transactionIdGenerator: TransactionIdGenerator = FixedTransactionIdGenerator(aTransactionId()),
-        unitOfWork: InMemoryUnitOfWork = InMemoryUnitOfWork()
+        unitOfWork: InMemoryUnitOfWork = InMemoryUnitOfWork(),
+        exchangeRateRepository: InMemoryExchangeRateRepository = InMemoryExchangeRateRepository()
     ): RecordTransferService
     {
         return RecordTransferService(
             accountRepository,
             transactionRepository,
             transactionIdGenerator,
-            unitOfWork
+            unitOfWork,
+            exchangeRateRepository
         )
     }
 }

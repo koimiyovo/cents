@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
@@ -24,16 +25,19 @@ fun canEditInitialDeposit(transaction: Transaction): Boolean
 data class InitialDepositFormState(
     val amountText: String,
     val editingId: TransactionId,
+    /** The currency of the account the deposit is on: how many decimals the field takes. */
+    val currency: AccountCurrency = AccountCurrency.EUR,
 )
 {
     companion object
     {
-        fun editing(transaction: Transaction): InitialDepositFormState
+        fun editing(transaction: Transaction, currency: AccountCurrency = AccountCurrency.EUR): InitialDepositFormState
         {
             require(canEditInitialDeposit(transaction)) { "Only an opening deposit can be edited here" }
             return InitialDepositFormState(
-                amountText = formatCentsForInput(transaction.amount.value),
+                amountText = formatCentsForInput(transaction.amount.value, currency.fractionDigits),
                 editingId = transaction.id,
+                currency = currency,
             )
         }
     }
@@ -41,7 +45,7 @@ data class InitialDepositFormState(
     /** Zero is refused (see [parseAmountToCents]): opening an account with 0 creates no deposit at all. */
     fun submit(): InitialDepositSubmission
     {
-        val cents = parseAmountToCents(amountText) ?: return InitialDepositSubmission.Invalid
+        val cents = parseAmountToCents(amountText, fractionDigits = currency.fractionDigits) ?: return InitialDepositSubmission.Invalid
         return InitialDepositSubmission.Update(editingId, Money(cents))
     }
 }

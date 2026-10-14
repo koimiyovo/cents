@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
@@ -39,10 +40,10 @@ class InitialDepositFormViewModel(
     val uiState: StateFlow<InitialDepositUiState> = _uiState.asStateFlow()
 
     /** Opens the form pre-filled with [transaction]'s amount. Anything but an opening deposit is ignored. */
-    fun openForEdit(transaction: Transaction)
+    fun openForEdit(transaction: Transaction, currency: AccountCurrency = AccountCurrency.EUR)
     {
         if (!canEditInitialDeposit(transaction)) return
-        _uiState.value = InitialDepositUiState(form = InitialDepositFormState.editing(transaction))
+        _uiState.value = InitialDepositUiState(form = InitialDepositFormState.editing(transaction, currency))
     }
 
     fun update(form: InitialDepositFormState)

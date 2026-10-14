@@ -42,11 +42,11 @@ import java.util.UUID
 
 private val NOW = Instant.parse("2026-09-23T12:00:00Z")
 
-private fun anAccount(archived: Boolean = false) = Account(
+private fun anAccount(archived: Boolean = false, currency: AccountCurrency = AccountCurrency.EUR) = Account(
     id = AccountId(UUID.randomUUID()),
     name = AccountName("Account ${UUID.randomUUID()}"),
     type = AccountType.CHECKING,
-    currency = AccountCurrency(Currency.getInstance("EUR")),
+    currency = currency,
     createdAt = NOW,
     archivedAt = if (archived) NOW else null,
 )
@@ -71,9 +71,11 @@ private class FakeRecordTransaction : RecordTransactionUseCase
 private class FakeRecordTransfer : RecordTransferUseCase
 {
     val commands = mutableListOf<RecordTransferCommand>()
+    var failWith: RuntimeException? = null
 
     override suspend fun record(command: RecordTransferCommand): TransferResult
     {
+        failWith?.let { throw it }
         commands += command
         return TransferResult(
             Transaction.transferOut(
@@ -982,5 +984,221 @@ class TransactionFormViewModelTest
 
         // THEN the user's later choice stands
         assertThat(form!!.accountId).isEqualTo(savings.id)
+    }
+
+    @Test
+    fun `an expense on a CFA franc account is saved as a count of francs`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(francs), preselectedAccountId = francs.id)
+        viewModel.update(form!!.copy(amountText = "1500", title = "Marché"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands.single().amount).isEqualTo(Money(1_500))
+    }
+
+    @Test
+    fun `an expense on a dollar account keeps its cents`()
+    {
+        // GIVEN
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        viewModel.open(listOf(dollars), preselectedAccountId = dollars.id)
+        viewModel.update(form!!.copy(amountText = "12,50", title = "Café"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands.single().amount).isEqualTo(Money(1_250))
+    }
+
+    @Test
+    fun `a decimal amount on a CFA franc account is refused and nothing is saved`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(francs), preselectedAccountId = francs.id)
+        viewModel.update(form!!.copy(amountText = "12,50", title = "Marché"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands).isEmpty()
+        assertThat(viewModel.uiState.value.showErrors).isTrue()
+    }
+
+    @Test
+    fun `the amount follows the account chosen after the form was opened`()
+    {
+        // GIVEN a form opened with a euro account, then an account in francs picked
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(checking, francs), preselectedAccountId = checking.id)
+        viewModel.update(form!!.copy(accountId = francs.id, amountText = "1500", title = "Marché"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransaction.commands.single().amount).isEqualTo(Money(1_500))
+    }
+
+    private fun openATransfer(from: Account, to: Account)
+    {
+        viewModel.open(listOf(from, to), preselectedAccountId = from.id)
+        viewModel.update(
+            form!!.withType(TransactionFormType.TRANSFER).copy(toAccountId = to.id, amountText = "100", title = "Change")
+        )
+    }
+
+    @Test
+    fun `a transfer between two currencies carries the amount received that was typed`()
+    {
+        // GIVEN 100,00 EUR sent to a dollar account, and what the bank gave typed in
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+        viewModel.update(form!!.withDestinationAmount("109,50", fractionDigits = 2))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        val command = recordTransfer.commands.single()
+        assertThat(command.amount).isEqualTo(Money(10_000))
+        assertThat(command.destinationAmount).isEqualTo(Money(10_950))
+    }
+
+    @Test
+    fun `an amount received in CFA francs is read as whole francs`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        openATransfer(checking, francs)
+        viewModel.update(form!!.withDestinationAmount("65000", fractionDigits = 0))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isEqualTo(Money(65_000))
+    }
+
+    @Test
+    fun `a transfer between two currencies with no amount typed leaves it to the exchange rates`()
+    {
+        // GIVEN
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isNull()
+    }
+
+    @Test
+    fun `an amount left in the field is ignored when both accounts are in the same currency`()
+    {
+        // GIVEN a transfer that was between two currencies, then the destination changed to a euro account
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        viewModel.open(listOf(checking, savings, dollars), preselectedAccountId = checking.id)
+        viewModel.update(
+            form!!.withType(TransactionFormType.TRANSFER)
+                .copy(toAccountId = dollars.id, amountText = "100", title = "Change")
+                .withDestinationAmount("109,50", fractionDigits = 2)
+        )
+        viewModel.update(form!!.copy(toAccountId = savings.id))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands.single().destinationAmount).isNull()
+    }
+
+    @Test
+    fun `an invalid amount received keeps the form open and says so`()
+    {
+        // GIVEN
+        val dollars = anAccount(currency = AccountCurrency.USD)
+        openATransfer(checking, dollars)
+        viewModel.update(form!!.copy(destinationAmountText = "0"))
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN
+        assertThat(recordTransfer.commands).isEmpty()
+        assertThat(viewModel.uiState.value.showErrors).isTrue()
+        assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `a transfer that needs a rate nobody has is explained on screen`()
+    {
+        // GIVEN the use case cannot convert: no amount typed, and no rate for the currency
+        val canadian = anAccount(currency = AccountCurrency.CAD)
+        openATransfer(checking, canadian)
+        recordTransfer.failWith = com.kyovo.cents.domain.exception.ExchangeRateUnavailableException()
+
+        // WHEN
+        viewModel.submit()
+
+        // THEN the sheet stays open and asks for the amount received
+        assertThat(viewModel.uiState.value.failure).isEqualTo(SubmitFailure.RATE_UNAVAILABLE)
+        assertThat(form).isNotNull()
+    }
+
+    @Test
+    fun `editing a transaction on a CFA franc account shows its amount as a whole number`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        val francExpense = Transaction.recorded(
+            id = TransactionId(UUID.randomUUID()),
+            accountId = francs.id,
+            amount = Money(1_500),
+            title = TransactionTitle("Marché"),
+            category = RecordableTransactionCategory.EXPENSE,
+            subcategory = null,
+            description = null,
+            date = NOW.minusSeconds(3600),
+        )
+
+        // WHEN
+        viewModel.openForEdit(francExpense, subcategory = null, project = null, accounts = listOf(francs))
+
+        // THEN
+        assertThat(form!!.amountText).isEqualTo("1500")
+    }
+
+    @Test
+    fun `the deletion question words the amount in the account's currency`()
+    {
+        // GIVEN
+        val francs = anAccount(currency = AccountCurrency.XOF)
+        val francExpense = Transaction.recorded(
+            id = TransactionId(UUID.randomUUID()),
+            accountId = francs.id,
+            amount = Money(1_500),
+            title = TransactionTitle("Marché"),
+            category = RecordableTransactionCategory.EXPENSE,
+            subcategory = null,
+            description = null,
+            date = NOW.minusSeconds(3600),
+        )
+        viewModel.openForEdit(francExpense, subcategory = null, project = null, accounts = listOf(francs))
+
+        // WHEN
+        viewModel.askToDelete()
+
+        // THEN
+        assertThat(viewModel.uiState.value.confirmingDelete)
+            .isEqualTo(TransactionToDelete("Marché", -1_500, AccountCurrency.XOF))
     }
 }

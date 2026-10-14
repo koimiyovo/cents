@@ -34,7 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
-import com.kyovo.cents.ui.common.formatEuroCents
+import com.kyovo.cents.ui.common.formatMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.BackButton
 import com.kyovo.cents.ui.home.DarkAccountsPalette
@@ -151,7 +152,7 @@ internal fun ProjectCardView(
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = stringResource(R.string.projects_card_cost, formatEuroCents(card.netCents)),
+                text = stringResource(R.string.projects_card_cost, formatMoney(card.netCents, LocalMainCurrency.current)),
                 color = palette.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
@@ -159,7 +160,7 @@ internal fun ProjectCardView(
             )
             card.progress.target?.let { target ->
                 Text(
-                    text = stringResource(R.string.projects_card_target, formatEuroCents(target.value)),
+                    text = stringResource(R.string.projects_card_target, formatMoney(target.value, LocalMainCurrency.current)),
                     color = palette.textMuted,
                     fontSize = 13.sp,
                 )
@@ -186,13 +187,13 @@ internal fun ProjectCardView(
         when (val remaining = card.remaining)
         {
             is ProjectRemaining.Left -> Text(
-                text = stringResource(R.string.projects_card_left, formatEuroCents(remaining.cents)),
+                text = stringResource(R.string.projects_card_left, formatMoney(remaining.cents, LocalMainCurrency.current)),
                 color = palette.textMuted,
                 fontSize = 13.sp,
             )
 
             is ProjectRemaining.Over -> Text(
-                text = stringResource(R.string.projects_card_over, formatEuroCents(remaining.cents)),
+                text = stringResource(R.string.projects_card_over, formatMoney(remaining.cents, LocalMainCurrency.current)),
                 color = palette.error,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,

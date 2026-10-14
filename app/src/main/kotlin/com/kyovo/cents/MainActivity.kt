@@ -6,6 +6,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.ui.settings.LocalChangeMainCurrency
+import com.kyovo.cents.ui.settings.LocalMainCurrency
+import com.kyovo.cents.ui.settings.MainCurrencyChoiceScreen
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,7 +42,7 @@ import kotlinx.coroutines.launch
 // A plain enum (rather than a sealed interface of data objects) so rememberSaveable can persist
 // it across configuration changes — Kotlin enums are Serializable for free, sealed-interface
 // singletons aren't.
-private enum class AppScreen { Splash, Onboarding, Home }
+private enum class AppScreen { Splash, Onboarding, Currency, Home }
 
 class MainActivity : ComponentActivity() {
     private val appContainer by lazy { (application as CentsApplication).appContainer }
@@ -75,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     createProject = appContainer.createProject,
                     updateProject = appContainer.updateProject,
                     deleteProject = appContainer.deleteProject,
+                    mainCurrency = appContainer.mainCurrencyState,
                 )
             }
         }
@@ -114,6 +123,7 @@ class MainActivity : ComponentActivity() {
                     getSpendingTrend = appContainer.getSpendingTrend,
                     getBudgetCalendar = appContainer.getBudgetCalendar,
                     setBudget = appContainer.setBudget,
+                    mainCurrency = appContainer.mainCurrencyState,
                 )
             }
         }
@@ -188,20 +198,44 @@ class MainActivity : ComponentActivity() {
             var screen by rememberSaveable { mutableStateOf(AppScreen.Splash) }
             val scope = rememberCoroutineScope()
 
+            // After the splash the main currency is read once: null means the user has not chosen yet.
+            val savedCurrency by remember { appContainer.mainCurrency.observe() }
+                .collectAsStateWithLifecycle(initialValue = null)
+            val changeCurrency: (AccountCurrency) -> Unit = { currency ->
+                scope.launch { appContainer.mainCurrency.save(currency) }
+            }
+
+            // The splash is the wait: the flags are read when it ends, so no extra loading state.
             when (screen) {
-                // The splash is the wait: the flag is read when it ends, so no extra loading state.
                 AppScreen.Splash -> SplashScreen(onFinished = {
                     scope.launch {
-                        screen = if (onboardingSeen.isSeen()) AppScreen.Home else AppScreen.Onboarding
+                        screen = when
+                        {
+                            !onboardingSeen.isSeen() -> AppScreen.Onboarding
+                            appContainer.mainCurrency.observe().first() == null -> AppScreen.Currency
+                            else -> AppScreen.Home
+                        }
                     }
                 })
                 AppScreen.Onboarding -> OnboardingScreen(onFinished = {
                     scope.launch {
                         onboardingSeen.markSeen()
+                        screen =
+                            if (appContainer.mainCurrency.observe().first() == null) AppScreen.Currency
+                            else AppScreen.Home
+                    }
+                })
+                AppScreen.Currency -> MainCurrencyChoiceScreen(onChosen = { currency ->
+                    scope.launch {
+                        appContainer.mainCurrency.save(currency)
                         screen = AppScreen.Home
                     }
                 })
-                AppScreen.Home -> HomeScreen(
+                AppScreen.Home -> CompositionLocalProvider(
+                    LocalMainCurrency provides (savedCurrency ?: AccountCurrency.EUR),
+                    LocalChangeMainCurrency provides changeCurrency,
+                ) {
+                    HomeScreen(
                     listAccounts = appContainer.listAccounts,
                     listArchivedAccounts = appContainer.listArchivedAccounts,
                     archiveAccount = appContainer.archiveAccount,
@@ -211,6 +245,9 @@ class MainActivity : ComponentActivity() {
                     getAccount = appContainer.getAccount,
                     getAccountBalance = appContainer.getAccountBalance,
                     listTransactions = appContainer.listTransactions,
+                    listConvertedTransactions = appContainer.listConvertedTransactions,
+                    getTotalBalance = appContainer.getTotalBalance,
+                    getExchangeRates = appContainer.getExchangeRates,
                     listSubcategories = appContainer.listSubcategories,
                     listRecurringTransactions = appContainer.listRecurringTransactions,
                     listProjects = appContainer.listProjects,
@@ -227,7 +264,8 @@ class MainActivity : ComponentActivity() {
                     automaticBackupViewModel = automaticBackupViewModel,
                     notificationTarget = notificationTarget,
                     onNotificationTargetHandled = { notificationTarget = null },
-                )
+                    )
+                }
             }
         }
     }

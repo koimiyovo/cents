@@ -129,7 +129,9 @@ fun RecurringTransactionFormSheet(
                 AccountDisplayField(palette, form.accountName.orEmpty())
             } else
             {
-                AccountPickerField(palette, accounts, form.accountId, onSelect = { onFormChange(form.withAccount(it)) })
+                AccountPickerField(palette, accounts, form.accountId, onSelect = { id ->
+                    onFormChange(form.withAccount(id, accounts.firstOrNull { it.id == id }?.currency ?: form.currency))
+                })
                 if (RecurringTransactionFormError.ACCOUNT_REQUIRED in errors)
                 {
                     ErrorText(palette, stringResource(R.string.recurring_form_error_account))
@@ -139,8 +141,9 @@ fun RecurringTransactionFormSheet(
             AmountField(
                 palette = palette,
                 value = form.amountText,
-                onValueChange = { if (acceptsAmountInput(it)) onFormChange(form.withAmount(it)) },
+                onValueChange = { if (acceptsAmountInput(it, form.currency.fractionDigits)) onFormChange(form.withAmount(it)) },
                 error = RecurringTransactionFormError.AMOUNT_INVALID in errors,
+                currency = form.currency,
                 focusRequester = amountFocus,
             )
             if (RecurringTransactionFormError.AMOUNT_INVALID in errors)

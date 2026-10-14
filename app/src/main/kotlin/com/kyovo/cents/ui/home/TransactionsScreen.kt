@@ -1,5 +1,13 @@
 package com.kyovo.cents.ui.home
 
+import com.kyovo.cents.domain.model.TransactionId
+import androidx.compose.ui.res.pluralStringResource
+import com.kyovo.cents.ui.common.convertedTotals
+import com.kyovo.cents.ui.common.unconvertedAccountCount
+import com.kyovo.cents.ui.common.foreignAccountCount
+import com.kyovo.cents.ui.common.ratesNote
+import com.kyovo.cents.ui.common.RatesNoteText
+import com.kyovo.cents.domain.port.input.GetExchangeRatesUseCase
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,7 +79,9 @@ import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SelectOptionRows
 import com.kyovo.cents.ui.common.SelectableOptionRow
-import com.kyovo.cents.ui.common.formatSignedEuroCents
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.ui.common.formatSignedMoney
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.transaction.reactsToTap
 import java.time.Instant
 import java.time.LocalDate
@@ -87,6 +97,8 @@ fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
     listArchivedAccounts: ListArchivedAccountsUseCase,
     listTransactions: ListTransactionsUseCase,
+    listConvertedTransactions: ListTransactionsUseCase,
+    getExchangeRates: GetExchangeRatesUseCase,
     listSubcategories: ListSubcategoriesUseCase,
     projects: List<Project>,
     onTransactionClick: (Transaction) -> Unit,
@@ -137,15 +149,26 @@ fun TransactionsScreen(
     val transactionsInPeriod = remember(allTransactions, periodFrom, periodTo) {
         transactionsWithinRange(allTransactions, periodFrom, periodTo)
     }
-    val totalIncomeCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.INCOME }
-            .sumOf { it.amount.value }
+    // The totals are in the main currency: each transaction counts at its converted amount (the rows keep showing
+    // their own account's currency). One whose currency has no rate is left out, and the screen says so.
+    val mainCurrency = LocalMainCurrency.current
+    val convertedTransactions by remember { listConvertedTransactions.observe() }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val rates by remember { getExchangeRates.observe() }.collectAsStateWithLifecycle(initialValue = null)
+    val convertedById = remember(convertedTransactions) { convertedTransactions.associateBy { it.id } }
+    val totals = remember(transactionsInPeriod, convertedTransactions) {
+        convertedTotals(transactionsInPeriod, convertedTransactions)
     }
-    val totalExpenseCents = remember(transactionsInPeriod) {
-        transactionsInPeriod.filter { it.category == TransactionCategory.EXPENSE }
-            .sumOf { it.amount.value }
-    }
-    val netCents = totalIncomeCents - totalExpenseCents
+    val totalIncomeCents = totals.incomeCents
+    val totalExpenseCents = totals.expenseCents
+    val netCents = totals.netCents
+    val everyAccount = remember(accounts, archivedAccounts) { accounts + archivedAccounts }
+    val ratesNote = ratesNote(
+        foreignAccounts = foreignAccountCount(everyAccount, mainCurrency),
+        unconvertedAccounts = unconvertedAccountCount(everyAccount, mainCurrency, rates),
+        rates = rates,
+        today = LocalDate.now(),
+    )
     val subcategoriesInPeriod = remember(transactionsInPeriod, subcategories) {
         availableSubcategories(transactionsInPeriod, subcategories)
     }
@@ -200,8 +223,18 @@ fun TransactionsScreen(
             palette,
             expenseCents = totalExpenseCents,
             incomeCents = totalIncomeCents,
-            netCents = netCents
+            netCents = netCents,
+            currency = mainCurrency,
         )
+        RatesNoteText(ratesNote, normal = palette.textMuted, warning = palette.error)
+        if (totals.unconverted > 0)
+        {
+            Text(
+                text = pluralStringResource(R.plurals.transactions_unconverted, totals.unconverted, totals.unconverted),
+                color = palette.error,
+                fontSize = 12.sp,
+            )
+        }
         SearchField(palette, searchQuery) { searchQuery = it }
         Text(
             text = movementsCountLabel(filteredTransactions.size),
@@ -221,7 +254,10 @@ fun TransactionsScreen(
         {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick, projectsById)
+                    DayGroup(
+                        palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick, projectsById,
+                        convertedById = convertedById,
+                    )
                 }
             }
         }
@@ -458,28 +494,29 @@ internal fun StatsRow(
     palette: AccountsPalette,
     expenseCents: Long,
     incomeCents: Long,
-    netCents: Long
+    netCents: Long,
+    currency: AccountCurrency,
 )
 {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_expense_label),
-            amount = formatSignedEuroCents(-expenseCents),
+            amount = formatSignedMoney(-expenseCents, currency),
             accent = palette.heroExpenseAccent,
             palette = palette,
         )
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_income_label),
-            amount = formatSignedEuroCents(incomeCents),
+            amount = formatSignedMoney(incomeCents, currency),
             accent = palette.heroIncomeAccent,
             palette = palette,
         )
         StatPill(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.transactions_net_label),
-            amount = formatSignedEuroCents(netCents),
+            amount = formatSignedMoney(netCents, currency),
             accent = palette.statusActiveColor,
             palette = palette,
         )
@@ -763,6 +800,10 @@ internal fun DayGroup(
     onTransactionClick: ((Transaction) -> Unit)? = null,
     // Left empty on a project's own page, where every row is in that project and repeating it would be noise.
     projectsById: Map<ProjectId, Project> = emptyMap(),
+    // The currency of a row whose account is not looked up (the account's own page: every row is in it).
+    fallbackCurrency: AccountCurrency? = null,
+    // The transactions with their amounts in the main currency, by id: what a day that mixes currencies adds up.
+    convertedById: Map<TransactionId, Transaction> = emptyMap(),
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -776,14 +817,18 @@ internal fun DayGroup(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            val dayNetCents = transactions.sumOf { it.signedAmount }
-            Text(
-                text = formatSignedEuroCents(dayNetCents),
-                color = palette.textMuted,
-                fontSize = 13.sp
+            // The day's net: in its currency when the day has only one, in the main currency (and approximate) when
+            // the day mixes several, nothing when one of its transactions cannot be converted.
+            val net = dayNet(
+                transactions,
+                currencyOf = { accountsById[it.accountId]?.currency ?: fallbackCurrency },
+                converted = convertedById
             )
+            dayNetLabel(net, LocalMainCurrency.current)?.let { label ->
+                Text(text = label, color = palette.textMuted, fontSize = 13.sp)
+            }
         }
-        TransactionListCard(palette, transactions, accountsById, subcategoriesById, projectsById, onTransactionClick)
+        TransactionListCard(palette, transactions, accountsById, subcategoriesById, projectsById, onTransactionClick, fallbackCurrency)
     }
 }
 
@@ -799,6 +844,7 @@ private fun TransactionListCard(
     subcategoriesById: Map<SubcategoryId, Subcategory>,
     projectsById: Map<ProjectId, Project>,
     onTransactionClick: ((Transaction) -> Unit)?,
+    fallbackCurrency: AccountCurrency?,
 )
 {
     Column(
@@ -812,6 +858,7 @@ private fun TransactionListCard(
                 palette = palette,
                 transaction = transaction,
                 account = accountsById[transaction.accountId],
+                currency = accountsById[transaction.accountId]?.currency ?: fallbackCurrency ?: LocalMainCurrency.current,
                 subcategory = transaction.subcategoryId?.let(subcategoriesById::get),
                 project = transaction.projectId?.let(projectsById::get),
                 // Only what can be edited reacts to a tap: a transfer doesn't. An opening deposit
@@ -838,6 +885,7 @@ private fun TransactionRow(
     palette: AccountsPalette,
     transaction: Transaction,
     account: Account?,
+    currency: AccountCurrency,
     subcategory: Subcategory?,
     project: Project?,
     onClick: (() -> Unit)?,
@@ -889,7 +937,7 @@ private fun TransactionRow(
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = formatSignedEuroCents(transaction.signedAmount),
+                text = formatSignedMoney(transaction.signedAmount, currency),
                 color = if (transaction.signedAmount >= 0) palette.heroIncomeAccent else palette.heroExpenseAccent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
