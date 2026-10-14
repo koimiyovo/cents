@@ -22,11 +22,11 @@ class BackupSnapshotConsistencyTest
 {
     private fun uuid(n: Int) = UUID.fromString("00000000-0000-0000-0000-%012d".format(n))
 
-    private fun account(n: Int, name: String, archived: Boolean = false) = Account(
+    private fun account(n: Int, name: String, archived: Boolean = false, currency: String = "EUR") = Account(
         id = AccountId(uuid(n)),
         name = AccountName(name),
         type = AccountType.CHECKING,
-        currency = AccountCurrency(Currency.getInstance("EUR")),
+        currency = AccountCurrency(Currency.getInstance(currency)),
         createdAt = Instant.parse("2026-01-01T00:00:00Z"),
         archivedAt = if (archived) Instant.parse("2026-02-01T00:00:00Z") else null
     )
@@ -300,6 +300,29 @@ class BackupSnapshotConsistencyTest
     }
 
     // ---- references that lead nowhere
+
+    // A real currency, but not one the app handles: it could not be chosen, and its amounts could never be converted.
+    @Test
+    fun `an account in a currency the app does not handle is refused`()
+    {
+        assertRefused(snapshot(accounts = listOf(account(1, "Courant", currency = "JPY"))))
+    }
+
+    @Test
+    fun `an archived account in a currency the app does not handle is refused too`()
+    {
+        assertRefused(snapshot(accounts = listOf(current, account(2, "Livret", archived = true, currency = "CHF"))))
+    }
+
+    @Test
+    fun `an account in each currency the app handles is accepted`()
+    {
+        val accounts = AccountCurrency.SUPPORTED.mapIndexed { i, currency ->
+            account(i + 1, "Compte ${currency.value.currencyCode}", currency = currency.value.currencyCode)
+        }
+
+        assertThatCode { snapshot(accounts = accounts).requireConsistent() }.doesNotThrowAnyException()
+    }
 
     @Test
     fun `a transaction on an account that is not in the file is refused`()
