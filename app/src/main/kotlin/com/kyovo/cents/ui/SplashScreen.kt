@@ -109,7 +109,7 @@ fun SplashScreen(onFinished: () -> Unit = {}, modifier: Modifier = Modifier) {
                     fontSize = 13.sp,
                 )
                 Text(
-                    text = stringResource(R.string.splash_version, BuildConfig.VERSION_NAME),
+                    text = stringResource(R.string.app_version, BuildConfig.VERSION_NAME),
                     color = palette.caption,
                     fontSize = 13.sp,
                 )

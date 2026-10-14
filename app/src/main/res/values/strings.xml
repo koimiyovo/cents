@@ -4,7 +4,7 @@
     <string name="splash_tagline">Votre argent, simplement suivi</string>
     <string name="splash_privacy_badge">Vos données restent sur l\'appareil</string>
     <string name="splash_status">Chargement de vos données</string>
-    <string name="splash_version">v%1$s</string>
+    <string name="app_version">v%1$s</string>
 
     <!-- Onboarding — shared -->
     <string name="onboarding_skip">Passer</string>
