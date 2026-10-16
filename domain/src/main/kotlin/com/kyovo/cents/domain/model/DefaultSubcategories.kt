@@ -43,6 +43,8 @@ object DefaultSubcategories
         expense("groceries", "Alimentation", "🛒"),
         expense("housing", "Logement", "🏠"),
         expense("transport", "Transport", "🚗"),
+        expense("car-loan", "Prêt voiture", "🚙"),
+        expense("mortgage", "Prêt résidence principale", "🏡"),
         expense("health", "Santé", "💊"),
         expense("leisure", "Loisirs", "🎬"),
         expense("restaurants", "Restaurants", "🍽️"),
