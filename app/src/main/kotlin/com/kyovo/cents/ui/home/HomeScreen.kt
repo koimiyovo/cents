@@ -396,15 +396,17 @@ fun HomeScreen(
         }
     }
 
-    // The CSV export can start from the Transactions tab, away from the backup screen that shows results:
-    // its outcome is said in a snackbar there. On the backup screen the result card does it.
+    // A successful export is always said in a snackbar. A failure is said in one too when the export started
+    // from the Transactions tab, away from the backup screen; there the result card keeps it on screen.
     LaunchedEffect(dataBackupViewModel)
     {
         dataBackupViewModel.uiState.map { it.result }
             .filterNotNull()
-            .filter { it == BackupResult.CsvExported || it == BackupResult.ExportFailed }
+            .filter {
+                it == BackupResult.Exported || it == BackupResult.CsvExported || it == BackupResult.ExportFailed
+            }
             .collect {
-                if (destination == HomeDestination.Tabs)
+                if (it != BackupResult.ExportFailed || destination == HomeDestination.Tabs)
                 {
                     dataBackupViewModel.dismissResult()
                     snackbarHostState.showSnackbar(resources.getString(backupResultMessage(it)))
