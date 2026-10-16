@@ -2,8 +2,7 @@ package com.kyovo.cents.ui.home
 
 /**
  * Where the user is, besides an opened account: on the tabs, in the settings, or one level below
- * them, on the screen managing the subcategories, the one setting the budget limits, or the one
- * managing the recurring transactions.
+ * them, on the screen managing the subcategories or the one setting the budget limits.
  */
 internal enum class HomeDestination
 {
@@ -12,7 +11,6 @@ internal enum class HomeDestination
     Subcategories,
     Budgets,
     BudgetCycle,
-    RecurringTransactions,
     Projects,
     Backup;
 
@@ -27,7 +25,6 @@ internal enum class HomeDestination
         Subcategories    -> Settings
         Budgets          -> Settings
         BudgetCycle      -> Budgets
-        RecurringTransactions -> Settings
         Projects              -> Settings
         Backup                -> Settings
     }

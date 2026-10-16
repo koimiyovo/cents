@@ -84,7 +84,6 @@ import com.kyovo.cents.ui.budget.BudgetsViewModel
 import com.kyovo.cents.ui.budget.budgetAlertNotice
 import com.kyovo.cents.ui.recurring.DeleteRecurringTransactionDialog
 import com.kyovo.cents.ui.recurring.RecurringTransactionFormSheet
-import com.kyovo.cents.ui.recurring.RecurringTransactionsScreen
 import com.kyovo.cents.ui.recurring.RecurringTransactionsViewModel
 import com.kyovo.cents.ui.backup.BackupResult
 import com.kyovo.cents.ui.backup.backupResultMessage
@@ -195,6 +194,7 @@ fun HomeScreen(
     var openedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
     // The Budget tab's own state, held here so it is still there when the user comes back from a project's page.
     var budgetSection by rememberSaveable { mutableStateOf(BudgetSection.MONTH) }
+    var transactionsSection by rememberSaveable { mutableStateOf(TransactionsSection.MOVEMENTS) }
     var analysedProjectUuid by rememberSaveable { mutableStateOf<String?>(null) }
     // Set when the page was opened from the Budget tab: Back then returns there, not to the list of projects.
     var projectOpenedFromTab by rememberSaveable { mutableStateOf(false) }
@@ -545,7 +545,6 @@ fun HomeScreen(
                 onBack = { destination = HomeDestination.Tabs },
                 onOpenSubcategories = { destination = HomeDestination.Subcategories },
                 onOpenBudgets = { destination = HomeDestination.Budgets },
-                onOpenRecurringTransactions = { destination = HomeDestination.RecurringTransactions },
                 onOpenProjects = { destination = HomeDestination.Projects },
                 onOpenBackup = { destination = HomeDestination.Backup },
                 modifier = Modifier.weight(1f),
@@ -616,26 +615,6 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
-        } else if (destination == HomeDestination.RecurringTransactions)
-        {
-            RecurringTransactionsScreen(
-                listRecurringTransactions = listRecurringTransactions,
-                listAccounts = listAccounts,
-                listArchivedAccounts = listArchivedAccounts,
-                listSubcategories = listSubcategories,
-                onBack = { destination = HomeDestination.Settings },
-                onCreate = {
-                    val only = accounts.singleOrNull()
-                    recurringTransactionsViewModel.openCreate(only?.id, currency = only?.currency ?: mainCurrency)
-                },
-                onEdit = { row ->
-                    recurringTransactionsViewModel.openForEdit(
-                        row,
-                        subcategories.find { it.id == row.recurringTransaction.subcategoryId },
-                    )
-                },
-                modifier = Modifier.weight(1f),
-            )
         } else if (destination == HomeDestination.BudgetCycle)
         {
             BudgetCycleScreen(
@@ -708,6 +687,19 @@ fun HomeScreen(
                                 onOpenSettings = { destination = HomeDestination.Settings },
                                 suggestedCsvFileName = dataBackupViewModel.csvFileName(),
                                 onExportCsvTo = dataBackupViewModel::exportCsvTo,
+                                section = transactionsSection,
+                                onSelectSection = { transactionsSection = it },
+                                listRecurringTransactions = listRecurringTransactions,
+                                onCreateRecurring = {
+                                    val only = accounts.singleOrNull()
+                                    recurringTransactionsViewModel.openCreate(only?.id, currency = only?.currency ?: mainCurrency)
+                                },
+                                onEditRecurring = { row ->
+                                    recurringTransactionsViewModel.openForEdit(
+                                        row,
+                                        subcategories.find { it.id == row.recurringTransaction.subcategoryId },
+                                    )
+                                },
                             )
 
                         HomeTab.Budget ->

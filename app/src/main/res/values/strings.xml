@@ -319,8 +319,6 @@
     <string name="budget_form_error_unavailable">Cette sous-catégorie n\'existe plus ou n\'est plus une dépense.</string>
 
     <!-- Recurring transactions -->
-    <string name="settings_recurring_transactions">Transactions récurrentes</string>
-    <string name="settings_recurring_transactions_hint">Loyer, salaire, abonnements : à saisir une fois</string>
     <string name="recurring_transactions_title">Transactions récurrentes</string>
     <string name="recurring_transactions_intro">Chaque échéance génère automatiquement une transaction, dépense ou revenu. Touchez une ligne pour la modifier ou la supprimer.</string>
     <string name="recurring_transactions_new">Nouvelle transaction récurrente</string>
@@ -404,6 +402,8 @@
         <item quantity="other">« %1$s » sera supprimé. Les %2$d transactions qui y sont rangées sont conservées, sans projet.</item>
     </plurals>
     <string name="project_delete_confirm">Supprimer</string>
+    <string name="transactions_section_movements">Mouvements</string>
+    <string name="transactions_section_recurring">Récurrentes</string>
     <string name="budget_section_month">Mois</string>
     <string name="budget_section_projects">Projets</string>
     <string name="project_analysis_no_project">Aucun projet pour l\'instant. Créez-en un pour suivre un voyage, des travaux…</string>

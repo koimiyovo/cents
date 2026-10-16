@@ -71,7 +71,11 @@ import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
+import com.kyovo.cents.ui.common.SectionSwitch
+import com.kyovo.cents.ui.recurring.RecurringTransactionRow
+import com.kyovo.cents.ui.recurring.RecurringTransactionsContent
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.common.DropdownPill
 import com.kyovo.cents.ui.common.IconTone
@@ -92,6 +96,13 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
+/** The two halves of the Transactions tab: the movements, and the rules generating some of them. */
+enum class TransactionsSection
+{
+    MOVEMENTS,
+    RECURRING,
+}
+
 @Composable
 fun TransactionsScreen(
     listAccounts: ListAccountsUseCase,
@@ -105,6 +116,12 @@ fun TransactionsScreen(
     onOpenSettings: () -> Unit,
     suggestedCsvFileName: String,
     onExportCsvTo: (String) -> Unit,
+    // Which half is shown is held by the caller, so it survives going to another screen and coming back.
+    section: TransactionsSection,
+    onSelectSection: (TransactionsSection) -> Unit,
+    listRecurringTransactions: ListRecurringTransactionsUseCase,
+    onCreateRecurring: () -> Unit,
+    onEditRecurring: (RecurringTransactionRow) -> Unit,
     modifier: Modifier = Modifier,
 )
 {
@@ -197,79 +214,99 @@ fun TransactionsScreen(
             onOpenSettings,
             onExportClick = { csvPicker.launch(suggestedCsvFileName) },
         )
-        Text(
-            text = stringResource(R.string.transactions_subtitle),
-            color = palette.textMuted,
-            fontSize = 13.sp,
-        )
-        TransactionFilters(
-            palette = palette,
-            periodLabel = periodLabel(selectedPeriod, customFrom, customTo),
-            selectedPeriod = selectedPeriod,
-            accounts = accounts,
-            selectedAccountId = selectedAccountId,
-            allSubcategories = subcategories,
-            subcategoryChoices = subcategoriesInPeriod,
-            selectedSubcategory = selectedSubcategory,
-            openMenu = openFilter,
-            onToggleMenu = { openFilter = toggledMenu(openFilter, it) },
-            onSelectPeriod = { openFilter = null; selectedPeriod = it },
-            onSelectCustomPeriod = { openFilter = null; showCustomRangePicker = true },
-            onSelectAccount = { openFilter = null; selectedAccountId = it },
-            onSelectSubcategory = { openFilter = null; chosenSubcategory = it },
-        )
-
-        StatsRow(
-            palette,
-            expenseCents = totalExpenseCents,
-            incomeCents = totalIncomeCents,
-            netCents = netCents,
-            currency = mainCurrency,
-        )
-        RatesNoteText(ratesNote, normal = palette.textMuted, warning = palette.error)
-        if (totals.unconverted > 0)
+        SectionSwitch(palette, TransactionsSection.entries, section, onSelect = onSelectSection, labelOf = {
+            when (it)
+            {
+                TransactionsSection.MOVEMENTS -> R.string.transactions_section_movements
+                TransactionsSection.RECURRING -> R.string.transactions_section_recurring
+            }
+        })
+        if (section == TransactionsSection.RECURRING)
         {
-            Text(
-                text = pluralStringResource(R.plurals.transactions_unconverted, totals.unconverted, totals.unconverted),
-                color = palette.error,
-                fontSize = 12.sp,
-            )
-        }
-        SearchField(palette, searchQuery) { searchQuery = it }
-        Text(
-            text = movementsCountLabel(filteredTransactions.size),
-            color = palette.textMuted,
-            fontSize = 13.sp,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-        if (groupedByDay.isEmpty())
-        {
-            Text(
-                text = stringResource(R.string.transactions_empty),
-                color = palette.textMuted,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 24.dp),
+            RecurringTransactionsContent(
+                palette = palette,
+                listRecurringTransactions = listRecurringTransactions,
+                accounts = everyAccount,
+                subcategories = subcategories,
+                onCreate = onCreateRecurring,
+                onEdit = onEditRecurring,
             )
         } else
         {
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                groupedByDay.forEach { (date, dayTransactions) ->
-                    DayGroup(
-                        palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick, projectsById,
-                        convertedById = convertedById,
-                    )
+            Text(
+                text = stringResource(R.string.transactions_subtitle),
+                color = palette.textMuted,
+                fontSize = 13.sp,
+            )
+            TransactionFilters(
+                palette = palette,
+                periodLabel = periodLabel(selectedPeriod, customFrom, customTo),
+                selectedPeriod = selectedPeriod,
+                accounts = accounts,
+                selectedAccountId = selectedAccountId,
+                allSubcategories = subcategories,
+                subcategoryChoices = subcategoriesInPeriod,
+                selectedSubcategory = selectedSubcategory,
+                openMenu = openFilter,
+                onToggleMenu = { openFilter = toggledMenu(openFilter, it) },
+                onSelectPeriod = { openFilter = null; selectedPeriod = it },
+                onSelectCustomPeriod = { openFilter = null; showCustomRangePicker = true },
+                onSelectAccount = { openFilter = null; selectedAccountId = it },
+                onSelectSubcategory = { openFilter = null; chosenSubcategory = it },
+            )
+
+            StatsRow(
+                palette,
+                expenseCents = totalExpenseCents,
+                incomeCents = totalIncomeCents,
+                netCents = netCents,
+                currency = mainCurrency,
+            )
+            RatesNoteText(ratesNote, normal = palette.textMuted, warning = palette.error)
+            if (totals.unconverted > 0)
+            {
+                Text(
+                    text = pluralStringResource(R.plurals.transactions_unconverted, totals.unconverted, totals.unconverted),
+                    color = palette.error,
+                    fontSize = 12.sp,
+                )
+            }
+            SearchField(palette, searchQuery) { searchQuery = it }
+            Text(
+                text = movementsCountLabel(filteredTransactions.size),
+                color = palette.textMuted,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+            if (groupedByDay.isEmpty())
+            {
+                Text(
+                    text = stringResource(R.string.transactions_empty),
+                    color = palette.textMuted,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            } else
+            {
+                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    groupedByDay.forEach { (date, dayTransactions) ->
+                        DayGroup(
+                            palette, date, dayTransactions, accountsById, subcategoriesById, onTransactionClick, projectsById,
+                            convertedById = convertedById,
+                        )
+                    }
                 }
             }
+            Text(
+                text = stringResource(R.string.transactions_privacy_footer),
+                color = palette.textMuted,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            )
         }
-        Text(
-            text = stringResource(R.string.transactions_privacy_footer),
-            color = palette.textMuted,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-        )
     }
 
     if (showCustomRangePicker)
