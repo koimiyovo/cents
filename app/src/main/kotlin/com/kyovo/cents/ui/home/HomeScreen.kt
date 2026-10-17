@@ -734,6 +734,9 @@ fun HomeScreen(
                                 onSelectTab = budgetsViewModel::selectTab,
                                 onSelectAccount = budgetsViewModel::selectAccount,
                                 onOpenSettings = { destination = HomeDestination.Settings },
+                                onMessage = { message ->
+                                    coroutineScope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
+                                },
                                 section = budgetSection,
                                 onSelectSection = { budgetSection = it },
                                 projectsTab = {

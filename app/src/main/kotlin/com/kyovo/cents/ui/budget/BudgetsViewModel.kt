@@ -11,6 +11,7 @@ import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.input.GetIncomeBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
@@ -49,6 +50,7 @@ enum class BudgetTab
     OVERVIEW,
     BUDGETS,
     TRENDS,
+    CASHFLOW,
 }
 
 /**
@@ -66,6 +68,8 @@ data class BudgetsUiState(
     val selectedAccountId: AccountId? = null,
     val rows: List<BudgetRow> = emptyList(),
     val breakdown: SpendingBreakdown = SpendingBreakdown(Money(0), emptyList()),
+    /** Where the month's income came from, sliced like [breakdown]: the left side of the cash-flow diagram. */
+    val incomeBreakdown: SpendingBreakdown = SpendingBreakdown(Money(0), emptyList()),
     val trend: SpendingTrend = SpendingTrend(emptyList(), null, null),
     val form: BudgetFormState? = null,
     val error: BudgetFormError? = null,
@@ -87,6 +91,7 @@ class BudgetsViewModel(
     listSubcategories: ListSubcategoriesUseCase,
     getBudgetProgress: GetBudgetProgressUseCase,
     getSpendingBreakdown: GetSpendingBreakdownUseCase,
+    getIncomeBreakdown: GetIncomeBreakdownUseCase,
     getSpendingTrend: GetSpendingTrendUseCase,
     getBudgetCalendar: GetBudgetCalendarUseCase,
     private val setBudget: SetBudgetUseCase,
@@ -149,6 +154,15 @@ class BudgetsViewModel(
             ) { subcategories, spent -> scope to spendingBreakdown(subcategories, spent) }
         }
 
+    /** The cash-flow tab's left side: where the month's income came from, income subcategories only. */
+    private val incomeOfTheMonth: Flow<Pair<Scope, SpendingBreakdown>> = scope
+        .flatMapLatest { scope ->
+            combine(
+                listSubcategories.observe(RecordableTransactionCategory.INCOME),
+                getIncomeBreakdown.observe(scope.month, scope.accountId),
+            ) { subcategories, received -> scope to spendingBreakdown(subcategories, received) }
+        }
+
     /** The trends tab's bars: the last few months' totals, this one's window ending at the month shown. */
     private val trendOfTheMonth: Flow<Pair<Scope, SpendingTrend>> = scope
         .flatMapLatest { scope ->
@@ -162,17 +176,18 @@ class BudgetsViewModel(
     val uiState: StateFlow<BudgetsUiState> =
         combine(
             combine(chosen, currentCycle, calendar, ::Looking),
-            rowsOfTheMonth, breakdownOfTheMonth, trendOfTheMonth
+            rowsOfTheMonth, breakdownOfTheMonth, incomeOfTheMonth, trendOfTheMonth
         )
-        { (chosen, today, calendar), (rowsScope, rows), (breakdownScope, breakdown), (trendScope, trend) ->
+        { (chosen, today, calendar), (rowsScope, rows), (breakdownScope, breakdown), (incomeScope, income), (trendScope, trend) ->
             val month = chosen.month ?: today
             val wanted = Scope(month, chosen.accountId)
-            if (rowsScope != wanted || breakdownScope != wanted || trendScope != wanted) null
+            if (rowsScope != wanted || breakdownScope != wanted || incomeScope != wanted || trendScope != wanted) null
             else BudgetsUiState(
                 selector = MonthSelector(month),
                 selectedAccountId = chosen.accountId,
                 rows = rows,
                 breakdown = breakdown,
+                incomeBreakdown = income,
                 trend = trend,
                 form = chosen.form,
                 error = chosen.error,

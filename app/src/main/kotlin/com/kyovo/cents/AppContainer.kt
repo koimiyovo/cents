@@ -32,6 +32,7 @@ import com.kyovo.cents.application.usecase.GetAccountService
 import com.kyovo.cents.application.usecase.GetBudgetCalendarService
 import com.kyovo.cents.application.usecase.GetBudgetProgressService
 import com.kyovo.cents.application.usecase.GetProjectProgressService
+import com.kyovo.cents.application.usecase.GetIncomeBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingBreakdownService
 import com.kyovo.cents.application.usecase.GetSpendingTrendService
 import com.kyovo.cents.application.usecase.ListAccountsService
@@ -77,6 +78,7 @@ import com.kyovo.cents.domain.port.input.GetAccountUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetCalendarUseCase
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.input.GetIncomeBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
@@ -236,6 +238,8 @@ class AppContainer(context: Context, persistence: RoomPersistence)
         )
     val getSpendingBreakdown: GetSpendingBreakdownUseCase =
         GetSpendingBreakdownService(totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
+    val getIncomeBreakdown: GetIncomeBreakdownUseCase =
+        GetIncomeBreakdownService(totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val getSpendingTrend: GetSpendingTrendUseCase =
         GetSpendingTrendService(totalsTransactionRepository, persistence.budgetCalendar, ZoneId.systemDefault())
     val openAccount: OpenAccountUseCase = OpenAccountService(

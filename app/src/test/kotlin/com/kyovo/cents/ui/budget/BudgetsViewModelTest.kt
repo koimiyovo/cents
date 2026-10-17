@@ -16,6 +16,7 @@ import com.kyovo.cents.domain.model.RecordableTransactionCategory
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.SubcategoryId
 import com.kyovo.cents.domain.port.input.GetBudgetProgressUseCase
+import com.kyovo.cents.domain.port.input.GetIncomeBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
@@ -74,6 +75,15 @@ private class FakeSpendingBreakdown : GetSpendingBreakdownUseCase
         byScope.map { it[month to accountId] ?: emptyMap() }.distinctUntilChanged()
 }
 
+/** What was received per subcategory in each month/account, which a test can change while the view model is watching. */
+private class FakeIncomeBreakdown : GetIncomeBreakdownUseCase
+{
+    val byScope = MutableStateFlow<Map<Pair<YearMonth, AccountId?>, Map<SubcategoryId?, Money>>>(emptyMap())
+
+    override fun observe(month: YearMonth, accountId: AccountId?): Flow<Map<SubcategoryId?, Money>> =
+        byScope.map { it[month to accountId] ?: emptyMap() }.distinctUntilChanged()
+}
+
 /** The trend of each month/account asked about, which a test can change while the view model is watching. */
 private class FakeSpendingTrend : GetSpendingTrendUseCase
 {
@@ -114,6 +124,7 @@ class BudgetsViewModelTest
     private val subcategories = FakeSubcategories(listOf(GROCERIES_SUBCATEGORY, SALARY_SUBCATEGORY, FUEL_SUBCATEGORY))
     private val progress = FakeProgress()
     private val spendingBreakdown = FakeSpendingBreakdown()
+    private val incomeBreakdown = FakeIncomeBreakdown()
     private val spendingTrend = FakeSpendingTrend()
     private val set = RecordingSet()
     private val calendar = StoredBudgetCalendar()
@@ -129,6 +140,7 @@ class BudgetsViewModelTest
             listSubcategories = subcategories,
             getBudgetProgress = progress,
             getSpendingBreakdown = spendingBreakdown,
+            getIncomeBreakdown = incomeBreakdown,
             getSpendingTrend = spendingTrend,
             getBudgetCalendar = calendar,
             setBudget = set,
@@ -590,6 +602,7 @@ class BudgetsViewModelTest
         listSubcategories = subcategories,
         getBudgetProgress = progress,
         getSpendingBreakdown = spendingBreakdown,
+            getIncomeBreakdown = incomeBreakdown,
         getSpendingTrend = spendingTrend,
         getBudgetCalendar = calendar,
         setBudget = set,

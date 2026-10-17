@@ -27,6 +27,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets the share sheet read the chart the user chose to share (see ChartExportMenu), and nothing else:
+             the paths are those of res/xml/file_paths.xml. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- On-demand WorkManager initialization (see CentsApplication's Configuration.Provider):
              the default eager initializer must be disabled, or it would already have built WorkManager
              with the default configuration — without CentsWorkerFactory — before ours is ever read. -->

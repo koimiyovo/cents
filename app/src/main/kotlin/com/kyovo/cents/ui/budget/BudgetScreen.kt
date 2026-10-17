@@ -7,6 +7,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,12 +24,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,8 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.material3.minimumInteractiveComponentSize
-import com.kyovo.cents.ui.common.decorative
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,15 +49,17 @@ import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.ui.common.ExpandableChart
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
+import com.kyovo.cents.ui.common.decorative
 import com.kyovo.cents.ui.common.formatMoney
-import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.HomeTopBar
 import com.kyovo.cents.ui.home.LightAccountsPalette
 import com.kyovo.cents.ui.home.SubcategoryChip
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.subcategory.defaultSubcategoryEmoji
 import kotlin.math.roundToInt
 
@@ -71,6 +75,7 @@ import kotlin.math.roundToInt
  * Above all of that, a switch between two sections: the month (everything described above) and the projects,
  * which are not monthly and so have no month selector - [projectsTab] fills that second half.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BudgetScreen(
     state: BudgetsUiState,
@@ -81,6 +86,8 @@ fun BudgetScreen(
     onSelectTab: (BudgetTab) -> Unit,
     onSelectAccount: (AccountId?) -> Unit,
     onOpenSettings: () -> Unit,
+    // Said by the screen's snackbar: how saving the cash-flow diagram went.
+    onMessage: (Int) -> Unit,
     // Which half is shown is held by the caller, so it survives going to a project's page and coming back.
     section: BudgetSection,
     onSelectSection: (BudgetSection) -> Unit,
@@ -117,22 +124,45 @@ fun BudgetScreen(
                 onToday = onToday,
             )
             BudgetAccountFilter(palette, accounts, state.selectedAccountId, onSelectAccount)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp))
+            // Four tabs no longer fit on one line of a narrow screen: the last one wraps rather than squashes.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            )
             {
-                SubcategoryChip(stringResource(R.string.budget_tab_overview), state.tab == BudgetTab.OVERVIEW, palette) {
+                SubcategoryChip(
+                    stringResource(R.string.budget_tab_overview),
+                    state.tab == BudgetTab.OVERVIEW,
+                    palette
+                ) {
                     onSelectTab(BudgetTab.OVERVIEW)
                 }
-                SubcategoryChip(stringResource(R.string.budget_tab_budgets), state.tab == BudgetTab.BUDGETS, palette) {
+                SubcategoryChip(
+                    stringResource(R.string.budget_tab_cashflow),
+                    state.tab == BudgetTab.CASHFLOW,
+                    palette
+                ) {
+                    onSelectTab(BudgetTab.CASHFLOW)
+                }
+                SubcategoryChip(
+                    stringResource(R.string.budget_tab_budgets),
+                    state.tab == BudgetTab.BUDGETS,
+                    palette
+                ) {
                     onSelectTab(BudgetTab.BUDGETS)
                 }
-                SubcategoryChip(stringResource(R.string.budget_tab_trends), state.tab == BudgetTab.TRENDS, palette) {
+                SubcategoryChip(
+                    stringResource(R.string.budget_tab_trends),
+                    state.tab == BudgetTab.TRENDS,
+                    palette
+                ) {
                     onSelectTab(BudgetTab.TRENDS)
                 }
             }
 
             when (state.tab)
             {
-                BudgetTab.BUDGETS ->
+                BudgetTab.BUDGETS  ->
                 {
                     val summary = overview.summary
                     if (summary == null)
@@ -162,7 +192,8 @@ fun BudgetScreen(
                 }
 
                 BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
-                BudgetTab.TRENDS -> BudgetTrendTab(palette, state.trend)
+                BudgetTab.TRENDS   -> BudgetTrendTab(palette, state.trend)
+                BudgetTab.CASHFLOW -> BudgetCashFlowTab(palette, state, onMessage)
             }
         }
     }
@@ -247,7 +278,12 @@ private fun BudgetAccountFilter(
 }
 
 @Composable
-private fun RoundArrow(palette: AccountsPalette, glyph: String, description: String, onClick: () -> Unit)
+private fun RoundArrow(
+    palette: AccountsPalette,
+    glyph: String,
+    description: String,
+    onClick: () -> Unit
+)
 {
     Box(
         modifier = Modifier
@@ -258,7 +294,12 @@ private fun RoundArrow(palette: AccountsPalette, glyph: String, description: Str
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = glyph, color = palette.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = glyph,
+            color = palette.textPrimary,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -293,9 +334,15 @@ private fun SummaryCard(palette: AccountsPalette, summary: BudgetSummary)
         )
         Text(
             text = if (summary.isOverspent)
-                stringResource(R.string.budget_summary_over, formatMoney(-summary.remaining, LocalMainCurrency.current))
+                stringResource(
+                    R.string.budget_summary_over,
+                    formatMoney(-summary.remaining, LocalMainCurrency.current)
+                )
             else
-                stringResource(R.string.budget_summary_left, formatMoney(summary.remaining, LocalMainCurrency.current)),
+                stringResource(
+                    R.string.budget_summary_left,
+                    formatMoney(summary.remaining, LocalMainCurrency.current)
+                ),
             color = color,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -303,12 +350,26 @@ private fun SummaryCard(palette: AccountsPalette, summary: BudgetSummary)
         // How many budgets need attention: the whole point of a glance.
         val attention = buildList {
             if (summary.overCount > 0)
-                add(pluralStringResource(R.plurals.budget_summary_over_count, summary.overCount, summary.overCount))
+                add(
+                    pluralStringResource(
+                        R.plurals.budget_summary_over_count,
+                        summary.overCount,
+                        summary.overCount
+                    )
+                )
             if (summary.closeCount > 0)
-                add(pluralStringResource(R.plurals.budget_summary_close_count, summary.closeCount, summary.closeCount))
+                add(
+                    pluralStringResource(
+                        R.plurals.budget_summary_close_count,
+                        summary.closeCount,
+                        summary.closeCount
+                    )
+                )
         }
         Text(
-            text = if (attention.isEmpty()) stringResource(R.string.budget_summary_all_good) else attention.joinToString(" · "),
+            text = if (attention.isEmpty()) stringResource(R.string.budget_summary_all_good) else attention.joinToString(
+                " · "
+            ),
             color = palette.heroOnCardSecondary,
             fontSize = 13.sp,
         )
@@ -367,8 +428,16 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
             Text(
                 text = when (remaining)
                 {
-                    is BudgetRemaining.Left -> stringResource(R.string.budget_row_left, formatMoney(remaining.cents, LocalMainCurrency.current))
-                    is BudgetRemaining.Over -> stringResource(R.string.budget_row_over, formatMoney(remaining.cents, LocalMainCurrency.current))
+                    is BudgetRemaining.Left -> stringResource(
+                        R.string.budget_row_left,
+                        formatMoney(remaining.cents, LocalMainCurrency.current)
+                    )
+
+                    is BudgetRemaining.Over -> stringResource(
+                        R.string.budget_row_over,
+                        formatMoney(remaining.cents, LocalMainCurrency.current)
+                    )
+
                     null                    -> ""
                 },
                 color = if (remaining is BudgetRemaining.Over) palette.error else palette.textSecondary,
@@ -382,7 +451,13 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
         if (projection != null && projection.isPacingToExceed && row.status != BudgetStatus.OVER)
         {
             Text(
-                text = stringResource(R.string.budget_row_pacing_to_exceed, formatMoney(projection.projectedSpend.value - projection.limit.value, LocalMainCurrency.current)),
+                text = stringResource(
+                    R.string.budget_row_pacing_to_exceed,
+                    formatMoney(
+                        projection.projectedSpend.value - projection.limit.value,
+                        LocalMainCurrency.current
+                    )
+                ),
                 color = palette.iconToneGold,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
@@ -456,7 +531,13 @@ private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreak
         SpendingPie(palette, breakdown)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp))
         {
-            breakdown.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice) }
+            breakdown.slices.forEachIndexed { index, slice ->
+                SpendingLegendRow(
+                    palette,
+                    index,
+                    slice
+                )
+            }
         }
     }
 }
@@ -466,6 +547,27 @@ private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreak
 @Composable
 internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
 {
+    // A tap opens it in a popup where it can be zoomed, with its legend under it.
+    ExpandableChart(
+        palette = palette,
+        zoomedContent = {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp))
+            {
+                PieChart(palette, breakdown)
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp))
+                {
+                    breakdown.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice) }
+                }
+            }
+        },
+    ) {
+        PieChart(palette, breakdown)
+    }
+}
+
+@Composable
+private fun PieChart(palette: AccountsPalette, breakdown: SpendingBreakdown)
+{
     val gapDegrees = if (breakdown.slices.size > 1) 3f else 0f
     Box(
         modifier = Modifier
@@ -474,9 +576,17 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
         contentAlignment = Alignment.Center,
     ) {
         // The legend below says everything the ring draws.
-        Canvas(modifier = Modifier.size(180.dp).decorative())
+        // 210 dp: the ring itself is 180 dp across, and its stroke is drawn inside the canvas (see below).
+        Canvas(modifier = Modifier
+            .size(210.dp)
+            .decorative())
         {
-            val strokeWidth = size.minDimension * 0.16f
+            val strokeWidth = size.minDimension * 0.14f
+            // A stroke is centred on the edge of the arc it follows: the arc is inset by half of it, or the outer
+            // half would spill out of the canvas and be cut off at the top and bottom of the ring.
+            val inset = strokeWidth / 2f
+            val arcTopLeft = Offset(inset, inset)
+            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             var startAngle = -90f
             breakdown.slices.forEachIndexed { index, slice ->
                 val sweep = slice.fraction * 360f
@@ -485,18 +595,23 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
                     startAngle = startAngle + gapDegrees / 2,
                     sweepAngle = (sweep - gapDegrees).coerceAtLeast(0f),
                     useCenter = false,
+                    topLeft = arcTopLeft,
+                    size = arcSize,
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Butt),
                 )
                 startAngle += sweep
             }
         }
         Text(
-            text = stringResource(R.string.budget_overview_total_spent, formatMoney(breakdown.total.value, LocalMainCurrency.current)),
+            text = stringResource(
+                R.string.budget_overview_total_spent,
+                formatMoney(breakdown.total.value, LocalMainCurrency.current)
+            ),
             color = palette.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            // The hole of the ring is about 151 dp wide (the 180 dp canvas minus the two 16 % strokes): the
+            // The hole of the ring is about 151 dp wide (the 180 dp ring minus the two strokes of 14 % of 210 dp): the
             // text is held to a width that leaves a margin all round, so it wraps ("1 160,00 €" then
             // "dépensés") instead of running up to the arcs. The Box is as wide as the screen, so without
             // this the text was only limited by the screen.
@@ -543,7 +658,10 @@ internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: Spen
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = stringResource(R.string.budget_overview_slice_percent, (slice.fraction * 100).roundToInt()),
+                text = stringResource(
+                    R.string.budget_overview_slice_percent,
+                    (slice.fraction * 100).roundToInt()
+                ),
                 color = palette.textMuted,
                 fontSize = 12.sp,
             )
@@ -552,16 +670,16 @@ internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: Spen
 }
 
 @Composable
-private fun sliceLabelText(label: SpendingSliceLabel): String = when (label)
+internal fun sliceLabelText(label: SpendingSliceLabel): String = when (label)
 {
-    is SpendingSliceLabel.Named -> label.name
+    is SpendingSliceLabel.Named      -> label.name
     SpendingSliceLabel.Uncategorized -> stringResource(R.string.budget_overview_uncategorized)
-    SpendingSliceLabel.Other -> stringResource(R.string.budget_overview_other)
+    SpendingSliceLabel.Other         -> stringResource(R.string.budget_overview_other)
 }
 
 /** A slice's colour: a fixed categorical hue by its rank among the named slices, kept distinct from — and
  * never reused as — a status colour; the folded "other" slice is neutral, since it names no single thing. */
-private fun sliceColor(palette: AccountsPalette, index: Int, label: SpendingSliceLabel): Color =
+internal fun sliceColor(palette: AccountsPalette, index: Int, label: SpendingSliceLabel): Color =
     if (label == SpendingSliceLabel.Other) palette.textMuted else palette.chartColors[index]
 
 /**
@@ -585,7 +703,10 @@ private fun BudgetTrendTab(palette: AccountsPalette, trend: SpendingTrend)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp))
     {
         Text(
-            text = stringResource(R.string.budget_trend_average, formatMoney(trend.average.value, LocalMainCurrency.current)),
+            text = stringResource(
+                R.string.budget_trend_average,
+                formatMoney(trend.average.value, LocalMainCurrency.current)
+            ),
             color = palette.textSecondary,
             fontSize = 14.sp,
         )
@@ -596,17 +717,27 @@ private fun BudgetTrendTab(palette: AccountsPalette, trend: SpendingTrend)
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             trend.bars.forEach { bar ->
-                TrendBar(palette, bar, trend.averageFraction, Modifier.weight(1f).fillMaxHeight())
+                TrendBar(palette, bar, trend.averageFraction, Modifier
+                    .weight(1f)
+                    .fillMaxHeight())
             }
         }
     }
 }
 
 @Composable
-private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFraction: Float?, modifier: Modifier)
+private fun TrendBar(
+    palette: AccountsPalette,
+    bar: SpendingTrendBar,
+    averageFraction: Float?,
+    modifier: Modifier
+)
 {
     // Month and amount are read together; the dashed average line is drawing only.
-    Column(modifier = modifier.semantics(mergeDescendants = true) { }, horizontalAlignment = Alignment.CenterHorizontally)
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) { },
+        horizontalAlignment = Alignment.CenterHorizontally
+    )
     {
         Text(
             text = formatMoney(bar.total.value, LocalMainCurrency.current),
@@ -616,13 +747,20 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
             maxLines = 1,
         )
         Spacer(Modifier.height(4.dp))
-        Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter
+        )
         {
             // The average, as a dashed line level with the bars: every column draws its own segment at the
             // same fraction of the same fixed-height box, so the segments line up into one continuous line.
             if (averageFraction != null)
             {
-                Canvas(modifier = Modifier.matchParentSize().decorative())
+                Canvas(modifier = Modifier
+                    .matchParentSize()
+                    .decorative())
                 {
                     val y = size.height * (1f - averageFraction.coerceIn(0f, 1f))
                     drawLine(
@@ -640,7 +778,11 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
                     .fillMaxWidth(0.6f)
                     // A month with nothing spent gets a fixed, visible tick rather than a proportional
                     // sliver: next to a much busier month, a couple of percent tall would vanish.
-                    .then(if (fraction <= 0f) Modifier.height(4.dp) else Modifier.fillMaxHeight(fraction))
+                    .then(
+                        if (fraction <= 0f) Modifier.height(4.dp) else Modifier.fillMaxHeight(
+                            fraction
+                        )
+                    )
                     .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
                     .background(if (bar.isSelected) palette.iconToneGreen else palette.divider),
             )

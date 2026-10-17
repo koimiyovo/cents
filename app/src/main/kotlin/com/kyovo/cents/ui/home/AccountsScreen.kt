@@ -74,6 +74,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import com.kyovo.cents.ui.common.ExportIcon
 import com.kyovo.cents.ui.common.decorative
 import com.kyovo.cents.ui.common.foldState
 import androidx.compose.ui.text.font.FontWeight
@@ -405,7 +406,7 @@ internal fun HomeTopBar(
                     .semantics { contentDescription = description },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "📤", fontSize = 20.sp)
+                ExportIcon(tint = palette.textPrimary, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(8.dp))
         }
