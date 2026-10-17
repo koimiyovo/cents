@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,11 +105,11 @@ private fun CycleEntry(palette: AccountsPalette, onClick: () -> Unit)
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "📅", fontSize = 22.sp)
+        Text(text = "📅", fontSize = 22.sp, modifier = Modifier.decorative())
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -134,13 +136,14 @@ private fun LimitRow(palette: AccountsPalette, row: BudgetRow, onClick: () -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = row.subcategory.emoji?.value ?: defaultSubcategoryEmoji(row.subcategory.kind),
             fontSize = 22.sp,
+            modifier = Modifier.decorative(),
         )
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

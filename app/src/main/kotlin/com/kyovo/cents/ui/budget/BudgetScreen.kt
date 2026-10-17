@@ -34,7 +34,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.material3.minimumInteractiveComponentSize
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -151,6 +155,7 @@ fun BudgetScreen(
                             color = palette.textSecondary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            modifier = Modifier.semantics { heading() },
                         )
                         overview.unbudgeted.forEach { row -> UnbudgetedRow(palette, row) }
                     }
@@ -188,7 +193,13 @@ internal fun MonthSelectorRow(
         RoundArrow(palette, "‹", stringResource(R.string.budget_month_previous), onPrevious)
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally)
         {
-            Text(text = label, color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = label,
+                color = palette.textPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
+            )
             // The days the budget month covers, when it is not the plain calendar month.
             if (range != null)
             {
@@ -204,7 +215,8 @@ internal fun MonthSelectorRow(
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onToday)
+                        .clickable(role = Role.Button, onClick = onToday)
+                        .minimumInteractiveComponentSize()
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
             }
@@ -239,10 +251,10 @@ private fun RoundArrow(palette: AccountsPalette, glyph: String, description: Str
 {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(palette.surface)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
@@ -257,6 +269,8 @@ private fun SummaryCard(palette: AccountsPalette, summary: BudgetSummary)
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // One stop for the whole card; the bar is redundant with the figures.
+            .semantics(mergeDescendants = true) { }
             .clip(RoundedCornerShape(20.dp))
             .background(palette.heroCardBackground)
             .padding(16.dp),
@@ -309,6 +323,7 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) { }
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
             .padding(14.dp),
@@ -316,7 +331,7 @@ private fun BudgetCard(palette: AccountsPalette, row: BudgetRow)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically)
         {
-            Text(text = subcategoryEmoji(row), fontSize = 22.sp)
+            Text(text = subcategoryEmoji(row), fontSize = 22.sp, modifier = Modifier.decorative())
             Spacer(Modifier.width(10.dp))
             Text(
                 text = row.subcategory.name.value,
@@ -382,12 +397,13 @@ private fun UnbudgetedRow(palette: AccountsPalette, row: BudgetRow)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) { }
             .clip(RoundedCornerShape(14.dp))
             .background(palette.surface)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = subcategoryEmoji(row), fontSize = 18.sp)
+        Text(text = subcategoryEmoji(row), fontSize = 18.sp, modifier = Modifier.decorative())
         Spacer(Modifier.width(10.dp))
         Text(text = row.subcategory.name.value, color = palette.textMuted, fontSize = 14.sp)
     }
@@ -457,7 +473,8 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.size(180.dp))
+        // The legend below says everything the ring draws.
+        Canvas(modifier = Modifier.size(180.dp).decorative())
         {
             val strokeWidth = size.minDimension * 0.16f
             var startAngle = -90f
@@ -491,7 +508,12 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
 @Composable
 internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: SpendingSlice)
 {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth())
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { },
+    )
     {
         Box(
             modifier = Modifier
@@ -503,7 +525,7 @@ internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: Spen
         val label = slice.label
         if (label is SpendingSliceLabel.Named)
         {
-            Text(text = label.emoji, fontSize = 16.sp)
+            Text(text = label.emoji, fontSize = 16.sp, modifier = Modifier.decorative())
             Spacer(Modifier.width(6.dp))
         }
         Text(
@@ -583,7 +605,8 @@ private fun BudgetTrendTab(palette: AccountsPalette, trend: SpendingTrend)
 @Composable
 private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFraction: Float?, modifier: Modifier)
 {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally)
+    // Month and amount are read together; the dashed average line is drawing only.
+    Column(modifier = modifier.semantics(mergeDescendants = true) { }, horizontalAlignment = Alignment.CenterHorizontally)
     {
         Text(
             text = formatMoney(bar.total.value, LocalMainCurrency.current),
@@ -599,7 +622,7 @@ private fun TrendBar(palette: AccountsPalette, bar: SpendingTrendBar, averageFra
             // same fraction of the same fixed-height box, so the segments line up into one continuous line.
             if (averageFraction != null)
             {
-                Canvas(modifier = Modifier.matchParentSize())
+                Canvas(modifier = Modifier.matchParentSize().decorative())
                 {
                     val y = size.height * (1f - averageFraction.coerceIn(0f, 1f))
                     drawLine(

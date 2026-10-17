@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -88,17 +94,21 @@ internal fun <T> SelectDropdown(
     Column(modifier = modifier) {
         val trigger = if (enabled)
         {
-            Modifier.clickable {
-                if (!expanded)
-                {
-                    focusManager.clearFocus()
-                    keyboard?.hide()
+            Modifier
+                .clickable(role = Role.DropdownList) {
+                    if (!expanded)
+                    {
+                        focusManager.clearFocus()
+                        keyboard?.hide()
+                    }
+                    expanded = !expanded
                 }
-                expanded = !expanded
-            }
+                .foldState(expanded)
         } else
         {
-            Modifier.alpha(DISABLED_ALPHA)
+            Modifier
+                .alpha(DISABLED_ALPHA)
+                .semantics { disabled() }
         }
         if (fillWidth)
         {
@@ -132,7 +142,7 @@ internal fun <T> SelectDropdown(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
+                            .clickable(role = Role.Button) {
                                 expanded = false
                                 onFooterClick()
                             }
@@ -186,6 +196,8 @@ internal fun DropdownPill(label: String, palette: AccountsPalette, modifier: Mod
 {
     Row(
         modifier = modifier
+            // Grows the touch target to 48 dp without growing the pill itself.
+            .minimumInteractiveComponentSize()
             .clip(RoundedCornerShape(50))
             .background(palette.surface)
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -195,7 +207,9 @@ internal fun DropdownPill(label: String, palette: AccountsPalette, modifier: Mod
             text = label,
             color = palette.textSecondary,
             fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            // The leading emoji ("📅 Ce mois") is decoration: read the words only.
+            modifier = Modifier.semantics { contentDescription = label.dropWhile { !it.isLetterOrDigit() } },
         )
         Spacer(Modifier.width(6.dp))
         ChevronDownIcon(tint = palette.textSecondary, modifier = Modifier.size(12.dp))
@@ -267,7 +281,7 @@ internal fun SelectableOptionRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (selected) palette.iconToneGreen else Color.Transparent)
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }

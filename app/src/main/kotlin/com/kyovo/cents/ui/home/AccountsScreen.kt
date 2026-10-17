@@ -68,9 +68,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.kyovo.cents.ui.common.decorative
+import com.kyovo.cents.ui.common.foldState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -385,6 +390,7 @@ internal fun HomeTopBar(
                 color = palette.textPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
         }
         if (onExportClick != null)
@@ -392,10 +398,10 @@ internal fun HomeTopBar(
             val description = stringResource(R.string.transactions_export_description)
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(palette.surface)
-                    .clickable(onClick = onExportClick)
+                    .clickable(role = Role.Button, onClick = onExportClick)
                     .semantics { contentDescription = description },
                 contentAlignment = Alignment.Center,
             ) {
@@ -411,10 +417,10 @@ internal fun HomeTopBar(
             val description = stringResource(R.string.settings_button_description)
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(palette.surface)
-                    .clickable(onClick = onSettingsClick)
+                    .clickable(role = Role.Button, onClick = onSettingsClick)
                     .semantics { contentDescription = description },
                 contentAlignment = Alignment.Center,
             ) {
@@ -487,14 +493,24 @@ private fun TotalBalanceCard(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            EyeToggleIcon(
-                visible = visible,
-                tint = palette.heroOnCardSecondary,
-                modifier = Modifier
-                    .clickable(onClick = onToggleVisibility)
-                    .padding(4.dp)
-                    .size(20.dp),
+            val toggleDescription = stringResource(
+                if (visible) R.string.accounts_hide_balances else R.string.accounts_show_balances,
             )
+            // A 48 dp touch target around the 20 dp drawing, named for screen readers.
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .clickable(role = Role.Button, onClick = onToggleVisibility)
+                    .semantics { contentDescription = toggleDescription },
+                contentAlignment = Alignment.Center,
+            ) {
+                EyeToggleIcon(
+                    visible = visible,
+                    tint = palette.heroOnCardSecondary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
         Text(
             text = if (visible) formatMoney(totalCents, LocalMainCurrency.current) else hidden,
@@ -574,6 +590,10 @@ private fun HeroStatPill(
 {
     Column(
         modifier = modifier
+            // One stop reading "Revenus +12,00 €", without the arrow glyph of the visual label.
+            .semantics(mergeDescendants = true) {
+                contentDescription = "${label.dropWhile { !it.isLetter() }} $amount"
+            }
             .clip(RoundedCornerShape(16.dp))
             .background(palette.heroPillBackground)
             .padding(if (compact) 8.dp else 12.dp),
@@ -597,7 +617,7 @@ private fun NewAccountButton(palette: AccountsPalette, onClick: () -> Unit)
             .clip(RoundedCornerShape(50))
             .background(palette.primaryButtonBackground)
             .border(1.dp, palette.primaryButtonBorder, RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -619,6 +639,7 @@ private fun AccountsSectionHeader(palette: AccountsPalette, count: Int)
             color = palette.textPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() },
         )
         Spacer(Modifier.width(8.dp))
         Box(
@@ -666,6 +687,7 @@ private fun AccountRow(
     archived: Boolean = false,
 )
 {
+    val archivedText = stringResource(R.string.accounts_status_archived)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -674,7 +696,9 @@ private fun AccountRow(
             .alpha(if (archived) 0.65f else 1f)
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
+            // The dimming is invisible to a screen reader: say it.
+            .semantics { if (archived) stateDescription = archivedText }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -682,7 +706,8 @@ private fun AccountRow(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(toneBackground(tone, palette)),
+                .background(toneBackground(tone, palette))
+                .decorative(),
             contentAlignment = Alignment.Center,
         ) {
             Text(text = accountEmoji(account.type), fontSize = 18.sp)
@@ -844,7 +869,9 @@ private fun SwipeableRow(
         modifier = Modifier
             .fillMaxWidth()
             .onSizeChanged { rowWidthPx = it.width }
-            .semantics {
+            // Merged with the row inside: the actions sit on the same TalkBack stop as the row itself,
+            // instead of on a parent that is not a stop of its own.
+            .semantics(mergeDescendants = true) {
                 customActions = listOf(
                     CustomAccessibilityAction(rightLabel) { currentOnSwipeRight(); true },
                     CustomAccessibilityAction(editLabel) { currentOnEdit(); true },
@@ -956,7 +983,7 @@ private fun SwipeActionButton(
             .fillMaxHeight()
             .clip(RoundedCornerShape(18.dp))
             .background(palette.badgeBackground)
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -998,8 +1025,9 @@ private fun ArchivedAccountsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { expanded = !expanded }
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .clickable(role = Role.Button) { expanded = !expanded }
+                .foldState(expanded)
+                .padding(horizontal = 4.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

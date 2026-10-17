@@ -19,6 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +77,7 @@ fun BudgetFormSheet(
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
             // A budget holds from a month on, not for that month only: said, so it is no surprise.
             Text(
@@ -92,8 +96,11 @@ fun BudgetFormSheet(
                 focusRequester = limitFocus,
             )
 
-            SectionLabel(palette, stringResource(R.string.budget_form_threshold_label, form.thresholdPercent))
+            val thresholdLabel = stringResource(R.string.budget_form_threshold_label, form.thresholdPercent)
+            SectionLabel(palette, thresholdLabel)
             Slider(
+                // The label above is a separate Text: name the slider with it.
+                modifier = Modifier.semantics { contentDescription = thresholdLabel },
                 value = form.thresholdPercent.toFloat(),
                 // The form snaps what the slider reports to its steps, so the thumb never rests between two.
                 onValueChange = { onThresholdChange(it.roundToInt()) },

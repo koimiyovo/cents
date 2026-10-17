@@ -9,7 +9,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -973,11 +975,11 @@ private fun BottomNavItem(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .background(if (selected) palette.iconToneGreen else Color.Transparent)
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = emoji, fontSize = 20.sp)
+        Text(text = emoji, fontSize = 20.sp, modifier = Modifier.decorative())
         Text(
             text = label,
             color = if (selected) palette.heroOnCardPrimary else palette.textMuted,

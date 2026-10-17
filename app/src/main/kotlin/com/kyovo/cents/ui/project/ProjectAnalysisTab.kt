@@ -2,6 +2,9 @@ package com.kyovo.cents.ui.project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,7 +133,7 @@ private fun LinkPill(palette: AccountsPalette, text: String, onClick: () -> Unit
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(palette.surface)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
     )
 }
@@ -150,7 +153,13 @@ private fun ProjectPicker(palette: AccountsPalette, projects: List<Project>, sel
 @Composable
 private fun SectionTitle(palette: AccountsPalette, text: String)
 {
-    Text(text = text, color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Text(
+        text = text,
+        color = palette.textPrimary,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.semantics { heading() },
+    )
 }
 
 /** The pie of the expenses by subcategory, its legend, and — apart — what refunds took off. */

@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +84,7 @@ internal fun DeleteAccountDialog(
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = if (choices.deletesTransactions)
@@ -134,7 +138,7 @@ internal fun DialogCancelButton(palette: AccountsPalette, onClick: () -> Unit)
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 12.dp),
         textAlign = TextAlign.Center,
     )
@@ -149,7 +153,7 @@ internal fun DestructiveButton(palette: AccountsPalette, label: String, onClick:
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
             .border(BorderStroke(1.5.dp, palette.error), RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {

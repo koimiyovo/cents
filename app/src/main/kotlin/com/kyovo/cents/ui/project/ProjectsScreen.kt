@@ -2,6 +2,10 @@ package com.kyovo.cents.ui.project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,7 +88,8 @@ fun ProjectsScreen(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(palette.surface)
-                    .clickable(onClick = onCreate)
+                    .clickable(role = Role.Button, onClick = onCreate)
+                    .minimumInteractiveComponentSize()
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
@@ -121,12 +126,13 @@ internal fun ProjectCardView(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(palette.surface)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .semantics(mergeDescendants = true) { }
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = card.displayEmoji(), fontSize = 24.sp)
+            Text(text = card.displayEmoji(), fontSize = 24.sp, modifier = Modifier.decorative())
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

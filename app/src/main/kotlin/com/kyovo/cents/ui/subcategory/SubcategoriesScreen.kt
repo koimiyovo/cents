@@ -33,7 +33,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import com.kyovo.cents.ui.common.decorative
+import com.kyovo.cents.ui.common.foldState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -126,8 +130,9 @@ private fun SectionBlock(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClickLabel = toggleLabel, onClick = onToggle)
-                    .padding(vertical = 6.dp),
+                    .clickable(onClickLabel = toggleLabel, role = Role.Button, onClick = onToggle)
+                    .foldState(expanded)
+                    .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 ChevronDownIcon(
@@ -142,6 +147,7 @@ private fun SectionBlock(
                     color = palette.textPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -161,10 +167,10 @@ private fun SectionBlock(
             // A "+" alone says it: the accessible name carries the words.
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(palette.surface)
-                    .clickable(onClick = onCreate)
+                    .clickable(role = Role.Button, onClick = onCreate)
                     .semantics { contentDescription = newDescription },
                 contentAlignment = Alignment.Center,
             ) {
@@ -213,12 +219,12 @@ private fun SubcategoryRowItem(palette: AccountsPalette, row: SubcategoryRow, on
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = editLabel, onClick = onClick)
+            .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.background),
+            modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.background).decorative(),
             contentAlignment = Alignment.Center,
         ) {
             // The category's own emoji stands in for a subcategory that has none.

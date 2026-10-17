@@ -5,6 +5,12 @@ import com.kyovo.cents.domain.model.ExchangeRates
 import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.kyovo.cents.ui.common.foldState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -157,6 +163,7 @@ fun TransactionFormSheet(
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
             val archivedOriginal = remember(
                 accounts,
@@ -308,7 +315,10 @@ fun TransactionFormSheet(
                     color = palette.kicker,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { showDetails = !showDetails },
+                    modifier = Modifier
+                        .clickable(role = Role.Button) { showDetails = !showDetails }
+                        .foldState(showDetails)
+                        .minimumInteractiveComponentSize(),
                 )
                 if (showDetails)
                 {
@@ -415,7 +425,13 @@ private fun RepeatSection(
 {
     val repeat = form.repeat
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // The whole row is the switch, so it is read with its label and hint.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = repeat != null, role = Role.Switch) { onFormChange(form.withRepeat(it)) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 SectionLabel(palette, stringResource(R.string.transaction_form_repeat_label))
                 Text(
@@ -426,7 +442,7 @@ private fun RepeatSection(
             }
             Switch(
                 checked = repeat != null,
-                onCheckedChange = { onFormChange(form.withRepeat(it)) },
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = palette.iconToneGreen),
             )
         }

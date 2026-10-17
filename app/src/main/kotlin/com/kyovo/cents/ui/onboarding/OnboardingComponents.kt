@@ -21,6 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.minimumInteractiveComponentSize
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +58,8 @@ fun OnboardingTopBar(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(palette.textPrimary),
+                    .background(palette.textPrimary)
+                    .decorative(),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(text = "¢", color = palette.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -68,7 +76,8 @@ fun OnboardingTopBar(
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
                 .background(palette.skipButtonBackground)
-                .clickable(onClick = onSkip)
+                .clickable(role = Role.Button, onClick = onSkip)
+                .minimumInteractiveComponentSize()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Text(
@@ -109,6 +118,7 @@ fun FeatureRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) { }
             .clip(RoundedCornerShape(20.dp))
             .background(palette.surface)
             .padding(18.dp),
@@ -157,7 +167,7 @@ fun PageIcon(
             .background(palette.toneBackground(tone)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = icon, fontSize = 54.sp)
+        Text(text = icon, fontSize = 54.sp, modifier = Modifier.decorative())
     }
 }
 
@@ -168,8 +178,10 @@ fun PageIndicator(
     palette: OnboardingPalette,
     modifier: Modifier = Modifier,
 ) {
+    val position = stringResource(R.string.a11y_page_indicator, currentPage + 1, pageCount)
     Row(
-        modifier = modifier,
+        // The dots say nothing to a screen reader: one sentence instead.
+        modifier = modifier.clearAndSetSemantics { contentDescription = position },
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -198,7 +210,7 @@ fun OnboardingPrimaryButton(
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
             .background(palette.primaryButton)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -221,7 +233,9 @@ fun OnboardingBackButton(
         text = stringResource(R.string.onboarding_back),
         color = palette.textMuted,
         fontSize = 14.sp,
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .clickable(role = Role.Button, onClick = onClick)
+            .minimumInteractiveComponentSize(),
     )
 }
 

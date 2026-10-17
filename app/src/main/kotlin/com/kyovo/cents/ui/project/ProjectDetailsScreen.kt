@@ -2,6 +2,8 @@ package com.kyovo.cents.ui.project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -118,7 +120,8 @@ fun ProjectDetailsScreen(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(palette.surface)
-                    .clickable { onEdit(card) }
+                    .clickable(role = Role.Button) { onEdit(card) }
+                    .minimumInteractiveComponentSize()
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }

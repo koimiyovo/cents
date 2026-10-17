@@ -22,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import com.kyovo.cents.ui.common.decorative
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -68,10 +70,10 @@ fun RecurringTransactionsContent(
         val newDescription = stringResource(R.string.recurring_transactions_new)
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(palette.surface)
-                .clickable(onClick = onCreate)
+                .clickable(role = Role.Button, onClick = onCreate)
                 .semantics { contentDescription = newDescription },
             contentAlignment = Alignment.Center,
         ) {
@@ -110,12 +112,12 @@ private fun RecurringTransactionRowItem(palette: AccountsPalette, row: Recurring
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = editLabel, onClick = onClick)
+            .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.background),
+            modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.background).decorative(),
             contentAlignment = Alignment.Center,
         ) {
             Text(text = "🔁", fontSize = 18.sp)
