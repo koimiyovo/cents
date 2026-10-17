@@ -2,6 +2,10 @@ package com.kyovo.cents.ui.budget
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -181,14 +185,18 @@ private fun DeclaredStart(palette: AccountsPalette, row: DeclaredStartRow, onCle
             fontSize = 14.sp,
             modifier = Modifier.weight(1f),
         )
+        val clearLabel = stringResource(R.string.budget_cycle_clear)
         Text(
-            text = stringResource(R.string.budget_cycle_clear),
+            text = clearLabel,
             color = palette.error,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .clickable { onClear(row.month) }
+                .clickable(role = Role.Button) { onClear(row.month) }
+                // Several rows say the same word: name the month it applies to.
+                .semantics { contentDescription = "$clearLabel, ${row.monthLabel}" }
+                .minimumInteractiveComponentSize()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
         )
     }
