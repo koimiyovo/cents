@@ -1,7 +1,7 @@
 package com.kyovo.cents.ui.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,7 +47,7 @@ internal fun <T> SectionSwitch(
                     .weight(1f)
                     .clip(RoundedCornerShape(50))
                     .background(if (isSelected) palette.iconToneGreen else palette.surface)
-                    .clickable { onSelect(option) }
+                    .selectable(selected = isSelected, role = Role.Tab) { onSelect(option) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {

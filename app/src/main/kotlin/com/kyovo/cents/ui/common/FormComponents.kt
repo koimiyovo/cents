@@ -21,6 +21,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,6 +51,7 @@ internal fun AmountField(
     textSize: TextUnit = 32.sp,
 )
 {
+    val amountLabel = stringResource(R.string.a11y_amount_field)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -67,6 +73,7 @@ internal fun AmountField(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
             modifier = Modifier
                 .weight(1f)
+                .semantics { contentDescription = amountLabel }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             decorationBox = { innerField ->
                 Box {
@@ -120,6 +127,8 @@ internal fun FormTextField(
             keyboardOptions = keyboardOptions,
             modifier = Modifier
                 .fillMaxWidth()
+                // The placeholder is a separate Text: without this the field is read as nameless.
+                .semantics { contentDescription = placeholder }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         )
     }
@@ -134,7 +143,13 @@ internal fun SectionLabel(palette: AccountsPalette, text: String)
 @Composable
 internal fun ErrorText(palette: AccountsPalette, text: String)
 {
-    Text(text = text, color = palette.error, fontSize = 12.sp)
+    // Polite live region: the error is announced when it appears, not only when the user swipes to it.
+    Text(
+        text = text,
+        color = palette.error,
+        fontSize = 12.sp,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 /** The secondary action of a form: outlined, so it is not mistaken for the one main action ([SubmitButton]). */
@@ -147,7 +162,7 @@ internal fun OutlinedFormButton(palette: AccountsPalette, label: String, onClick
             .clip(RoundedCornerShape(50))
             .background(palette.primaryButtonBackground)
             .border(1.dp, palette.primaryButtonBorder, RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -170,7 +185,7 @@ internal fun SubmitButton(palette: AccountsPalette, label: String, onClick: () -
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
             .background(palette.iconToneGreen)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -91,7 +93,7 @@ internal fun NameAndEmojiField(
                     .size(44.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(palette.background)
-                    .clickable {
+                    .clickable(role = Role.Button) {
                         if (!expanded)
                         {
                             focusManager.clearFocus()
@@ -99,7 +101,8 @@ internal fun NameAndEmojiField(
                         }
                         expanded = !expanded
                     }
-                    .semantics { contentDescription = emojiDescription },
+                    .semantics { contentDescription = emojiDescription }
+                    .foldState(expanded),
                 contentAlignment = Alignment.Center,
             ) {
                 // A faint smiley while none is chosen: it says an emoji can go here.
@@ -127,6 +130,7 @@ internal fun NameAndEmojiField(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .semantics { contentDescription = placeholder }
                         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
                 )
             }
@@ -150,7 +154,7 @@ internal fun NameAndEmojiField(
                             .size(44.dp)
                             .clip(CircleShape)
                             .background(if (isSelected) palette.iconToneGreen else Color.Transparent)
-                            .clickable {
+                            .selectable(selected = isSelected, role = Role.RadioButton) {
                                 expanded = false
                                 onEmojiChange(if (isSelected) null else candidate)
                             },
