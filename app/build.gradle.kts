@@ -25,7 +25,7 @@ android {
         applicationId = "com.kyovo.cents"
         minSdk = 30
         targetSdk = 37
-        versionCode = 5
+        versionCode = 6
         versionName = "1.0"
         buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
 
