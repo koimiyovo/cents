@@ -31,9 +31,15 @@ class BudgetOverviewTest
     private val gifts = aSubcategory(5, "Cadeaux")
 
     // Spent against a limit of 100 euros: below, near and above the default threshold of 80 %.
-    private fun onTrack(subcategory: Subcategory) = BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(3_000)))
-    private fun close(subcategory: Subcategory) = BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(9_000)))
-    private fun over(subcategory: Subcategory) = BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(12_000)))
+    private fun onTrack(subcategory: Subcategory) =
+        BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(3_000)))
+
+    private fun close(subcategory: Subcategory) =
+        BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(9_000)))
+
+    private fun over(subcategory: Subcategory) =
+        BudgetRow(subcategory, BudgetProgress(Money(10_000), Money(12_000)))
+
     private fun none(subcategory: Subcategory) = BudgetRow(subcategory, null)
 
     @Test
@@ -46,7 +52,11 @@ class BudgetOverviewTest
         val overview = budgetOverview(rows)
 
         // THEN
-        assertThat(overview.budgeted.map { it.subcategory }).containsExactly(leisure, fuel, groceries)
+        assertThat(overview.budgeted.map { it.subcategory }).containsExactly(
+            leisure,
+            fuel,
+            groceries
+        )
     }
 
     @Test
@@ -59,7 +69,13 @@ class BudgetOverviewTest
         val overview = budgetOverview(rows)
 
         // THEN
-        assertThat(overview.budgeted.map { it.subcategory }).containsExactly(health, groceries, leisure, gifts, fuel)
+        assertThat(overview.budgeted.map { it.subcategory }).containsExactly(
+            health,
+            groceries,
+            leisure,
+            gifts,
+            fuel
+        )
     }
 
     @Test
@@ -91,14 +107,21 @@ class BudgetOverviewTest
     @Test
     fun `an empty list gives an empty overview`()
     {
-        assertThat(budgetOverview(emptyList())).isEqualTo(BudgetOverview(emptyList(), emptyList(), null))
+        assertThat(budgetOverview(emptyList())).isEqualTo(
+            BudgetOverview(
+                emptyList(),
+                emptyList(),
+                null
+            )
+        )
     }
 
     @Test
     fun `the summary adds up the limits and what was spent of the budgets that are set only`()
     {
         // GIVEN 100 + 100 + 100 euros of limits, 30 + 90 + 120 euros spent, and a subcategory without a budget
-        val overview = budgetOverview(listOf(onTrack(groceries), close(fuel), over(leisure), none(health)))
+        val overview =
+            budgetOverview(listOf(onTrack(groceries), close(fuel), over(leisure), none(health)))
 
         // THEN
         val summary = overview.summary!!
@@ -112,11 +135,13 @@ class BudgetOverviewTest
     fun `the summary counts how many budgets are over and how many are close`()
     {
         // GIVEN
-        val overview = budgetOverview(listOf(onTrack(groceries), close(fuel), close(gifts), over(leisure)))
+        val overview =
+            budgetOverview(listOf(onTrack(groceries), close(fuel), close(gifts), over(leisure)))
 
         // THEN
-        assertThat(overview.summary!!.overCount).isEqualTo(1)
-        assertThat(overview.summary!!.closeCount).isEqualTo(2)
+        val summary = overview.summary!!
+        assertThat(summary.overCount).isEqualTo(1)
+        assertThat(summary.closeCount).isEqualTo(2)
     }
 
     // Everything can be fine as a whole with one budget over, and the month as a whole can be over: the total
@@ -133,22 +158,41 @@ class BudgetOverviewTest
         )
 
         // THEN 130 spent of 200: not over as a whole, though one budget is
-        assertThat(overview.summary!!.isOverspent).isFalse()
-        assertThat(overview.summary!!.overCount).isEqualTo(1)
+        val overviewSummary = overview.summary!!
+        assertThat(overviewSummary.isOverspent).isFalse()
+        assertThat(overviewSummary.overCount).isEqualTo(1)
 
         // AND when the total itself passes the total limit
-        val worse = budgetOverview(listOf(BudgetRow(groceries, BudgetProgress(Money(10_000), Money(13_000)))))
-        assertThat(worse.summary!!.isOverspent).isTrue()
-        assertThat(worse.summary!!.remaining).isEqualTo(-3_000)
+        val worse = budgetOverview(
+            listOf(
+                BudgetRow(
+                    groceries,
+                    BudgetProgress(Money(10_000), Money(13_000))
+                )
+            )
+        )
+        val worseSummary = worse.summary!!
+        assertThat(worseSummary.isOverspent).isTrue()
+        assertThat(worseSummary.remaining).isEqualTo(-3_000)
     }
 
     @Test
     fun `the summary bar is the share of the total limit spent, kept between empty and full`()
     {
-        assertThat(budgetOverview(listOf(onTrack(groceries))).summary!!.barFraction).isCloseTo(0.3f, within(0.0001f))
+        assertThat(budgetOverview(listOf(onTrack(groceries))).summary!!.barFraction).isCloseTo(
+            0.3f,
+            within(0.0001f)
+        )
         assertThat(budgetOverview(listOf(over(groceries))).summary!!.barFraction).isEqualTo(1f)
         assertThat(
-            budgetOverview(listOf(BudgetRow(groceries, BudgetProgress(Money(10_000), Money(0))))).summary!!.barFraction
+            budgetOverview(
+                listOf(
+                    BudgetRow(
+                        groceries,
+                        BudgetProgress(Money(10_000), Money(0))
+                    )
+                )
+            ).summary!!.barFraction
         ).isEqualTo(0f)
     }
 }

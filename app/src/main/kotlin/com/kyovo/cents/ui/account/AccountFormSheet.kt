@@ -28,25 +28,25 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AccountType
 import com.kyovo.cents.ui.common.AmountField
 import com.kyovo.cents.ui.common.ErrorText
 import com.kyovo.cents.ui.common.FormTextField
-import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.common.SectionLabel
-import com.kyovo.cents.ui.common.SubmitButton
-import com.kyovo.cents.domain.model.AccountCurrency
-import com.kyovo.cents.ui.settings.label
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
+import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.acceptsAmountInput
+import com.kyovo.cents.ui.common.limitNameInput
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.LightAccountsPalette
 import com.kyovo.cents.ui.home.SubcategoryChip
 import com.kyovo.cents.ui.home.accountEmoji
 import com.kyovo.cents.ui.home.accountTypeLabelRes
+import com.kyovo.cents.ui.settings.label
 
 /**
  * Bottom sheet to open a new account: a name, a type, and optionally an opening balance and a
@@ -104,7 +104,16 @@ fun AccountFormSheet(
                 palette = palette,
                 value = form.name,
                 // Typing stops at the domain's limit: the field never holds a name it would refuse.
-                onValueChange = { onFormChange(form.copy(name = limitNameInput(it, AccountName.MAX_LENGTH))) },
+                onValueChange = {
+                    onFormChange(
+                        form.copy(
+                            name = limitNameInput(
+                                it,
+                                AccountName.MAX_LENGTH
+                            )
+                        )
+                    )
+                },
                 placeholder = stringResource(R.string.account_form_name_placeholder),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -124,7 +133,10 @@ fun AccountFormSheet(
             TypePicker(palette, form.type) { onFormChange(form.copy(type = it)) }
 
             // The currency is fixed once the account exists: only offered when opening one.
-            if (!form.isEditing) CurrencyPicker(palette, form.currency) { onFormChange(form.withCurrency(it)) }
+            if (!form.isEditing) CurrencyPicker(
+                palette,
+                form.currency
+            ) { onFormChange(form.withCurrency(it)) }
 
             // The opening balance is only asked for when opening: afterwards it is a transaction.
             if (!form.isEditing) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -133,7 +145,13 @@ fun AccountFormSheet(
                     palette = palette,
                     value = form.initialAmountText,
                     // Edits that would break the amount's shape (letters, a third decimal...) are dropped.
-                    onValueChange = { if (acceptsAmountInput(it, form.currency.fractionDigits)) onFormChange(form.copy(initialAmountText = it)) },
+                    onValueChange = {
+                        if (acceptsAmountInput(
+                                it,
+                                form.currency.fractionDigits
+                            )
+                        ) onFormChange(form.copy(initialAmountText = it))
+                    },
                     error = AccountFormError.INITIAL_AMOUNT_INVALID in errors,
                     currency = form.currency,
                     textSize = 22.sp,
@@ -176,7 +194,7 @@ private fun CurrencyPicker(
             palette = palette,
             options = AccountCurrency.SUPPORTED.map { SelectOption(it, it.label()) },
             selected = selected,
-            onSelect = { it?.let(onSelect) },
+            onSelect = { currency -> currency.let(onSelect) },
             fillWidth = true,
         )
     }

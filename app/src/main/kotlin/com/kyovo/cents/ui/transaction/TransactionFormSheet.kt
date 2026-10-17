@@ -1,16 +1,7 @@
 package com.kyovo.cents.ui.transaction
 
-import com.kyovo.cents.ui.common.formatMoney
-import com.kyovo.cents.domain.model.ExchangeRates
-import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import com.kyovo.cents.ui.common.foldState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +24,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -46,6 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -53,7 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyovo.cents.R
 import com.kyovo.cents.domain.model.Account
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.ExchangeRates
 import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.ui.common.AmountField
@@ -65,6 +63,8 @@ import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.SubmitButton
 import com.kyovo.cents.ui.common.acceptsAmountInput
+import com.kyovo.cents.ui.common.foldState
+import com.kyovo.cents.ui.common.formatMoney
 import com.kyovo.cents.ui.home.AccountsPalette
 import com.kyovo.cents.ui.home.DarkAccountsPalette
 import com.kyovo.cents.ui.home.DestructiveButton
@@ -119,7 +119,7 @@ fun TransactionFormSheet(
     val destinationCurrency = accounts.firstOrNull { it.id == form.toAccountId }?.currency
     // A transfer between two currencies has an amount received of its own, in the destination's currency.
     val crossCurrency = form.type == TransactionFormType.TRANSFER && sourceCurrency != null &&
-        destinationCurrency != null && sourceCurrency != destinationCurrency
+            destinationCurrency != null && sourceCurrency != destinationCurrency
 
     // Opens straight on the details when the edited transaction already has some.
     var showDetails by rememberSaveable { mutableStateOf(form.hasDetails) }
@@ -130,7 +130,7 @@ fun TransactionFormSheet(
     {
         (form.submit(
             fractionDigits = currency.fractionDigits,
-            destinationFractionDigits = if (crossCurrency) destinationCurrency?.fractionDigits else null
+            destinationFractionDigits = if (crossCurrency) destinationCurrency.fractionDigits else null
         ) as? FormSubmission.Invalid)?.errors.orEmpty()
     } else
     {
@@ -188,7 +188,11 @@ fun TransactionFormSheet(
                 palette = palette,
                 value = form.amountText,
                 // Edits that would break the amount's shape (letters, a third decimal...) are dropped.
-                onValueChange = { if (acceptsAmountInput(it, currency.fractionDigits)) onFormChange(form.copy(amountText = it)) },
+                onValueChange = {
+                    if (acceptsAmountInput(it, currency.fractionDigits)) onFormChange(
+                        form.copy(amountText = it)
+                    )
+                },
                 error = FormError.AMOUNT_INVALID in errors,
                 currency = currency,
                 focusRequester = amountFocus,
@@ -264,7 +268,7 @@ fun TransactionFormSheet(
                         FormError.DESTINATION_ACCOUNT_REQUIRED,
                     )
                     FieldError(palette, FormError.SAME_ACCOUNT in errors, FormError.SAME_ACCOUNT)
-                    if (crossCurrency && sourceCurrency != null && destinationCurrency != null)
+                    if (crossCurrency)
                     {
                         DestinationAmountField(
                             palette = palette,
@@ -429,7 +433,10 @@ private fun RepeatSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .toggleable(value = repeat != null, role = Role.Switch) { onFormChange(form.withRepeat(it)) },
+                .toggleable(
+                    value = repeat != null,
+                    role = Role.Switch
+                ) { onFormChange(form.withRepeat(it)) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -448,7 +455,10 @@ private fun RepeatSection(
         }
         if (repeat != null)
         {
-            FrequencyField(palette, repeat.frequency, onSelect = { onFormChange(form.withFrequency(it)) })
+            FrequencyField(
+                palette,
+                repeat.frequency,
+                onSelect = { onFormChange(form.withFrequency(it)) })
             IntervalField(
                 palette = palette,
                 frequency = repeat.frequency,
@@ -531,14 +541,24 @@ private fun DestinationAmountField(
     val dayFormat = remember { DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRENCH) }
     val estimate = transferEstimate(form.amountText, source, destination, rates)
     // The franc is tied to the euro, so they convert even before any rate is fetched.
-    val convertible = (rates ?: ExchangeRates(LocalDate.ofEpochDay(0), emptyMap())).canConvert(source, destination)
+    val convertible = (rates ?: ExchangeRates(LocalDate.ofEpochDay(0), emptyMap())).canConvert(
+        source,
+        destination
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(palette, stringResource(R.string.transfer_received_label))
         AmountField(
             palette = palette,
             value = form.destinationAmountText,
-            onValueChange = { onFormChange(form.withDestinationAmount(it, destination.fractionDigits)) },
+            onValueChange = {
+                onFormChange(
+                    form.withDestinationAmount(
+                        it,
+                        destination.fractionDigits
+                    )
+                )
+            },
             error = invalid,
             currency = destination,
             textSize = 22.sp,
@@ -550,8 +570,10 @@ private fun DestinationAmountField(
                 estimate != null -> stringResource(
                     R.string.transfer_received_hint_estimate,
                     formatMoney(estimate.value, destination),
-                    rates?.date?.format(dayFormat) ?: stringResource(R.string.transfer_received_fixed_rate),
+                    rates?.date?.format(dayFormat)
+                        ?: stringResource(R.string.transfer_received_fixed_rate),
                 )
+
                 !convertible     -> stringResource(R.string.transfer_received_hint_no_rate)
                 else             -> stringResource(R.string.transfer_received_hint_empty)
             },
@@ -630,7 +652,12 @@ private fun ProjectPicker(
         SelectDropdown(
             palette = palette,
             options = listOf(SelectOption<Project?>(null, noneLabel)) +
-                    projects.map { SelectOption<Project?>(it, "${it.emoji?.value ?: DEFAULT_PROJECT_EMOJI} ${it.name.value}") },
+                    projects.map {
+                        SelectOption<Project?>(
+                            it,
+                            "${it.emoji?.value ?: DEFAULT_PROJECT_EMOJI} ${it.name.value}"
+                        )
+                    },
             selected = selected,
             onSelect = onSelect,
             fillWidth = true,

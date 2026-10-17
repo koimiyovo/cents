@@ -1,6 +1,5 @@
 package com.kyovo.cents.ui.transaction
 
-import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
@@ -17,6 +16,7 @@ import com.kyovo.cents.domain.port.input.CreateRecurringTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransactionCommand
 import com.kyovo.cents.domain.port.input.RecordTransferCommand
 import com.kyovo.cents.domain.port.input.UpdateTransactionCommand
+import com.kyovo.cents.ui.common.acceptsAmountInput
 import com.kyovo.cents.ui.common.formatCentsForInput
 import com.kyovo.cents.ui.common.parseAmountToCents
 import com.kyovo.cents.ui.recurring.INTERVAL_INPUT_PATTERN
@@ -25,7 +25,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /** Which account of the form is meant: the one money leaves from (or the only one), or the one a transfer goes to. */
-enum class AccountField { SOURCE, DESTINATION }
+enum class AccountField
+{ SOURCE, DESTINATION }
 
 /** Archived accounts can't receive new transactions (domain rule), so the form never offers them. */
 fun selectableAccounts(accounts: List<Account>): List<Account>
@@ -188,7 +189,10 @@ data class TransactionFormState(
         val readsDestinationAmount =
             category == null && destinationFractionDigits != null && destinationAmountText.isNotBlank()
         val destinationAmountCents =
-            if (readsDestinationAmount) parseAmountToCents(destinationAmountText, fractionDigits = destinationFractionDigits!!) else null
+            if (readsDestinationAmount) parseAmountToCents(
+                destinationAmountText,
+                fractionDigits = destinationFractionDigits
+            ) else null
         if (readsDestinationAmount && destinationAmountCents == null) errors += FormError.DESTINATION_AMOUNT_INVALID
 
         if (category == null)
@@ -298,7 +302,8 @@ data class TransactionFormState(
             return copy(date = dateOnDay(day, date, zone))
         }
         // A rule can't end before it starts: the end date follows the day when the day passes it.
-        val keptRepeat = repeat?.let { if (it.endDate != null && it.endDate.isBefore(day)) it.copy(endDate = day) else it }
+        val keptRepeat =
+            repeat?.let { if (it.endDate != null && it.endDate.isBefore(day)) it.copy(endDate = day) else it }
         return copy(date = dateOnDay(day, now, zone), repeat = keptRepeat)
     }
 
@@ -325,7 +330,8 @@ data class TransactionFormState(
     }
 
     /** The projects this form offers: all of them, or none when it cannot have one. */
-    fun projectChoices(projects: List<Project>): List<Project> = if (canHaveProject) projects else emptyList()
+    fun projectChoices(projects: List<Project>): List<Project> =
+        if (canHaveProject) projects else emptyList()
 
     /** Changing the unit does not reset the count: "every 2" stays "every 2" under the new unit. */
     fun withFrequency(frequency: RecurrenceFrequency): TransactionFormState =
@@ -339,10 +345,14 @@ data class TransactionFormState(
     }
 
     /** An end date starts on the form's own day; switching it off forgets it. */
-    fun withEndDateEnabled(enabled: Boolean, zone: ZoneId = ZoneId.systemDefault()): TransactionFormState =
+    fun withEndDateEnabled(
+        enabled: Boolean,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): TransactionFormState =
         copy(repeat = repeat?.copy(endDate = if (enabled) day(zone) else null))
 
-    fun withEndDate(date: LocalDate): TransactionFormState = copy(repeat = repeat?.copy(endDate = date))
+    fun withEndDate(date: LocalDate): TransactionFormState =
+        copy(repeat = repeat?.copy(endDate = date))
 
     /**
      * The form as it should be saved at [now]: when it is still dated today, the date is refreshed
@@ -412,7 +422,10 @@ data class TransactionFormState(
      */
     fun withAccountSelected(field: AccountField, id: AccountId): TransactionFormState = when (field)
     {
-        AccountField.SOURCE      -> copy(accountId = id, toAccountId = toAccountId?.takeUnless { it == id })
+        AccountField.SOURCE      -> copy(
+            accountId = id,
+            toAccountId = toAccountId?.takeUnless { it == id })
+
         AccountField.DESTINATION -> copy(toAccountId = id)
     }
 
