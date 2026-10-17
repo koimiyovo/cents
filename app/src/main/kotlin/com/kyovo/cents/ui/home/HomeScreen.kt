@@ -93,6 +93,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import com.kyovo.cents.ui.backup.AutomaticBackupOutcome
 import com.kyovo.cents.ui.backup.AutomaticBackupViewModel
 import com.kyovo.cents.ui.backup.DataBackupScreen
 import com.kyovo.cents.ui.backup.DataBackupViewModel
@@ -412,6 +413,25 @@ fun HomeScreen(
                 {
                     dataBackupViewModel.dismissResult()
                     snackbarHostState.showSnackbar(resources.getString(backupResultMessage(it)))
+                }
+            }
+    }
+
+    // The outcome of a backup started from the backup screen's folder card, said in a snackbar like an export.
+    // A success is then dismissed (the card would only repeat it); a failure also stays as a card, which keeps
+    // the way out ("choose another folder") on screen after the snackbar is gone.
+    LaunchedEffect(automaticBackupViewModel)
+    {
+        automaticBackupViewModel.uiState.map { it.outcome }
+            .filterNotNull()
+            .collect {
+                if (it == AutomaticBackupOutcome.BACKED_UP)
+                {
+                    automaticBackupViewModel.dismissOutcome()
+                    snackbarHostState.showSnackbar(resources.getString(R.string.backup_auto_done))
+                } else
+                {
+                    snackbarHostState.showSnackbar(resources.getString(R.string.backup_auto_failed))
                 }
             }
     }

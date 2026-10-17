@@ -455,7 +455,7 @@
     <string name="backup_result_import_unreadable">Ce fichier n\'a pas pu être lu. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_result_import_storage">L\'import a échoué. Vos données n\'ont pas été modifiées.</string>
     <string name="backup_auto_title">Sauvegarde automatique</string>
-    <string name="backup_auto_hint">Chaque semaine, Centimes enregistre une copie de vos données dans le dossier de votre choix et garde les 5 dernières. Ces copies ne sont pas chiffrées : choisissez un dossier que vous maîtrisez.</string>
+    <string name="backup_auto_hint">Chaque semaine, Centimes enregistre une copie de vos données dans le dossier de votre choix et garde les 5 dernières. Pour avoir une copie hors de l\'appareil, choisissez un dossier de Google Drive : Centimes ne se connecte pas à Google, c\'est l\'application Drive de votre téléphone qui envoie les fichiers vers votre compte. Ces copies ne sont pas chiffrées : choisissez un dossier que vous maîtrisez.</string>
     <string name="backup_auto_choose">Choisir un dossier</string>
     <string name="backup_auto_folder">Dossier : %1$s</string>
     <string name="backup_auto_now">Sauvegarder maintenant</string>
