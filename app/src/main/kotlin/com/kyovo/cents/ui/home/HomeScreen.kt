@@ -755,6 +755,9 @@ fun HomeScreen(
                                             openedProjectUuid = id.value.toString()
                                             destination = HomeDestination.Projects
                                         },
+                                        onMessage = { message ->
+                                            coroutineScope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
+                                        },
                                     )
                                 },
                             )

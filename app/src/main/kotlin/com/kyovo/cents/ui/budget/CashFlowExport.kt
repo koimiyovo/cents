@@ -72,3 +72,11 @@ fun writeCashFlow(out: OutputStream, format: CashFlowFormat, diagram: Diagram, s
         drawCashFlow(canvas, width, height, diagram, style.copy(textSizePx = textSize))
     }
 }
+
+/** The spending ring [diagram] saved with [writeChart], in [style]'s colours. */
+fun writeSpendingPie(out: OutputStream, format: CashFlowFormat, diagram: PieDiagram, style: DiagramStyle)
+{
+    writeChart(out, format, diagram.slices.size) { canvas, width, height, textSize ->
+        drawSpendingPie(canvas, width, height, diagram, style.copy(textSizePx = textSize))
+    }
+}

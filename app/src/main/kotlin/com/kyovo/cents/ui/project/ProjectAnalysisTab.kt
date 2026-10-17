@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -38,6 +39,7 @@ import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.budget.SpendingLegendRow
+import com.kyovo.cents.ui.budget.SpendingPieExportMenu
 import com.kyovo.cents.ui.budget.SpendingPie
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
@@ -70,6 +72,8 @@ fun ProjectAnalysisTab(
     onChooseProject: (ProjectId) -> Unit,
     onOpenProject: (ProjectId) -> Unit,
     onCreateProject: () -> Unit,
+    // Said by the screen's snackbar: how saving the ring as an image or a PDF went.
+    onMessage: (Int) -> Unit,
 )
 {
     // Null while the first list is on its way: that is "not loaded yet", not "no project".
@@ -117,7 +121,7 @@ fun ProjectAnalysisTab(
         return
     }
 
-    BreakdownSection(palette, projectBreakdown(transactions, subcategories))
+    BreakdownSection(palette, projectBreakdown(transactions, subcategories), selected.name.value, onMessage)
     TopExpensesSection(palette, topExpenses(transactions))
 }
 
@@ -164,9 +168,25 @@ private fun SectionTitle(palette: AccountsPalette, text: String)
 
 /** The pie of the expenses by subcategory, its legend, and — apart — what refunds took off. */
 @Composable
-private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdown)
+private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdown, projectName: String, onMessage: (Int) -> Unit)
 {
-    SectionTitle(palette, stringResource(R.string.project_analysis_breakdown_title))
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically)
+    {
+        Box(modifier = Modifier.weight(1f))
+        {
+            SectionTitle(palette, stringResource(R.string.project_analysis_breakdown_title))
+        }
+        if (breakdown.spending.slices.isNotEmpty())
+        {
+            SpendingPieExportMenu(
+                palette,
+                breakdown.spending,
+                title = stringResource(R.string.pie_title_project, projectName),
+                fileName = "centimes-depenses-projet",
+                onMessage = onMessage,
+            )
+        }
+    }
     if (breakdown.spending.slices.isEmpty())
     {
         Text(text = stringResource(R.string.project_analysis_breakdown_empty), color = palette.textMuted, fontSize = 14.sp)

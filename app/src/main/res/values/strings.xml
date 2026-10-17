@@ -287,6 +287,8 @@
     <string name="budget_tab_overview">Aperçu</string>
     <string name="budget_tab_trends">Tendances</string>
     <string name="budget_tab_cashflow">Flux</string>
+    <string name="pie_title">Dépenses par sous-catégorie · %1$s</string>
+    <string name="pie_title_project">Dépenses du projet · %1$s</string>
     <string name="chart_export_description">Exporter le diagramme</string>
     <string name="chart_share_png">Partager l\'image</string>
     <string name="chart_share_pdf">Partager le PDF</string>

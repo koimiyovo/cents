@@ -191,7 +191,13 @@ fun BudgetScreen(
                     }
                 }
 
-                BudgetTab.OVERVIEW -> BudgetOverviewTab(palette, state.breakdown)
+                BudgetTab.OVERVIEW -> BudgetOverviewTab(
+                    palette,
+                    state.breakdown,
+                    title = stringResource(R.string.pie_title, state.selector.label),
+                    fileName = "centimes-depenses-${state.selector.month}",
+                    onMessage = onMessage,
+                )
                 BudgetTab.TRENDS   -> BudgetTrendTab(palette, state.trend)
                 BudgetTab.CASHFLOW -> BudgetCashFlowTab(palette, state, onMessage)
             }
@@ -514,7 +520,13 @@ private fun subcategoryEmoji(row: BudgetRow): String =
  * subcategory has a budget — followed by a legend row per slice. Empty when nothing was spent.
  */
 @Composable
-private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreakdown)
+private fun BudgetOverviewTab(
+    palette: AccountsPalette,
+    breakdown: SpendingBreakdown,
+    title: String,
+    fileName: String,
+    onMessage: (Int) -> Unit,
+)
 {
     if (breakdown.slices.isEmpty())
     {
@@ -528,6 +540,11 @@ private fun BudgetOverviewTab(palette: AccountsPalette, breakdown: SpendingBreak
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp))
     {
+        // At the top, not under the legend: with many subcategories the bottom is a long scroll away.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End)
+        {
+            SpendingPieExportMenu(palette, breakdown, title, fileName, onMessage)
+        }
         SpendingPie(palette, breakdown)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp))
         {
