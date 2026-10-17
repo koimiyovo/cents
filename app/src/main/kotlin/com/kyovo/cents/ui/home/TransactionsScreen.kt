@@ -13,6 +13,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.kyovo.cents.ui.common.decorative
+import com.kyovo.cents.ui.common.foldState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -589,6 +597,7 @@ private fun StatPill(
 @Composable
 internal fun SearchField(palette: AccountsPalette, query: String, onQueryChange: (String) -> Unit)
 {
+    val searchLabel = stringResource(R.string.transactions_search_placeholder)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -597,7 +606,7 @@ internal fun SearchField(palette: AccountsPalette, query: String, onQueryChange:
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "🔍", fontSize = 16.sp)
+        Text(text = "🔍", fontSize = 16.sp, modifier = Modifier.decorative())
         Spacer(Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty())
@@ -614,7 +623,9 @@ internal fun SearchField(palette: AccountsPalette, query: String, onQueryChange:
                 singleLine = true,
                 textStyle = TextStyle(color = palette.textPrimary, fontSize = 14.sp),
                 cursorBrush = SolidColor(palette.textPrimary),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = searchLabel },
             )
         }
     }
@@ -635,7 +646,9 @@ internal fun PeriodFilterRow(
         DropdownPill(
             label = "📅 $label",
             palette = palette,
-            modifier = Modifier.clickable(onClick = onToggleExpanded),
+            modifier = Modifier
+                .clickable(role = Role.DropdownList, onClick = onToggleExpanded)
+                .foldState(expanded),
         )
         if (expanded)
         {
@@ -734,17 +747,23 @@ private fun TransactionFilters(
             DropdownPill(
                 label = "📅 $periodLabel",
                 palette = palette,
-                modifier = Modifier.clickable { onToggleMenu(FilterMenu.PERIOD) },
+                modifier = Modifier
+                    .clickable(role = Role.DropdownList) { onToggleMenu(FilterMenu.PERIOD) }
+                    .foldState(openMenu == FilterMenu.PERIOD),
             )
             DropdownPill(
                 label = "💳 $accountLabel",
                 palette = palette,
-                modifier = Modifier.clickable { onToggleMenu(FilterMenu.ACCOUNT) },
+                modifier = Modifier
+                    .clickable(role = Role.DropdownList) { onToggleMenu(FilterMenu.ACCOUNT) }
+                    .foldState(openMenu == FilterMenu.ACCOUNT),
             )
             DropdownPill(
                 label = "🏷️ $subcategoryLabel",
                 palette = palette,
-                modifier = Modifier.clickable { onToggleMenu(FilterMenu.SUBCATEGORY) },
+                modifier = Modifier
+                    .clickable(role = Role.DropdownList) { onToggleMenu(FilterMenu.SUBCATEGORY) }
+                    .foldState(openMenu == FilterMenu.SUBCATEGORY),
             )
         }
         if (openMenu != null)
@@ -813,9 +832,11 @@ internal fun SubcategoryChip(
     // is indistinguishable from an unselected chip's own (also white) surface background.
     Box(
         modifier = Modifier
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            // Grows the touch target to 48 dp without growing the chip itself.
+            .minimumInteractiveComponentSize()
             .clip(RoundedCornerShape(50))
             .background(if (selected) palette.iconToneGreen else palette.surface)
-            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
@@ -852,7 +873,8 @@ internal fun DayGroup(
                 text = dayLabel(date),
                 color = palette.textPrimary,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.semantics { heading() },
             )
             // The day's net: in its currency when the day has only one, in the main currency (and approximate) when
             // the day mixes several, nothing when one of its transactions cannot be converted.
@@ -935,9 +957,12 @@ private fun TransactionRow(
             .then(
                 if (onClick != null) Modifier.clickable(
                     onClickLabel = editLabel,
+                    role = Role.Button,
                     onClick = onClick
                 ) else Modifier
             )
+            // A row that cannot be tapped (a transfer) is still one stop, not five.
+            .semantics(mergeDescendants = true) { }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -955,7 +980,7 @@ private fun TransactionRow(
                 .background(toneBackground(tone, palette)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = emoji, fontSize = 16.sp)
+            Text(text = emoji, fontSize = 16.sp, modifier = Modifier.decorative())
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

@@ -2,6 +2,10 @@ package com.kyovo.cents.ui.recurring
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -393,7 +397,9 @@ private fun DateField(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
                 .background(palette.surface)
-                .clickable(onClick = onClick)
+                .clickable(role = Role.Button, onClick = onClick)
+                // The label above is a separate Text: name the field with it.
+                .semantics(mergeDescendants = true) { contentDescription = "$label, ${date.format(formatter)}" }
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
             Text(text = date.format(formatter), color = palette.textPrimary, fontSize = 15.sp)
@@ -412,13 +418,20 @@ internal fun EndDateField(
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        val endDateLabel = stringResource(R.string.recurring_form_end_date_label)
+        // The whole row is the switch, so it is read with its label ("Date de fin, interrupteur, activé").
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = hasEndDate, role = Role.Switch, onValueChange = onToggle),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
-                SectionLabel(palette, stringResource(R.string.recurring_form_end_date_label))
+                SectionLabel(palette, endDateLabel)
             }
             Switch(
                 checked = hasEndDate,
-                onCheckedChange = onToggle,
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = palette.iconToneGreen),
             )
         }
@@ -429,7 +442,8 @@ internal fun EndDateField(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(palette.surface)
-                    .clickable(onClick = onClick)
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .semantics(mergeDescendants = true) { contentDescription = "$endDateLabel, ${endDate.format(formatter)}" }
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Text(text = endDate.format(formatter), color = palette.textPrimary, fontSize = 15.sp)
