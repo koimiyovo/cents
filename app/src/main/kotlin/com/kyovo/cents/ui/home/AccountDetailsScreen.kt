@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -389,10 +390,10 @@ private fun AccountActionsMenu(
         // Hand-drawn like the back button: three dots, one above the other.
         Canvas(
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(palette.surface)
-                .clickable { expanded = true }
+                .clickable(role = Role.Button) { expanded = true }
                 .semantics { contentDescription = description },
         ) {
             val radius = size.width * 0.06f
@@ -456,12 +457,12 @@ internal fun BackButton(palette: AccountsPalette, onClick: () -> Unit)
     val description = stringResource(R.string.account_details_back)
     Canvas(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(palette.surface)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description }
-            .padding(12.dp),
+            .padding(14.dp),
     ) {
         val w = size.width
         val h = size.height
