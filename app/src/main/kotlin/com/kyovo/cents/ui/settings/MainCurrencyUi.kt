@@ -25,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,11 +64,12 @@ internal fun MainCurrencyPill(palette: AccountsPalette)
     Box {
         Box(
             modifier = Modifier
-                .height(40.dp)
+                .height(48.dp)
                 .clip(CircleShape)
                 .background(palette.surface)
-                .clickable { open = true }
-                .semantics { contentDescription = description }
+                .clickable(role = Role.Button) { open = true }
+                // The description alone would hide which currency it is.
+                .semantics { contentDescription = "$description, ${current.value.currencyCode}" }
                 .padding(horizontal = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -115,6 +118,7 @@ fun MainCurrencyChoiceScreen(onChosen: (AccountCurrency) -> Unit)
             color = palette.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() },
         )
         Text(
             text = stringResource(R.string.main_currency_choice_body),
@@ -127,7 +131,7 @@ fun MainCurrencyChoiceScreen(onChosen: (AccountCurrency) -> Unit)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.surface)
-                    .clickable { onChosen(currency) }
+                    .clickable(role = Role.Button) { onChosen(currency) }
                     .padding(horizontal = 20.dp, vertical = 18.dp),
             ) {
                 Text(

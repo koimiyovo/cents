@@ -6,6 +6,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -247,6 +253,7 @@ private fun ImportConfirmationDialog(palette: AccountsPalette, onConfirm: () -> 
                 color = palette.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = stringResource(R.string.backup_import_confirm_body),
@@ -276,6 +283,8 @@ private fun ResultCard(palette: AccountsPalette, @StringRes message: Int, failed
             text = stringResource(message),
             color = if (failed) palette.error else palette.textPrimary,
             fontSize = 14.sp,
+            // The outcome of an export or import appears after the tap: announce it.
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
         Text(
             text = stringResource(R.string.backup_result_dismiss),
@@ -284,7 +293,8 @@ private fun ResultCard(palette: AccountsPalette, @StringRes message: Int, failed
             fontWeight = FontWeight.Medium,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onDismiss)
+                .clickable(role = Role.Button, onClick = onDismiss)
+                .minimumInteractiveComponentSize()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
         )
     }

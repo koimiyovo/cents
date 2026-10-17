@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -113,8 +115,11 @@ fun ProjectFormSheet(
             if (form.targetText.isNotBlank())
             {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel(palette, stringResource(R.string.project_form_threshold_label, form.thresholdPercent))
+                    val thresholdLabel = stringResource(R.string.project_form_threshold_label, form.thresholdPercent)
+                    SectionLabel(palette, thresholdLabel)
                     Slider(
+                        // The label above is a separate Text: name the slider with it.
+                        modifier = Modifier.semantics { contentDescription = thresholdLabel },
                         value = form.thresholdPercent.toFloat(),
                         // The form snaps what the slider reports to its steps, so the thumb never rests between two.
                         onValueChange = { onFormChange(form.withThreshold(it.roundToInt())) },
