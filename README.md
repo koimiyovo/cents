@@ -46,8 +46,20 @@ The user interface is in French.
 - Set a monthly limit on an expense subcategory, with its own alert threshold (a slider). A month
   without a limit of its own inherits the most recent earlier one, so nothing is copied when a month
   starts.
-- A **Budget** tab shows where each budget stands (on track, close, over), most urgent first, with
-  the spending breakdown and trend, and a month selector.
+- A **Budget** tab with a month selector and an account filter, in four views: the **overview** (a
+  ring of where the month's money went, with its legend), the **cash flow**, the **budgets** (where
+  each one stands: on track, close, over, most urgent first) and the **trends** (a bar per recent
+  month).
+- The **cash flow** (Sankey) diagram follows the month's money: the income, by subcategory, flows
+  into one box, then out into the spending, by subcategory. What was not spent is shown as the
+  **savings capacity**, with its share of the income; a month that costs more than it brings in
+  shows the **deficit** on the income side. Every amount is in the main currency.
+- Tap the ring or the cash-flow diagram to open it full screen and **zoom** (pinch, or double-tap)
+  to read the small labels.
+- **Export a diagram** (the ring, or the cash flow) as a **PNG image** or a **PDF**, or **share** it,
+  from the icon above it. The file carries a title, the month and the mention "Généré avec
+  l'application Centimes", on a white page whatever the theme. The ring can also be exported from a
+  project's analysis.
 - A budget month need not be the calendar month: choose the day it starts (for example the day the
   pay comes in), or declare the start of a single month. After a salary is recorded, the app offers
   to start the cycle on that date.
@@ -86,6 +98,8 @@ The user interface is in French.
 - **Automatic backup**: every week WorkManager writes a copy into a folder you chose and keeps the
   last five.
 - Export the transactions as **CSV** for a spreadsheet (French format; it cannot be re-imported).
+- A diagram exported as an image or a PDF is written where you save it, or handed to the app you pick in
+  the share sheet: nothing leaves the phone unless you choose to send it.
 - The onboarding is shown once.
 - Amounts are integers in the smallest unit of their currency (never floating point): cents for the
   euro, the
@@ -174,7 +188,7 @@ device needed):
 The database schema is versioned and exported to `infrastructure/schemas/`, and those files are
 checked in. Every version that an installed app may carry is frozen: a test fails if an entity
 changes without a new version, or if a new version has no migration, and the migrations are tested
-on files built by hand from the exported schemas. The current version is 7. A destructive fallback
+on files built by hand from the exported schemas. A destructive fallback
 is deliberately not configured, since it would erase the user's accounts. To change the schema,
 raise the version in `CentsDatabase` and add a `Migration` to `CentsMigrations`.
 
