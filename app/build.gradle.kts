@@ -44,7 +44,7 @@ android {
         minSdk = 30
         targetSdk = 37
         versionCode = 8
-        versionName = "1.0"
+        versionName = "1.1"
         buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
