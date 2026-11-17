@@ -9,8 +9,9 @@
         <item name="colorSecondary">@color/cents_gold</item>
         <item name="colorSecondaryVariant">@color/cents_gold</item>
         <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <!-- No status bar colour: the app draws edge to edge (enableEdgeToEdge in MainActivity), the bars are
+             transparent and the screens pad themselves with the window insets. android:statusBarColor is
+             deprecated and ignored from Android 15 on. -->
         <!-- Matches the Compose splash background so there is no flash before Compose draws. -->
         <item name="android:windowBackground">@color/cents_background_light</item>
     </style>
