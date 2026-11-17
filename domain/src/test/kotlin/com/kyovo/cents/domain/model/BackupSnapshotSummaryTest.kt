@@ -31,7 +31,7 @@ class BackupSnapshotSummaryTest
         RecurringTransactionId(uuid(4)), account.id, RecordableTransactionCategory.EXPENSE, Money(75_000),
         TransactionTitle("Loyer"), null, null, RecurrenceFrequency.MONTHLY, 1, LocalDate.of(2026, 1, 5)
     )
-    private val project = Project(ProjectId(uuid(5)), ProjectName("Japon"), null, null)
+    private val project = Project(ProjectId(uuid(5)), ProjectName("Japon"), AccountCurrency.EUR, null, null)
 
     private val nothing = BackupSnapshot(
         emptyList(), emptyList(), emptyList(), emptyList(), BudgetCalendar(), emptyList(), emptyList()

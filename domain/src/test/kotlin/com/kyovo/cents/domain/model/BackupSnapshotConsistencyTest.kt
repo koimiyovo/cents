@@ -37,8 +37,8 @@ class BackupSnapshotConsistencyTest
         kind: RecordableTransactionCategory = RecordableTransactionCategory.EXPENSE
     ) = Subcategory(SubcategoryId(uuid(100 + n)), kind, SubcategoryName(name), emoji = null)
 
-    private fun project(n: Int, name: String) =
-        Project(ProjectId(uuid(200 + n)), ProjectName(name), null, null)
+    private fun project(n: Int, name: String, currency: String = "EUR") =
+        Project(ProjectId(uuid(200 + n)), ProjectName(name), AccountCurrency(Currency.getInstance(currency)), null, null)
 
     private fun transaction(
         n: Int,
@@ -322,6 +322,23 @@ class BackupSnapshotConsistencyTest
         }
 
         assertThatCode { snapshot(accounts = accounts).requireConsistent() }.doesNotThrowAnyException()
+    }
+
+    // A project's target is in its currency: one the app does not handle could never be compared with what it cost.
+    @Test
+    fun `a project in a currency the app does not handle is refused`()
+    {
+        assertRefused(snapshot(projects = listOf(project(1, "Japon", currency = "JPY"))))
+    }
+
+    @Test
+    fun `a project in each currency the app handles is accepted`()
+    {
+        val projects = AccountCurrency.SUPPORTED.mapIndexed { i, currency ->
+            project(i + 1, "Projet ${currency.value.currencyCode}", currency = currency.value.currencyCode)
+        }
+
+        assertThatCode { snapshot(projects = projects).requireConsistent() }.doesNotThrowAnyException()
     }
 
     @Test

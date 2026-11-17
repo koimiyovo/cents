@@ -1,5 +1,6 @@
 package com.kyovo.cents.domain.port.input
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Money
@@ -9,6 +10,8 @@ import com.kyovo.cents.domain.model.ProjectName
 
 data class CreateProjectCommand(
     val name: ProjectName,
+    /** No default: whoever creates a project says which currency its target is in. */
+    val currency: AccountCurrency,
     val emoji: Emoji? = null,
     val target: Money? = null,
     val alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
@@ -16,6 +19,6 @@ data class CreateProjectCommand(
 {
     fun toProject(id: ProjectId): Project
     {
-        return Project(id, name, emoji, target, alertThreshold)
+        return Project(id, name, currency, emoji, target, alertThreshold)
     }
 }

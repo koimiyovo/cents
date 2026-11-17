@@ -48,6 +48,7 @@ data class BackupSnapshot(
         requireUnique(budgets.map { it.subcategoryId to it.month })
         // Any ISO code reads as a currency, but the app offers five: another one could not be chosen or converted.
         accounts.forEach { require(it.currency in AccountCurrency.SUPPORTED) }
+        projects.forEach { require(it.currency in AccountCurrency.SUPPORTED) }
         // Account opening creates exactly one deposit, and nothing else can create another.
         requireUnique(transactions.filter { it.category == TransactionCategory.INITIAL_DEPOSIT }.map { it.accountId })
 

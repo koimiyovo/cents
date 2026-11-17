@@ -18,13 +18,13 @@ class ProjectTest
     @Test
     fun `a project can have no target`()
     {
-        assertThat(Project(id, name, null, null).target).isNull()
+        assertThat(Project(id, name, AccountCurrency.EUR, null, null).target).isNull()
     }
 
     @Test
     fun `a project can have a target`()
     {
-        assertThat(Project(id, name, null, Money(300_000)).target).isEqualTo(Money(300_000))
+        assertThat(Project(id, name, AccountCurrency.EUR, null, Money(300_000)).target).isEqualTo(Money(300_000))
     }
 
     @Test
@@ -32,23 +32,29 @@ class ProjectTest
     {
         val plane = Emoji("✈️")
 
-        assertThat(Project(id, name, plane, null).emoji).isEqualTo(plane)
-        assertThat(Project(id, name, null, null).emoji).isNull()
+        assertThat(Project(id, name, AccountCurrency.EUR, plane, null).emoji).isEqualTo(plane)
+        assertThat(Project(id, name, AccountCurrency.EUR, null, null).emoji).isNull()
     }
 
     @Test
     fun `a project starts with the default alert threshold, and can have its own`()
     {
-        assertThat(Project(id, name, null, null).alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
-        assertThat(Project(id, name, null, Money(100_000), AlertThreshold(60)).alertThreshold)
+        assertThat(Project(id, name, AccountCurrency.EUR, null, null).alertThreshold).isEqualTo(AlertThreshold.DEFAULT)
+        assertThat(Project(id, name, AccountCurrency.EUR, null, Money(100_000), AlertThreshold(60)).alertThreshold)
             .isEqualTo(AlertThreshold(60))
+    }
+
+    @Test
+    fun `a project keeps the currency its target is set in`()
+    {
+        assertThat(Project(id, name, AccountCurrency.XOF, null, Money(150_000)).currency).isEqualTo(AccountCurrency.XOF)
     }
 
     // A target of zero would be "over" at the first cent: it means nothing, as a budget limit of zero does.
     @Test
     fun `refuses a target of zero`()
     {
-        assertThatThrownBy { Project(id, name, null, Money(0)) }
+        assertThatThrownBy { Project(id, name, AccountCurrency.EUR, null, Money(0)) }
             .isInstanceOf(InvalidProjectTargetException::class.java)
     }
 }
