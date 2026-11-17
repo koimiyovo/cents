@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryMainCurrencyRepository
 import com.kyovo.cents.application.fakes.RecordingBackupRestorer
 import com.kyovo.cents.application.fakes.RecordingBackupSerializer
 import com.kyovo.cents.application.fakes.aSubcategory
@@ -8,6 +9,7 @@ import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
 import com.kyovo.cents.application.fakes.assertThatThrownBySuspending
 import com.kyovo.cents.domain.exception.InvalidBackupException
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.BackupSnapshot
 import com.kyovo.cents.domain.model.BackupSummary
 import com.kyovo.cents.domain.model.BudgetCalendar
@@ -26,7 +28,8 @@ class ImportDataServiceTest
 {
     private val serializer = RecordingBackupSerializer()
     private val restorer = RecordingBackupRestorer()
-    private val service = ImportDataService(serializer, restorer)
+    private val mainCurrency = InMemoryMainCurrencyRepository(AccountCurrency.GBP)
+    private val service = ImportDataService(serializer, restorer, mainCurrency)
 
     private val account = anAccount()
 
@@ -205,5 +208,19 @@ class ImportDataServiceTest
         // THEN
         assertThat(summary.transactions).isEqualTo(0)
         assertThat(summary.accounts).isEqualTo(1)
+    }
+
+    // An old file's projects have no currency: their targets were read in the main currency, which they take.
+    @Test
+    fun `gives the reader the main currency, for the projects of an old file`() = runTest()
+    {
+        // GIVEN
+        serializer.onRead = { consistent }
+
+        // WHEN
+        service.import("the file")
+
+        // THEN
+        assertThat(serializer.mainCurrencies).containsExactly(AccountCurrency.GBP)
     }
 }

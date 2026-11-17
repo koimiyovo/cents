@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.fakes
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.BackupSnapshot
 import com.kyovo.cents.domain.port.output.BackupRestorer
 import com.kyovo.cents.domain.port.output.BackupSerializer
@@ -25,9 +26,13 @@ class RecordingBackupSerializer(private val text: String = "the backup text") : 
         return text
     }
 
-    override fun deserialize(text: String): BackupSnapshot
+    /** The main currency given with each text read, in order. */
+    val mainCurrencies = mutableListOf<AccountCurrency>()
+
+    override fun deserialize(text: String, mainCurrency: AccountCurrency): BackupSnapshot
     {
         read += text
+        mainCurrencies += mainCurrency
         return onRead(text)
     }
 }

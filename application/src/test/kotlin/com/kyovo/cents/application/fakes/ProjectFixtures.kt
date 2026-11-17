@@ -1,5 +1,6 @@
 package com.kyovo.cents.application.fakes
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Money
@@ -24,20 +25,22 @@ fun aProject(
     name: ProjectName = ProjectName("Voyage au Japon"),
     emoji: Emoji? = null,
     target: Money? = null,
-    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT,
+    currency: AccountCurrency = AccountCurrency.EUR
 ): Project
 {
-    return Project(id, name, emoji, target, alertThreshold)
+    return Project(id, name, currency, emoji, target, alertThreshold)
 }
 
 fun aCreateProjectCommand(
     name: ProjectName = ProjectName("Voyage au Japon"),
     emoji: Emoji? = null,
     target: Money? = null,
-    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT
+    alertThreshold: AlertThreshold = AlertThreshold.DEFAULT,
+    currency: AccountCurrency = AccountCurrency.EUR
 ): CreateProjectCommand
 {
-    return CreateProjectCommand(name, emoji, target, alertThreshold)
+    return CreateProjectCommand(name, currency, emoji, target, alertThreshold)
 }
 
 fun anUpdateProjectCommand(

@@ -11,6 +11,7 @@ import com.kyovo.cents.domain.exception.ProjectNotFoundException
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.ProjectName
 import com.kyovo.cents.domain.model.Emoji
+import com.kyovo.cents.domain.model.AccountCurrency
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -41,6 +42,21 @@ class UpdateProjectServiceTest
         val expected = aProject(id = id, name = ProjectName("Voyage au Japon"), target = aMoney(300_000))
         assertThat(result).isEqualTo(expected)
         assertThat(repository.saved).containsExactly(expected)
+    }
+
+    // Like an account's: another currency would silently give the target another value.
+    @Test
+    fun `keeps the currency the project was created in`() = runTest()
+    {
+        // GIVEN
+        repository.save(aProject(id = id, target = aMoney(150_000), currency = AccountCurrency.XOF))
+
+        // WHEN
+        val result = service.update(anUpdateProjectCommand(id = id, target = aMoney(200_000)))
+
+        // THEN
+        assertThat(result.currency).isEqualTo(AccountCurrency.XOF)
+        assertThat(repository.saved.single().currency).isEqualTo(AccountCurrency.XOF)
     }
 
     @Test

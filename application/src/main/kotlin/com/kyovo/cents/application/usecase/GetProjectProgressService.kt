@@ -7,18 +7,28 @@ import com.kyovo.cents.domain.model.ProjectProgress
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.model.TransactionCategory
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.output.AccountRepository
+import com.kyovo.cents.domain.port.output.ExchangeRateRepository
 import com.kyovo.cents.domain.port.output.ProjectRepository
 import com.kyovo.cents.domain.port.output.TransactionRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+/**
+ * What each project has cost against its target, both in the project's currency: the transactions of an account in
+ * another currency are converted (see [ProjectTransactions]), so a project can gather spending from any account.
+ */
 class GetProjectProgressService(
-    private val projectRepository: ProjectRepository,
-    private val transactionRepository: TransactionRepository
+    projectRepository: ProjectRepository,
+    transactionRepository: TransactionRepository,
+    accountRepository: AccountRepository,
+    exchangeRateRepository: ExchangeRateRepository
 ) : GetProjectProgressUseCase
 {
+    private val projectTransactions =
+        ProjectTransactions(projectRepository, transactionRepository, accountRepository, exchangeRateRepository)
+
     override fun observe(id: ProjectId): Flow<ProjectProgress?>
     {
         return observeAll().map { it[id] }.distinctUntilChanged()
@@ -26,11 +36,9 @@ class GetProjectProgressService(
 
     override fun observeAll(): Flow<Map<ProjectId, ProjectProgress>>
     {
-        return combine(projectRepository.observeAll(), transactionRepository.observeAll())
-        { projects, transactions ->
-            val byProject = transactions.filter { it.projectId != null }.groupBy { it.projectId }
-            projects.associate { project -> project.id to progressOf(project, byProject[project.id].orEmpty()) }
-        }.distinctUntilChanged()
+        return projectTransactions.observe()
+            .map { byProject -> byProject.entries.associate { (project, transactions) -> project.id to progressOf(project, transactions) } }
+            .distinctUntilChanged()
     }
 
     private fun progressOf(project: Project, transactions: List<Transaction>): ProjectProgress

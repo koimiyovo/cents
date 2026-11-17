@@ -1,5 +1,7 @@
 package com.kyovo.cents.application.usecase
 
+import com.kyovo.cents.application.fakes.InMemoryAccountRepository
+import com.kyovo.cents.application.fakes.InMemoryExchangeRateRepository
 import com.kyovo.cents.application.fakes.InMemoryProjectRepository
 import com.kyovo.cents.application.fakes.InMemoryTransactionRepository
 import com.kyovo.cents.application.fakes.aMoney
@@ -7,8 +9,13 @@ import com.kyovo.cents.application.fakes.aProject
 import com.kyovo.cents.application.fakes.aProjectId
 import com.kyovo.cents.application.fakes.aTransaction
 import com.kyovo.cents.application.fakes.aTransactionId
+import com.kyovo.cents.application.fakes.anAccount
 import com.kyovo.cents.application.fakes.anAccountId
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.domain.model.AccountId
+import com.kyovo.cents.domain.model.AccountName
 import com.kyovo.cents.domain.model.AlertThreshold
+import com.kyovo.cents.domain.model.ExchangeRates
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.ProjectProgress
 import com.kyovo.cents.domain.model.Transaction
@@ -16,12 +23,16 @@ import com.kyovo.cents.domain.model.TransactionCategory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
+import java.time.LocalDate
 
 /**
  * What a project has cost is not stored: it is worked out from the transactions that belong to it, so it
  * can never disagree with them. Expenses add up, incomes (a refund) come off; whatever the account - an
  * archived account's spending is history and counts too - and whatever the date: a project is not a month.
+ * Everything is in the project's own currency: a transaction of an account in another one is converted.
  */
 class GetProjectProgressServiceTest
 {
@@ -30,7 +41,20 @@ class GetProjectProgressServiceTest
 
     private val projectRepository = InMemoryProjectRepository()
     private val transactionRepository = InMemoryTransactionRepository()
-    private val service = GetProjectProgressService(projectRepository, transactionRepository)
+    private val accountRepository = InMemoryAccountRepository()
+    private val exchangeRateRepository = InMemoryExchangeRateRepository()
+    private val service =
+        GetProjectProgressService(projectRepository, transactionRepository, accountRepository, exchangeRateRepository)
+
+    private fun accountId(suffix: String): AccountId = anAccountId("11111111-1111-1111-1111-11111111111$suffix")
+
+    // Accounts "1" and "2" in euros, like the projects of these tests unless one says otherwise.
+    @BeforeEach
+    fun givenEuroAccounts() = runTest()
+    {
+        accountRepository.save(anAccount(accountId("1"), AccountName("Courant"), currency = AccountCurrency.EUR))
+        accountRepository.save(anAccount(accountId("2"), AccountName("Livret"), currency = AccountCurrency.EUR))
+    }
 
     private fun aTransactionOf(
         suffix: Int,
@@ -41,7 +65,7 @@ class GetProjectProgressServiceTest
     ): Transaction =
         aTransaction(
             id = aTransactionId("33333333-3333-3333-3333-33333333333$suffix"),
-            accountId = anAccountId("11111111-1111-1111-1111-11111111111$accountSuffix"),
+            accountId = accountId(accountSuffix),
             amount = aMoney(cents),
             category = category,
             projectId = projectId,
@@ -205,5 +229,74 @@ class GetProjectProgressServiceTest
 
         // WHEN / THEN
         assertThat(service.observeAll().first()).isEmpty()
+    }
+
+    // ------------------------------------------------------------------ currencies
+
+    @Test
+    fun `converts a transaction of an account in another currency into the project's currency`() = runTest()
+    {
+        // GIVEN a project in CFA francs, and a euro expense (1 EUR = 655.957 XOF, by treaty)
+        projectRepository.save(aProject(id = japanId, target = aMoney(1_000_000), currency = AccountCurrency.XOF))
+        transactionRepository.save(aTransactionOf(1, 10_000, accountSuffix = "1"))
+
+        // WHEN
+        val progress = service.observe(japanId).first()!!
+
+        // THEN 100.00 EUR = 65 596 XOF (no decimals in francs)
+        assertThat(progress.expenses).isEqualTo(aMoney(65_596))
+        assertThat(progress.target).isEqualTo(aMoney(1_000_000))
+    }
+
+    @Test
+    fun `adds up transactions of accounts in several currencies, each converted`() = runTest()
+    {
+        // GIVEN a project in pounds, 1 EUR = 0.85 GBP, an expense in euros and one in pounds
+        accountRepository.save(anAccount(accountId("3"), AccountName("UK"), currency = AccountCurrency.GBP))
+        exchangeRateRepository.save(ExchangeRates(LocalDate.of(2026, 11, 13), mapOf(AccountCurrency.GBP to BigDecimal("0.85"))))
+        projectRepository.save(aProject(id = japanId, currency = AccountCurrency.GBP))
+        transactionRepository.save(aTransactionOf(1, 10_000, accountSuffix = "1"))
+        transactionRepository.save(aTransactionOf(2, 2_000, accountSuffix = "3"))
+
+        // WHEN
+        val progress = service.observe(japanId).first()!!
+
+        // THEN 100.00 EUR = 85.00 GBP, plus 20.00 GBP
+        assertThat(progress.expenses).isEqualTo(aMoney(10_500))
+        assertThat(progress.transactionCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `leaves out a transaction it has no rate for, rather than counting it at a wrong value`() = runTest()
+    {
+        // GIVEN a project in pounds, no rate fetched yet
+        projectRepository.save(aProject(id = japanId, currency = AccountCurrency.GBP))
+        accountRepository.save(anAccount(accountId("3"), AccountName("UK"), currency = AccountCurrency.GBP))
+        transactionRepository.save(aTransactionOf(1, 10_000, accountSuffix = "1"))
+        transactionRepository.save(aTransactionOf(2, 2_000, accountSuffix = "3"))
+
+        // WHEN
+        val progress = service.observe(japanId).first()!!
+
+        // THEN only the pound expense counts
+        assertThat(progress.expenses).isEqualTo(aMoney(2_000))
+        assertThat(progress.transactionCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `two projects in different currencies count the same expense each in its own`() = runTest()
+    {
+        // GIVEN
+        projectRepository.save(aProject(id = japanId, currency = AccountCurrency.EUR))
+        projectRepository.save(aProject(id = kitchenId, currency = AccountCurrency.XOF))
+        transactionRepository.save(aTransactionOf(1, 10_000))
+        transactionRepository.save(aTransactionOf(2, 10_000, projectId = kitchenId))
+
+        // WHEN
+        val all = service.observeAll().first()
+
+        // THEN
+        assertThat(all.getValue(japanId).expenses).isEqualTo(aMoney(10_000))
+        assertThat(all.getValue(kitchenId).expenses).isEqualTo(aMoney(65_596))
     }
 }

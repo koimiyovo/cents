@@ -11,6 +11,7 @@ import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.ProjectName
+import com.kyovo.cents.domain.model.AccountCurrency
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -50,6 +51,17 @@ class CreateProjectServiceTest
         // THEN
         assertThat(withTarget.target).isEqualTo(aMoney(300_000))
         assertThat(without.target).isNull()
+    }
+
+    @Test
+    fun `keeps the currency its target is set in`() = runTest()
+    {
+        // WHEN
+        val project = service.create(aCreateProjectCommand(target = aMoney(150_000), currency = AccountCurrency.XOF))
+
+        // THEN
+        assertThat(project.currency).isEqualTo(AccountCurrency.XOF)
+        assertThat(repository.saved.single().currency).isEqualTo(AccountCurrency.XOF)
     }
 
     @Test
