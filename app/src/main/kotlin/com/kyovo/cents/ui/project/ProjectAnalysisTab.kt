@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
@@ -36,6 +37,7 @@ import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.Subcategory
 import com.kyovo.cents.domain.model.Transaction
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.input.ListProjectTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
 import com.kyovo.cents.domain.port.input.ListTransactionsUseCase
 import com.kyovo.cents.ui.budget.SpendingLegendRow
@@ -44,7 +46,6 @@ import com.kyovo.cents.ui.budget.SpendingPie
 import com.kyovo.cents.ui.common.SelectDropdown
 import com.kyovo.cents.ui.common.SelectOption
 import com.kyovo.cents.ui.common.formatMoney
-import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.home.AccountsPalette
 import java.time.LocalDate
 import java.time.ZoneId
@@ -65,6 +66,8 @@ fun ProjectAnalysisTab(
     listProjects: ListProjectsUseCase,
     getProjectProgress: GetProjectProgressUseCase,
     listTransactions: ListTransactionsUseCase,
+    // The chosen project's transactions, in its currency: what the ring and the biggest expenses add up.
+    listProjectTransactions: ListProjectTransactionsUseCase,
     subcategories: List<Subcategory>,
     // The project the user picked, held by the caller (as the id's string, which survives rotation and a trip to
     // the project's page): null until they pick one.
@@ -105,7 +108,9 @@ fun ProjectAnalysisTab(
 
     val chosen = chosenProjectUuid?.let { ProjectId(UUID.fromString(it)) }
     val selected = resolveSelectedProject(chosen, loaded, allTransactions) ?: return
-    val transactions = remember(allTransactions, selected.id) { transactionsOfProject(allTransactions, selected.id) }
+    // Null while the first list is on its way: not "no transaction" yet.
+    val projectTransactions by remember(selected.id) { listProjectTransactions.observe(selected.id) }
+        .collectAsStateWithLifecycle(initialValue = null)
 
     ProjectPicker(palette, loaded, selected) { onChooseProject(it.id) }
     ProjectCardView(palette, projectCards(listOf(selected), progress).single())
@@ -115,14 +120,15 @@ fun ProjectAnalysisTab(
         LinkPill(palette, "+ " + stringResource(R.string.projects_new), createProject)
     }
 
+    val transactions = projectTransactions ?: return
     if (transactions.isEmpty())
     {
         Text(text = stringResource(R.string.project_details_empty), color = palette.textMuted, fontSize = 14.sp)
         return
     }
 
-    BreakdownSection(palette, projectBreakdown(transactions, subcategories), selected.name.value, onMessage)
-    TopExpensesSection(palette, topExpenses(transactions))
+    BreakdownSection(palette, projectBreakdown(transactions, subcategories), selected, onMessage)
+    TopExpensesSection(palette, topExpenses(transactions), selected.currency)
 }
 
 /** A small rounded link: an action that is not the main content of the screen. */
@@ -168,8 +174,9 @@ private fun SectionTitle(palette: AccountsPalette, text: String)
 
 /** The pie of the expenses by subcategory, its legend, and — apart — what refunds took off. */
 @Composable
-private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdown, projectName: String, onMessage: (Int) -> Unit)
+private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdown, project: Project, onMessage: (Int) -> Unit)
 {
+    val currency = project.currency
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically)
     {
         Box(modifier = Modifier.weight(1f))
@@ -181,9 +188,10 @@ private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdo
             SpendingPieExportMenu(
                 palette,
                 breakdown.spending,
-                title = stringResource(R.string.pie_title_project, projectName),
+                title = stringResource(R.string.pie_title_project, project.name.value),
                 fileName = "centimes-depenses-projet",
                 onMessage = onMessage,
+                currency = currency,
             )
         }
     }
@@ -192,15 +200,15 @@ private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdo
         Text(text = stringResource(R.string.project_analysis_breakdown_empty), color = palette.textMuted, fontSize = 14.sp)
     } else
     {
-        SpendingPie(palette, breakdown.spending)
+        SpendingPie(palette, breakdown.spending, currency)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            breakdown.spending.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice) }
+            breakdown.spending.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice, currency) }
         }
     }
     if (breakdown.refunds.isNotZero())
     {
         Text(
-            text = stringResource(R.string.project_analysis_refunds, formatMoney(breakdown.refunds.value, LocalMainCurrency.current)),
+            text = stringResource(R.string.project_analysis_refunds, formatMoney(breakdown.refunds.value, currency)),
             color = palette.textSecondary,
             fontSize = 14.sp,
         )
@@ -209,7 +217,7 @@ private fun BreakdownSection(palette: AccountsPalette, breakdown: ProjectBreakdo
 
 /** The few biggest expenses: title, day and amount. */
 @Composable
-private fun TopExpensesSection(palette: AccountsPalette, expenses: List<Transaction>)
+private fun TopExpensesSection(palette: AccountsPalette, expenses: List<Transaction>, currency: AccountCurrency)
 {
     if (expenses.isEmpty()) return
     SectionTitle(palette, stringResource(R.string.project_analysis_top_title))
@@ -231,7 +239,7 @@ private fun TopExpensesSection(palette: AccountsPalette, expenses: List<Transact
                     Text(text = day.format(dayFormat), color = palette.textMuted, fontSize = 12.sp)
                 }
                 Text(
-                    text = formatMoney(expense.amount.value, LocalMainCurrency.current),
+                    text = formatMoney(expense.amount.value, currency),
                     color = palette.textPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

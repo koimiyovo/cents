@@ -41,6 +41,7 @@ import com.kyovo.cents.application.usecase.GetExchangeRatesService
 import com.kyovo.cents.application.usecase.GetTotalBalanceService
 import com.kyovo.cents.application.usecase.RefreshExchangeRatesService
 import com.kyovo.cents.application.usecase.ListArchivedAccountsService
+import com.kyovo.cents.application.usecase.ListProjectTransactionsService
 import com.kyovo.cents.application.usecase.ListProjectsService
 import com.kyovo.cents.application.usecase.ListRecurringTransactionsService
 import com.kyovo.cents.application.usecase.ListSubcategoriesService
@@ -83,6 +84,7 @@ import com.kyovo.cents.domain.port.input.GetSpendingBreakdownUseCase
 import com.kyovo.cents.domain.port.input.GetSpendingTrendUseCase
 import com.kyovo.cents.domain.port.input.ListAccountsUseCase
 import com.kyovo.cents.domain.port.input.ListArchivedAccountsUseCase
+import com.kyovo.cents.domain.port.input.ListProjectTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
 import com.kyovo.cents.domain.port.input.ListRecurringTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListSubcategoriesUseCase
@@ -272,8 +274,11 @@ class AppContainer(context: Context, persistence: RoomPersistence)
     val updateProject: UpdateProjectUseCase = UpdateProjectService(projectRepository)
     val deleteProject: DeleteProjectUseCase =
         DeleteProjectService(projectRepository, transactionRepository, unitOfWork)
+    // In each project's own currency: the real transactions, converted per project (not the main-currency ones).
     val getProjectProgress: GetProjectProgressUseCase =
-        GetProjectProgressService(projectRepository, totalsTransactionRepository)
+        GetProjectProgressService(projectRepository, transactionRepository, accountRepository, exchangeRateRepository)
+    val listProjectTransactions: ListProjectTransactionsUseCase =
+        ListProjectTransactionsService(projectRepository, transactionRepository, accountRepository, exchangeRateRepository)
 
     val listRecurringTransactions: ListRecurringTransactionsUseCase =
         ListRecurringTransactionsService(recurringTransactionRepository)
@@ -330,7 +335,7 @@ class AppContainer(context: Context, persistence: RoomPersistence)
         unitOfWork,
         ZoneId.systemDefault(),
     )
-    val importData: ImportDataUseCase = ImportDataService(backupSerializer, persistence.backupRestorer)
+    val importData: ImportDataUseCase = ImportDataService(backupSerializer, persistence.backupRestorer, mainCurrency)
     val backupFiles: BackupFiles = AndroidBackupFiles(context.contentResolver)
 
     // The automatic backup: the chosen folder lives in DataStore (the screen will read and change it

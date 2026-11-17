@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -562,7 +563,12 @@ private fun BudgetOverviewTab(
 /** A donut, most spent slice first from the top, clockwise, with a small gap between slices — and the
  * month's total in its centre. */
 @Composable
-internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
+internal fun SpendingPie(
+    palette: AccountsPalette,
+    breakdown: SpendingBreakdown,
+    // The budgets' ring is in the main currency; a project's, in the project's.
+    currency: AccountCurrency = LocalMainCurrency.current,
+)
 {
     // A tap opens it in a popup where it can be zoomed, with its legend under it.
     ExpandableChart(
@@ -570,20 +576,20 @@ internal fun SpendingPie(palette: AccountsPalette, breakdown: SpendingBreakdown)
         zoomedContent = {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp))
             {
-                PieChart(palette, breakdown)
+                PieChart(palette, breakdown, currency)
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp))
                 {
-                    breakdown.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice) }
+                    breakdown.slices.forEachIndexed { index, slice -> SpendingLegendRow(palette, index, slice, currency) }
                 }
             }
         },
     ) {
-        PieChart(palette, breakdown)
+        PieChart(palette, breakdown, currency)
     }
 }
 
 @Composable
-private fun PieChart(palette: AccountsPalette, breakdown: SpendingBreakdown)
+private fun PieChart(palette: AccountsPalette, breakdown: SpendingBreakdown, currency: AccountCurrency)
 {
     val gapDegrees = if (breakdown.slices.size > 1) 3f else 0f
     Box(
@@ -622,7 +628,7 @@ private fun PieChart(palette: AccountsPalette, breakdown: SpendingBreakdown)
         Text(
             text = stringResource(
                 R.string.budget_overview_total_spent,
-                formatMoney(breakdown.total.value, LocalMainCurrency.current)
+                formatMoney(breakdown.total.value, currency)
             ),
             color = palette.textPrimary,
             fontSize = 15.sp,
@@ -638,7 +644,12 @@ private fun PieChart(palette: AccountsPalette, breakdown: SpendingBreakdown)
 }
 
 @Composable
-internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: SpendingSlice)
+internal fun SpendingLegendRow(
+    palette: AccountsPalette,
+    index: Int,
+    slice: SpendingSlice,
+    currency: AccountCurrency = LocalMainCurrency.current,
+)
 {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -669,7 +680,7 @@ internal fun SpendingLegendRow(palette: AccountsPalette, index: Int, slice: Spen
         Column(horizontalAlignment = Alignment.End)
         {
             Text(
-                text = formatMoney(slice.amount.value, LocalMainCurrency.current),
+                text = formatMoney(slice.amount.value, currency),
                 color = palette.textPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
@@ -36,7 +37,7 @@ private val FOOD = Subcategory(
 )
 
 private fun aProject(id: ProjectId, name: String, target: Long? = null, threshold: Int = 80) =
-    Project(id, ProjectName(name), null, target?.let { Money(it) }, AlertThreshold(threshold))
+    Project(id, ProjectName(name), AccountCurrency.EUR, null, target?.let { Money(it) }, AlertThreshold(threshold))
 
 private var counter = 0
 

@@ -56,23 +56,26 @@ data class ProjectFormState(
     val thresholdPercent: Int = AlertThreshold.DEFAULT.percent,
     /** Set when an existing project is being edited instead of a new one created. */
     val editingId: ProjectId? = null,
-    /** The currency of the target (the main one): how many decimals the field takes. */
-    val currency: AccountCurrency = AccountCurrency.EUR,
+    /**
+     * The project's currency: the one its target is typed in (how many decimals the field takes) and the project
+     * followed in. Chosen when the form opens for a creation, the project's own for an edit (it never changes).
+     */
+    val currency: AccountCurrency,
 )
 {
     val isEditing: Boolean get() = editingId != null
 
     companion object
     {
-        fun creating(currency: AccountCurrency = AccountCurrency.EUR): ProjectFormState = ProjectFormState(currency = currency)
+        fun creating(currency: AccountCurrency): ProjectFormState = ProjectFormState(currency = currency)
 
-        fun editing(project: Project, currency: AccountCurrency = AccountCurrency.EUR): ProjectFormState = ProjectFormState(
+        fun editing(project: Project): ProjectFormState = ProjectFormState(
             name = project.name.value,
             emoji = project.emoji?.value,
-            targetText = project.target?.let { formatCentsForInput(it.value, currency.fractionDigits) }.orEmpty(),
+            targetText = project.target?.let { formatCentsForInput(it.value, project.currency.fractionDigits) }.orEmpty(),
             thresholdPercent = project.alertThreshold.percent,
             editingId = project.id,
-            currency = currency,
+            currency = project.currency,
         )
     }
 
@@ -131,16 +134,17 @@ data class ProjectFormState(
             ProjectSubmission.Update(UpdateProjectCommand(editingId, projectName, parsedEmoji, target, threshold))
         } else
         {
-            ProjectSubmission.Create(CreateProjectCommand(projectName, parsedEmoji, target, threshold))
+            ProjectSubmission.Create(CreateProjectCommand(projectName, currency, parsedEmoji, target, threshold))
         }
     }
 }
 
 /**
  * The "new project" dialog opened from the transaction form: the form being filled and what is wrong
- * with the last attempt. The same form as the projects screen's, so the same rules and messages.
+ * with the last attempt. The same form as the projects screen's, so the same rules and messages; its currency is
+ * the one of the transaction's account.
  */
 data class NewProjectDraft(
-    val form: ProjectFormState = ProjectFormState.creating(),
+    val form: ProjectFormState,
     val errors: Set<ProjectFormError> = emptySet(),
 )

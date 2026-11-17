@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.settings.label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -252,6 +253,16 @@ fun TransactionFormSheet(
                     FormError.ACCOUNT_REQUIRED in errors,
                     FormError.ACCOUNT_REQUIRED
                 )
+                // Opened from a project's page with no account in the project's currency: say why the list is empty.
+                val projectCurrency = form.lockedProjectCurrency
+                if (projectCurrency != null && form.sourceChoices(selectable).isEmpty())
+                {
+                    Text(
+                        text = stringResource(R.string.transaction_form_no_account_in_project_currency, projectCurrency.label()),
+                        color = palette.textMuted,
+                        fontSize = 13.sp,
+                    )
+                }
                 if (isTransfer)
                 {
                     AccountPicker(
@@ -303,12 +314,14 @@ fun TransactionFormSheet(
                 {
                     ProjectPicker(
                         palette = palette,
-                        projects = form.projectChoices(projects),
+                        // Only the projects in the chosen account's currency.
+                        projects = form.projectChoices(projects, accounts.find { it.id == form.accountId }?.currency),
                         selected = form.project,
                         onSelect = { onFormChange(form.withProject(it)) },
                         onCreate = onCreateProject,
                         // Opened from a project's page, the project is fixed: shown, greyed.
                         locked = form.projectLocked,
+                        waitsForAccount = form.projectWaitsForAccount,
                     )
                 }
                 Text(
@@ -644,6 +657,8 @@ private fun ProjectPicker(
     onSelect: (Project?) -> Unit,
     onCreate: () -> Unit,
     locked: Boolean,
+    // No account chosen yet: greyed, with a word on why (a new project takes the account's currency).
+    waitsForAccount: Boolean,
 )
 {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -663,8 +678,16 @@ private fun ProjectPicker(
             fillWidth = true,
             footerLabel = stringResource(R.string.transaction_form_project_create),
             onFooterClick = onCreate,
-            enabled = !locked,
+            enabled = !locked && !waitsForAccount,
         )
+        if (waitsForAccount)
+        {
+            Text(
+                text = stringResource(R.string.transaction_form_project_needs_account),
+                color = palette.textMuted,
+                fontSize = 13.sp,
+            )
+        }
     }
 }
 

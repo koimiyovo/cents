@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
@@ -20,7 +21,7 @@ private val JAPAN = ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666
 private val KITCHEN = ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662"))
 
 private fun aProject(id: ProjectId, name: String, emoji: String? = null, target: Long? = null) =
-    Project(id, ProjectName(name), emoji?.let { Emoji(it) }, target?.let { Money(it) })
+    Project(id, ProjectName(name), AccountCurrency.EUR, emoji?.let { Emoji(it) }, target?.let { Money(it) })
 
 private fun progress(expenses: Long, incomes: Long = 0, target: Long? = null, count: Int = 1) =
     ProjectProgress(target?.let { Money(it) }, Money(expenses), Money(incomes), count)

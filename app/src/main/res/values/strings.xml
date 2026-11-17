@@ -387,6 +387,8 @@
     <string name="transaction_form_project_label">Projet</string>
     <string name="transaction_form_project_none">Aucun</string>
     <string name="transaction_form_project_create">+ Nouveau projet</string>
+    <string name="transaction_form_no_account_in_project_currency">Aucun compte en %1$s, la devise du projet : créez-en un.</string>
+    <string name="transaction_form_project_needs_account">Choisissez d\'abord un compte : un nouveau projet prend sa devise.</string>
     <string name="transaction_form_failure_project_gone">Ce projet n\'existe plus : choisissez-en un autre.</string>
     <string name="settings_projects">Projets</string>
     <string name="settings_projects_hint">Suivre un voyage, des travaux…</string>

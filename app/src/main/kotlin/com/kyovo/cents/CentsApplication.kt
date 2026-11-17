@@ -18,6 +18,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.kyovo.cents.infrastructure.persistence.room.RoomPersistence
+import com.kyovo.cents.domain.model.AccountCurrency
+import com.kyovo.cents.ui.settings.DataStoreMainCurrency
+import com.kyovo.cents.ui.settings.mainCurrencyDataStore
+import kotlinx.coroutines.flow.first
 import com.kyovo.cents.work.AutomaticBackupWorker
 import com.kyovo.cents.work.CentsWorkerFactory
 import com.kyovo.cents.work.RecurringTransactionWorker
@@ -44,7 +48,11 @@ import java.util.concurrent.TimeUnit
  * would already have initialized itself with the default configuration by the time this is read.
  */
 class CentsApplication : Application(), Configuration.Provider {
-    val appContainer: AppContainer by lazy { AppContainer(this, RoomPersistence.open(this)) }
+    val appContainer: AppContainer by lazy {
+        // A database file of version 8 gives its projects the main currency (the one their targets were read in).
+        val mainCurrency = DataStoreMainCurrency(mainCurrencyDataStore)
+        AppContainer(this, RoomPersistence.open(this, mainCurrency = { mainCurrency.observe().first() ?: AccountCurrency.EUR }))
+    }
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()

@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.MainDispatcherExtension
 import com.kyovo.cents.domain.exception.DuplicateProjectNameException
 import com.kyovo.cents.domain.exception.ProjectNotFoundException
@@ -15,6 +16,7 @@ import com.kyovo.cents.domain.port.input.CreateProjectUseCase
 import com.kyovo.cents.domain.port.input.DeleteProjectUseCase
 import com.kyovo.cents.domain.port.input.UpdateProjectCommand
 import com.kyovo.cents.domain.port.input.UpdateProjectUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -46,7 +48,7 @@ private class RecordingUpdate : UpdateProjectUseCase
     {
         failWith?.let { throw it }
         commands += command
-        return Project(command.id, command.name, command.emoji, command.target, command.alertThreshold)
+        return Project(command.id, command.name, AccountCurrency.EUR, command.emoji, command.target, command.alertThreshold)
     }
 }
 
@@ -62,7 +64,7 @@ private class RecordingDelete : DeleteProjectUseCase
 
 private fun aCard(name: String = "Voyage au Japon", transactions: Int = 12, target: Long? = 300_000) =
     ProjectCard(
-        Project(ProjectId(UUID.randomUUID()), ProjectName(name), Emoji(PLANE), target?.let { Money(it) }),
+        Project(ProjectId(UUID.randomUUID()), ProjectName(name), AccountCurrency.EUR, Emoji(PLANE), target?.let { Money(it) }),
         ProjectProgress(target?.let { Money(it) }, Money(100_000), Money(0), transactions),
     )
 
@@ -94,7 +96,7 @@ class ProjectsViewModelTest
     {
         viewModel.openCreate()
 
-        assertThat(state.form).isEqualTo(ProjectFormState.creating())
+        assertThat(state.form).isEqualTo(ProjectFormState.creating(AccountCurrency.EUR))
         assertThat(state.errors).isEmpty()
         assertThat(state.confirmingDelete).isNull()
         assertThat(state.editedTransactionCount).isNull()
@@ -109,6 +111,28 @@ class ProjectsViewModelTest
 
         assertThat(state.form).isEqualTo(ProjectFormState.editing(card.project))
         assertThat(state.editedTransactionCount).isEqualTo(12)
+    }
+
+    // From the projects screen there is no account to take a currency from: a new project is in the main one.
+    @Test
+    fun `a project created from the projects screen is in the main currency`()
+    {
+        val inPounds = ProjectsViewModel(create, update, delete, MutableStateFlow(AccountCurrency.GBP))
+
+        inPounds.openCreate()
+
+        assertThat(inPounds.uiState.value.form!!.currency).isEqualTo(AccountCurrency.GBP)
+    }
+
+    @Test
+    fun `an edit keeps the project's own currency, whatever the main one`()
+    {
+        val inPounds = ProjectsViewModel(create, update, delete, MutableStateFlow(AccountCurrency.GBP))
+        val card = aCard().let { it.copy(project = it.project.copy(currency = AccountCurrency.XOF)) }
+
+        inPounds.openForEdit(card)
+
+        assertThat(inPounds.uiState.value.form!!.currency).isEqualTo(AccountCurrency.XOF)
     }
 
     @Test
@@ -146,7 +170,7 @@ class ProjectsViewModelTest
         viewModel.submit()
 
         assertThat(create.commands).containsExactly(
-            CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_000), AlertThreshold.DEFAULT)
+            CreateProjectCommand(ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji(PLANE), Money(300_000), AlertThreshold.DEFAULT)
         )
         assertThat(state.form).isNull()
     }

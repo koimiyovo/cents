@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.Account
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
@@ -113,6 +114,13 @@ data class TransactionFormState(
 
     /** A transfer has no project, and a rule is not tied to one: neither the form of a transfer nor a repeating one offers it. */
     val canHaveProject: Boolean get() = type != TransactionFormType.TRANSFER && !isRepeating
+
+    /**
+     * The project field waits for the account (several accounts, none chosen yet): a project created from here takes
+     * the account's currency, so there is nothing to pick or create before. A project fixed by the page the form was
+     * opened from does not wait.
+     */
+    val projectWaitsForAccount: Boolean get() = accountId == null && !projectLocked
 
     companion object
     {
@@ -329,9 +337,25 @@ data class TransactionFormState(
         return copy(destinationAmountText = text)
     }
 
-    /** The projects this form offers: all of them, or none when it cannot have one. */
-    fun projectChoices(projects: List<Project>): List<Project> =
-        if (canHaveProject) projects else emptyList()
+    /**
+     * The projects this form offers: those in the currency of the chosen account ([accountCurrency]), none when it
+     * cannot have one or no account is chosen. The project already chosen stays among them whatever its currency
+     * (an edited transaction filed earlier, a project fixed by its page), so the field can still show it.
+     */
+    fun projectChoices(projects: List<Project>, accountCurrency: AccountCurrency?): List<Project> =
+        if (!canHaveProject) emptyList()
+        else projects.filter { (accountCurrency != null && it.currency == accountCurrency) || it.id == project?.id }
+
+    /**
+     * The account changed to one in [accountCurrency]: a project chosen in another currency is no longer one this
+     * form offers, so it is taken away (not when the page the form was opened from fixes it).
+     */
+    fun withProjectIn(accountCurrency: AccountCurrency): TransactionFormState
+    {
+        val current = project ?: return this
+        if (projectLocked || current.currency == accountCurrency) return this
+        return copy(project = null)
+    }
 
     /** Changing the unit does not reset the count: "every 2" stays "every 2" under the new unit. */
     fun withFrequency(frequency: RecurrenceFrequency): TransactionFormState =
@@ -436,9 +460,20 @@ data class TransactionFormState(
     fun withSoleAccountSelected(accounts: List<Account>): TransactionFormState
     {
         if (accountId != null) return this
-        val sole = selectableAccounts(accounts).singleOrNull() ?: return this
+        val sole = selectableAccounts(accounts).filter(::offers).singleOrNull() ?: return this
         return copy(accountId = sole.id)
     }
+
+    /**
+     * The currency of the project fixed by the page the form was opened from, null otherwise: the accounts offered
+     * are those in it, and an account created from the form starts in it.
+     */
+    val lockedProjectCurrency: AccountCurrency?
+        get() = project?.currency?.takeIf { projectLocked }
+
+    /** Whether [account] can be chosen to leave from: any, unless a fixed project asks for its own currency. */
+    fun offers(account: Account): Boolean =
+        lockedProjectCurrency.let { it == null || account.currency == it }
 
     /** The accounts this form offers (see [accountChoicesFor]). */
     fun accountChoices(accounts: List<Account>): List<Account> =
@@ -447,12 +482,14 @@ data class TransactionFormState(
     /**
      * Accounts a transfer can leave from: every selectable one except the chosen destination — a
      * transfer to the same account is meaningless, so it isn't offered rather than rejected later.
-     * Any other type has no destination and offers them all.
+     * Any other type has no destination and offers them all. A form opened from a project's page offers only the
+     * accounts in the project's currency.
      */
     fun sourceChoices(selectable: List<Account>): List<Account>
     {
-        if (type != TransactionFormType.TRANSFER) return selectable
-        return selectable.filter { it.id != toAccountId }
+        val offered = selectable.filter(::offers)
+        if (type != TransactionFormType.TRANSFER) return offered
+        return offered.filter { it.id != toAccountId }
     }
 
     /** Accounts a transfer can go to: every selectable one except the chosen source. */

@@ -214,8 +214,11 @@ class TransactionFormViewModel(
         editedTransaction = null
         accountRequest = null
         currencies = accounts.associate { it.id to it.currency }
-        // With a single active account there is nothing to choose: skip the step.
-        val onlyAccountId = selectableAccounts(accounts).singleOrNull()?.id
+        // With a single active account there is nothing to choose: skip the step. Opened from a project's page, only
+        // the accounts in the project's currency count.
+        val onlyAccountId = selectableAccounts(accounts)
+            .filter { project == null || it.currency == project.currency }
+            .singleOrNull()?.id
         _uiState.value = TransactionFormUiState(
             form = TransactionFormState.initial(
                 accounts = accounts,
@@ -272,20 +275,32 @@ class TransactionFormViewModel(
         if (request != null)
         {
             val created = selectableAccounts(accounts).filter { it.id !in request.knownIds }
-            if (created.size == 1)
+            // Not chosen if the form would not offer it (created in another currency than a fixed project's).
+            if (created.size == 1 && (request.field == AccountField.DESTINATION || updated.offers(created.single())))
             {
                 updated = updated.withAccountSelected(request.field, created.single().id)
                 accountRequest = null
             }
         }
 
-        updated = updated.withSoleAccountSelected(accounts)
+        updated = projectFollowingAccount(form, updated.withSoleAccountSelected(accounts))
         _uiState.update { if (it.form == null) it else it.copy(form = updated) }
     }
 
     fun update(form: TransactionFormState)
     {
-        _uiState.update { if (it.form == null) it else it.copy(form = form, failure = null) }
+        _uiState.update { state ->
+            val previous = state.form ?: return@update state
+            state.copy(form = projectFollowingAccount(previous, form), failure = null)
+        }
+    }
+
+    /** When [updated] moved to another account, the project it holds must be in that account's currency. */
+    private fun projectFollowingAccount(previous: TransactionFormState, updated: TransactionFormState): TransactionFormState
+    {
+        if (updated.accountId == previous.accountId) return updated
+        val currency = updated.accountId?.let { currencies[it] } ?: return updated
+        return updated.withProjectIn(currency)
     }
 
     fun close()
@@ -379,13 +394,19 @@ class TransactionFormViewModel(
         }
     }
 
-    /** Opens the "new project" dialog. Nothing to do for a transfer or a repeating transaction, which have no project. */
+    /**
+     * Opens the "new project" dialog, the project in the currency of the transaction's account: its target is
+     * typed in that currency. Nothing to do while no account is chosen (the field waits for one), nor for a
+     * transfer or a repeating transaction, which have no project.
+     */
     fun askToCreateProject()
     {
         val form = _uiState.value.form ?: return
         // Nothing to create where the project is fixed, or where there is none.
         if (!form.canHaveProject || form.projectLocked) return
-        _uiState.update { it.copy(newProject = NewProjectDraft()) }
+        if (form.projectWaitsForAccount) return
+        val currency = form.accountId?.let { currencies[it] } ?: return
+        _uiState.update { it.copy(newProject = NewProjectDraft(ProjectFormState.creating(currency))) }
     }
 
     /** Replaces the form of the dialog (an edit of a field); what was reported about the last attempt is stale. */

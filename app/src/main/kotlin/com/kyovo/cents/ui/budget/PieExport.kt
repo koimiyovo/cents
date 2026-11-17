@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.budget
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -24,9 +25,9 @@ internal fun SpendingPieExportMenu(
     title: String,
     fileName: String,
     onMessage: (Int) -> Unit,
+    currency: AccountCurrency = LocalMainCurrency.current,
 )
 {
-    val currency = LocalMainCurrency.current
     val footer = stringResource(R.string.cashflow_footer)
     val centre = stringResource(R.string.budget_overview_total_spent, formatMoney(breakdown.total.value, currency))
     val labels = breakdown.slices.map { sliceLabelText(it.label) }

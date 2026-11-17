@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AccountId
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.RecordableTransactionCategory
@@ -134,11 +135,47 @@ class TransactionFormProjectTest
     }
 
     @Test
-    fun `the form offers the projects it is given, none when it cannot have one`()
+    fun `the form offers the projects in the account's currency, none when it cannot have one`()
     {
-        assertThat(expense.projectChoices(ALL_TEST_PROJECTS)).containsExactlyElementsOf(ALL_TEST_PROJECTS)
-        assertThat(expense.withType(TransactionFormType.TRANSFER).projectChoices(ALL_TEST_PROJECTS)).isEmpty()
-        assertThat(expense.withRepeat(true).projectChoices(ALL_TEST_PROJECTS)).isEmpty()
+        val projects = ALL_TEST_PROJECTS + PLOT_PROJECT_XOF
+
+        assertThat(expense.projectChoices(projects, AccountCurrency.EUR)).containsExactlyElementsOf(ALL_TEST_PROJECTS)
+        assertThat(expense.projectChoices(projects, AccountCurrency.XOF)).containsExactly(PLOT_PROJECT_XOF)
+        assertThat(expense.withType(TransactionFormType.TRANSFER).projectChoices(projects, AccountCurrency.EUR)).isEmpty()
+        assertThat(expense.withRepeat(true).projectChoices(projects, AccountCurrency.EUR)).isEmpty()
+    }
+
+    @Test
+    fun `no project is offered while no account is chosen`()
+    {
+        assertThat(expense.copy(accountId = null).projectChoices(ALL_TEST_PROJECTS, null)).isEmpty()
+    }
+
+    // An edited transaction filed earlier, or a project fixed by its page: the field must still show it.
+    @Test
+    fun `the project already chosen stays offered, whatever its currency`()
+    {
+        val filed = expense.withProject(JAPAN_PROJECT)
+
+        assertThat(filed.projectChoices(ALL_TEST_PROJECTS + PLOT_PROJECT_XOF, AccountCurrency.XOF))
+            .containsExactlyInAnyOrder(JAPAN_PROJECT, PLOT_PROJECT_XOF)
+    }
+
+    @Test
+    fun `moving to an account in another currency takes away a project in the old one`()
+    {
+        val filed = expense.withProject(JAPAN_PROJECT)
+
+        assertThat(filed.withProjectIn(AccountCurrency.XOF).project).isNull()
+        assertThat(filed.withProjectIn(AccountCurrency.EUR).project).isEqualTo(JAPAN_PROJECT)
+    }
+
+    @Test
+    fun `a project fixed by its page is kept whatever the account`()
+    {
+        val locked = expense.copy(project = JAPAN_PROJECT, projectLocked = true)
+
+        assertThat(locked.withProjectIn(AccountCurrency.XOF).project).isEqualTo(JAPAN_PROJECT)
     }
 
     // ------------------------------------------------------------------ saving

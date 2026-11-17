@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.BudgetAlertLevel
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Project
@@ -51,7 +52,7 @@ class ProjectAlertsTest
     // ------------------------------------------------------------------ what it says on screen
 
     private fun aProject(emoji: String?) =
-        Project(ProjectId(UUID.randomUUID()), ProjectName("Voyage au Japon"), emoji?.let { Emoji(it) }, null)
+        Project(ProjectId(UUID.randomUUID()), ProjectName("Voyage au Japon"), AccountCurrency.EUR, emoji?.let { Emoji(it) }, null)
 
     @Test
     fun `a notice names the project by its emoji and its name, and carries the level`()

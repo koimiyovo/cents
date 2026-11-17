@@ -100,6 +100,7 @@ import com.kyovo.cents.ui.backup.DataBackupViewModel
 import com.kyovo.cents.ui.settings.SettingsScreen
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.port.input.GetProjectProgressUseCase
+import com.kyovo.cents.domain.port.input.ListProjectTransactionsUseCase
 import com.kyovo.cents.domain.port.input.ListProjectsUseCase
 import com.kyovo.cents.ui.budget.BudgetSection
 import com.kyovo.cents.ui.project.DeleteProjectDialog
@@ -155,6 +156,7 @@ fun HomeScreen(
     listRecurringTransactions: ListRecurringTransactionsUseCase,
     listProjects: ListProjectsUseCase,
     getProjectProgress: GetProjectProgressUseCase,
+    listProjectTransactions: ListProjectTransactionsUseCase,
     formViewModel: TransactionFormViewModel,
     initialDepositFormViewModel: InitialDepositFormViewModel,
     accountFormViewModel: AccountFormViewModel,
@@ -745,6 +747,7 @@ fun HomeScreen(
                                         listProjects = listProjects,
                                         getProjectProgress = getProjectProgress,
                                         listTransactions = listTransactions,
+                                        listProjectTransactions = listProjectTransactions,
                                         subcategories = subcategories,
                                         chosenProjectUuid = analysedProjectUuid,
                                         onChooseProject = { analysedProjectUuid = it.value.toString() },
@@ -818,7 +821,8 @@ fun HomeScreen(
             onCreateAccount = { field ->
                 // Remember which accounts exist, to recognise the new one and choose it for that field.
                 formViewModel.askToCreateAccount(field, accounts + archivedAccounts)
-                accountFormViewModel.open(mainCurrency)
+                // From a project's page, the new account starts in the project's currency (the only ones offered).
+                accountFormViewModel.open(form.lockedProjectCurrency ?: mainCurrency)
             },
             onDismiss = formViewModel::close,
         )

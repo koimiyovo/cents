@@ -42,7 +42,7 @@ class ProjectsViewModel(
     private val createProject: CreateProjectUseCase,
     private val updateProject: UpdateProjectUseCase,
     private val deleteProject: DeleteProjectUseCase,
-    // The currency targets are set in: the main one.
+    // The currency a project created from the projects screen is set in: the main one (an edit keeps the project's).
     private val mainCurrency: StateFlow<AccountCurrency> = MutableStateFlow(AccountCurrency.EUR),
 ) : ViewModel()
 {
@@ -63,7 +63,7 @@ class ProjectsViewModel(
     {
         editedCard = card
         _uiState.value = ProjectsUiState(
-            form = ProjectFormState.editing(card.project, mainCurrency.value),
+            form = ProjectFormState.editing(card.project),
             editedTransactionCount = card.transactionCount,
         )
     }

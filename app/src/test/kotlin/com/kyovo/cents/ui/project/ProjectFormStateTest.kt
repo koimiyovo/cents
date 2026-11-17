@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.project
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
@@ -25,16 +26,16 @@ private const val PLANE = "✈️"
 class ProjectFormStateTest
 {
     private val id = ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661"))
-    private val japan = Project(id, ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050), AlertThreshold(70))
+    private val japan = Project(id, ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji(PLANE), Money(300_050), AlertThreshold(70))
 
     // ------------------------------------------------------------------ opening
 
     @Test
     fun `a new form is empty and is not an edit`()
     {
-        val form = ProjectFormState.creating()
+        val form = ProjectFormState.creating(AccountCurrency.EUR)
 
-        assertThat(form).isEqualTo(ProjectFormState())
+        assertThat(form).isEqualTo(ProjectFormState(currency = AccountCurrency.EUR))
         assertThat(form.name).isEmpty()
         assertThat(form.emoji).isNull()
         assertThat(form.targetText).isEmpty()
@@ -56,6 +57,27 @@ class ProjectFormStateTest
     }
 
     @Test
+    fun `editing a project types its target in the project's currency`()
+    {
+        val form = ProjectFormState.editing(japan.copy(currency = AccountCurrency.XOF, target = Money(2_500_000)))
+
+        assertThat(form.currency).isEqualTo(AccountCurrency.XOF)
+        assertThat(form.targetText).isEqualTo("2500000")
+    }
+
+    @Test
+    fun `a creation carries the currency the form was opened in`()
+    {
+        val form = ProjectFormState.creating(AccountCurrency.XOF).withName("Parcelle").withTarget("2500000")
+
+        assertThat(form.submit()).isEqualTo(
+            ProjectSubmission.Create(
+                CreateProjectCommand(ProjectName("Parcelle"), AccountCurrency.XOF, null, Money(2_500_000), AlertThreshold.DEFAULT)
+            )
+        )
+    }
+
+    @Test
     fun `editing a project without an emoji or a target leaves them empty`()
     {
         val form = ProjectFormState.editing(japan.copy(emoji = null, target = null))
@@ -69,7 +91,7 @@ class ProjectFormStateTest
     @Test
     fun `the name is cut at the domain limit while typing`()
     {
-        val form = ProjectFormState.creating().withName("x".repeat(ProjectName.MAX_LENGTH + 10))
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("x".repeat(ProjectName.MAX_LENGTH + 10))
 
         assertThat(form.name).hasSize(ProjectName.MAX_LENGTH)
     }
@@ -79,13 +101,13 @@ class ProjectFormStateTest
     @CsvSource("50,50", "52,50", "53,55", "60,60", "97,95", "98,100", "100,100", "10,50", "0,50", "150,100")
     fun `the threshold snaps to the slider's steps and stays within its range`(typed: Int, expected: Int)
     {
-        assertThat(ProjectFormState.creating().withThreshold(typed).thresholdPercent).isEqualTo(expected)
+        assertThat(ProjectFormState.creating(AccountCurrency.EUR).withThreshold(typed).thresholdPercent).isEqualTo(expected)
     }
 
     @Test
     fun `an emoji can be picked and taken away`()
     {
-        val picked = ProjectFormState.creating().withEmoji(PLANE)
+        val picked = ProjectFormState.creating(AccountCurrency.EUR).withEmoji(PLANE)
 
         assertThat(picked.emoji).isEqualTo(PLANE)
         assertThat(picked.withEmoji(null).emoji).isNull()
@@ -95,14 +117,14 @@ class ProjectFormStateTest
     @ValueSource(strings = ["", "3000", "3000,", "3000,5", "3000,50", "3000.50"])
     fun `the target field accepts what an amount field accepts`(text: String)
     {
-        assertThat(ProjectFormState.creating().withTarget(text).targetText).isEqualTo(text)
+        assertThat(ProjectFormState.creating(AccountCurrency.EUR).withTarget(text).targetText).isEqualTo(text)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["abc", "12,345", "1,2,3", "-5", "12 €"])
     fun `an edit that would break the shape of the target is dropped`(text: String)
     {
-        val form = ProjectFormState.creating().withTarget("120")
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withTarget("120")
 
         assertThat(form.withTarget(text).targetText).isEqualTo("120")
     }
@@ -112,11 +134,11 @@ class ProjectFormStateTest
     @Test
     fun `a valid new project becomes a create command`()
     {
-        val form = ProjectFormState.creating().withName("  Voyage au Japon  ").withEmoji(PLANE).withTarget("3000,50")
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("  Voyage au Japon  ").withEmoji(PLANE).withTarget("3000,50")
 
         assertThat(form.submit()).isEqualTo(
             ProjectSubmission.Create(
-                CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji(PLANE), Money(300_050), AlertThreshold.DEFAULT)
+                CreateProjectCommand(ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji(PLANE), Money(300_050), AlertThreshold.DEFAULT)
             )
         )
     }
@@ -124,10 +146,10 @@ class ProjectFormStateTest
     @Test
     fun `a project needs only a name`()
     {
-        val form = ProjectFormState.creating().withName("Travaux cuisine")
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("Travaux cuisine")
 
         assertThat(form.submit()).isEqualTo(
-            ProjectSubmission.Create(CreateProjectCommand(ProjectName("Travaux cuisine"), null, null, AlertThreshold.DEFAULT))
+            ProjectSubmission.Create(CreateProjectCommand(ProjectName("Travaux cuisine"), AccountCurrency.EUR, null, null, AlertThreshold.DEFAULT))
         )
     }
 
@@ -135,7 +157,7 @@ class ProjectFormStateTest
     @ValueSource(strings = ["", " ", "   "])
     fun `a blank target means no target`(text: String)
     {
-        val form = ProjectFormState.creating().withName("Travaux").copy(targetText = text)
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("Travaux").copy(targetText = text)
 
         assertThat((form.submit() as ProjectSubmission.Create).command.target).isNull()
     }
@@ -143,7 +165,7 @@ class ProjectFormStateTest
     @Test
     fun `the threshold chosen with the slider goes into the command`()
     {
-        val form = ProjectFormState.creating().withName("Voyage").withTarget("1000").withThreshold(60)
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("Voyage").withTarget("1000").withThreshold(60)
 
         assertThat((form.submit() as ProjectSubmission.Create).command.alertThreshold).isEqualTo(AlertThreshold(60))
     }
@@ -178,7 +200,7 @@ class ProjectFormStateTest
     @ValueSource(strings = ["", "   "])
     fun `a blank name is refused`(name: String)
     {
-        val form = ProjectFormState.creating().copy(name = name)
+        val form = ProjectFormState.creating(AccountCurrency.EUR).copy(name = name)
 
         assertThat(form.submit()).isEqualTo(ProjectSubmission.Invalid(setOf(ProjectFormError.NAME_REQUIRED)))
     }
@@ -186,7 +208,7 @@ class ProjectFormStateTest
     @Test
     fun `a name that is too long is refused, even if it did not come through the field`()
     {
-        val form = ProjectFormState.creating().copy(name = "x".repeat(ProjectName.MAX_LENGTH + 1))
+        val form = ProjectFormState.creating(AccountCurrency.EUR).copy(name = "x".repeat(ProjectName.MAX_LENGTH + 1))
 
         assertThat(form.submit()).isEqualTo(ProjectSubmission.Invalid(setOf(ProjectFormError.NAME_TOO_LONG)))
     }
@@ -194,7 +216,7 @@ class ProjectFormStateTest
     @Test
     fun `a blank emoji is refused`()
     {
-        val form = ProjectFormState.creating().withName("Voyage").withEmoji("  ")
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("Voyage").withEmoji("  ")
 
         assertThat(form.submit()).isEqualTo(ProjectSubmission.Invalid(setOf(ProjectFormError.EMOJI_INVALID)))
     }
@@ -204,7 +226,7 @@ class ProjectFormStateTest
     @ValueSource(strings = ["0", "0,00", "0.0", ","])
     fun `a target that is not a positive amount is refused`(text: String)
     {
-        val form = ProjectFormState.creating().withName("Voyage").copy(targetText = text)
+        val form = ProjectFormState.creating(AccountCurrency.EUR).withName("Voyage").copy(targetText = text)
 
         assertThat(form.submit()).isEqualTo(ProjectSubmission.Invalid(setOf(ProjectFormError.TARGET_INVALID)))
     }
@@ -212,7 +234,7 @@ class ProjectFormStateTest
     @Test
     fun `every problem is reported at once`()
     {
-        val form = ProjectFormState.creating().copy(name = " ", emoji = " ", targetText = "0")
+        val form = ProjectFormState.creating(AccountCurrency.EUR).copy(name = " ", emoji = " ", targetText = "0")
 
         assertThat((form.submit() as ProjectSubmission.Invalid).errors).containsExactlyInAnyOrder(
             ProjectFormError.NAME_REQUIRED, ProjectFormError.EMOJI_INVALID, ProjectFormError.TARGET_INVALID,

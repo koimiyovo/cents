@@ -134,9 +134,65 @@ class TransactionFormNewProjectTest
 
         viewModel.askToCreateProject()
 
-        assertThat(state.newProject).isEqualTo(NewProjectDraft())
-        assertThat(state.newProject!!.form).isEqualTo(ProjectFormState.creating())
+        assertThat(state.newProject).isEqualTo(NewProjectDraft(ProjectFormState.creating(AccountCurrency.EUR)))
         assertThat(state.newProject!!.errors).isEmpty()
+    }
+
+    @Test
+    fun `the project is in the currency of the transaction's account`()
+    {
+        // GIVEN an account in CFA francs chosen in the form
+        val cfaAccount = anActiveAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = cfaAccount.id)
+
+        // WHEN
+        viewModel.askToCreateProject()
+
+        // THEN its target is typed in francs, and the project created in francs
+        assertThat(state.newProject!!.form.currency).isEqualTo(AccountCurrency.XOF)
+        typeInTheDialog { it.withName("Parcelle").withTarget("2500000") }
+        viewModel.confirmNewProject()
+        assertThat(createProject.commands.single().currency).isEqualTo(AccountCurrency.XOF)
+        assertThat(createProject.commands.single().target).isEqualTo(Money(2_500_000))
+    }
+
+    @Test
+    fun `the project follows the account chosen when the dialog is asked for, not the one preselected`()
+    {
+        // GIVEN the form opened on a euro account, then moved to a CFA franc one
+        val cfaAccount = anActiveAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = account.id)
+        viewModel.update(state.form!!.copy(accountId = cfaAccount.id))
+
+        // WHEN
+        viewModel.askToCreateProject()
+
+        // THEN
+        assertThat(state.newProject!!.form.currency).isEqualTo(AccountCurrency.XOF)
+    }
+
+    // Several accounts and none chosen: a new project would not know its currency.
+    @Test
+    fun `nothing opens while no account is chosen`()
+    {
+        // GIVEN two accounts, none preselected
+        viewModel.open(listOf(account, anActiveAccount()), preselectedAccountId = null)
+
+        // WHEN
+        viewModel.askToCreateProject()
+
+        // THEN
+        assertThat(state.form!!.projectWaitsForAccount).isTrue()
+        assertThat(state.newProject).isNull()
+    }
+
+    // The project is already fixed by the page the form was opened from: there is nothing to wait for.
+    @Test
+    fun `a form opened from a project's page does not wait for an account`()
+    {
+        viewModel.open(listOf(account, anActiveAccount()), preselectedAccountId = null, project = JAPAN_PROJECT)
+
+        assertThat(state.form!!.projectWaitsForAccount).isFalse()
     }
 
     @Test
@@ -192,7 +248,7 @@ class TransactionFormNewProjectTest
         viewModel.confirmNewProject()
 
         assertThat(createProject.commands).containsExactly(
-            CreateProjectCommand(ProjectName("Voyage au Japon"), Emoji("✈️"), Money(300_000))
+            CreateProjectCommand(ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), Money(300_000))
         )
         assertThat(state.newProject).isNull()
         assertThat(state.form!!.project).isNotNull()
@@ -279,6 +335,52 @@ class TransactionFormNewProjectTest
         assertThat(state.newProject).isNull()
     }
 
+    // ------------------------------------------------------------------ the account decides the currency
+
+    @Test
+    fun `choosing an account in another currency takes away the project chosen`()
+    {
+        // GIVEN a euro expense in a euro project
+        val cfaAccount = anActiveAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = account.id)
+        viewModel.update(state.form!!.withProject(JAPAN_PROJECT))
+
+        // WHEN the account is changed for the CFA franc one
+        viewModel.update(state.form!!.copy(accountId = cfaAccount.id))
+
+        // THEN
+        assertThat(state.form!!.project).isNull()
+    }
+
+    @Test
+    fun `choosing another account in the same currency keeps the project`()
+    {
+        val otherEuro = anActiveAccount()
+        viewModel.open(listOf(account, otherEuro), preselectedAccountId = account.id)
+        viewModel.update(state.form!!.withProject(JAPAN_PROJECT))
+
+        viewModel.update(state.form!!.copy(accountId = otherEuro.id))
+
+        assertThat(state.form!!.project).isEqualTo(JAPAN_PROJECT)
+    }
+
+    @Test
+    fun `an account created from the form and chosen for it takes away a project in another currency`()
+    {
+        // GIVEN a euro expense in a euro project, and an account asked for from the form
+        viewModel.open(listOf(account), preselectedAccountId = account.id)
+        viewModel.update(state.form!!.withProject(JAPAN_PROJECT))
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(account))
+
+        // WHEN the new account, in CFA francs, appears
+        val cfaAccount = anActiveAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.accountsChanged(listOf(account, cfaAccount))
+
+        // THEN it is chosen, and the euro project is taken away
+        assertThat(state.form!!.accountId).isEqualTo(cfaAccount.id)
+        assertThat(state.form!!.project).isNull()
+    }
+
     // ------------------------------------------------------------------ saving with a project
 
     @Test
@@ -350,7 +452,7 @@ class TransactionFormNewProjectTest
             com.kyovo.cents.domain.model.TransactionTitle("Billets"),
             com.kyovo.cents.domain.model.RecordableTransactionCategory.EXPENSE, null, null, MOMENT, null,
         )
-        viewModel.openForEdit(transaction, null, null)
+        viewModel.openForEdit(transaction, null, null, accounts = listOf(account))
 
         // WHEN
         viewModel.askToCreateProject()

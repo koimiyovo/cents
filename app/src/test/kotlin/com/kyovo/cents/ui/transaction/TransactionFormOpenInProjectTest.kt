@@ -201,4 +201,70 @@ class TransactionFormOpenInProjectTest
         assertThat(form.project).isEqualTo(JAPAN_PROJECT)
         assertThat(TransactionFormState.initial(listOf(account), null, MOMENT).project).isNull()
     }
+
+    // ------------------------------------------------------------------ accounts in the project's currency
+
+    @Test
+    fun `only the accounts in the project's currency are offered`()
+    {
+        // GIVEN a euro account and a CFA franc one, the form opened from a CFA franc project
+        val cfaAccount = anAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = null, project = PLOT_PROJECT_XOF)
+
+        // THEN
+        assertThat(state.form!!.sourceChoices(listOf(account, cfaAccount))).containsExactly(cfaAccount)
+        assertThat(state.form!!.lockedProjectCurrency).isEqualTo(AccountCurrency.XOF)
+    }
+
+    @Test
+    fun `the only account in the project's currency is chosen at once`()
+    {
+        val cfaAccount = anAccount().copy(currency = AccountCurrency.XOF)
+
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = null, project = PLOT_PROJECT_XOF)
+
+        assertThat(state.form!!.accountId).isEqualTo(cfaAccount.id)
+    }
+
+    @Test
+    fun `no account is offered when none is in the project's currency`()
+    {
+        viewModel.open(listOf(account), preselectedAccountId = null, project = PLOT_PROJECT_XOF)
+
+        assertThat(state.form!!.accountId).isNull()
+        assertThat(state.form!!.sourceChoices(listOf(account))).isEmpty()
+    }
+
+    @Test
+    fun `an account created from the form in the project's currency is chosen, one in another is not`()
+    {
+        // GIVEN a form opened from a CFA franc project, with only a euro account
+        viewModel.open(listOf(account), preselectedAccountId = null, project = PLOT_PROJECT_XOF)
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(account))
+
+        // WHEN a euro account is created
+        val otherEuro = anAccount()
+        viewModel.accountsChanged(listOf(account, otherEuro))
+
+        // THEN it is not chosen
+        assertThat(state.form!!.accountId).isNull()
+
+        // WHEN a CFA franc one is created
+        viewModel.askToCreateAccount(AccountField.SOURCE, listOf(account, otherEuro))
+        val cfaAccount = anAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.accountsChanged(listOf(account, otherEuro, cfaAccount))
+
+        // THEN it is
+        assertThat(state.form!!.accountId).isEqualTo(cfaAccount.id)
+    }
+
+    @Test
+    fun `a form opened without a project offers every account`()
+    {
+        val cfaAccount = anAccount().copy(currency = AccountCurrency.XOF)
+        viewModel.open(listOf(account, cfaAccount), preselectedAccountId = null)
+
+        assertThat(state.form!!.sourceChoices(listOf(account, cfaAccount))).containsExactly(account, cfaAccount)
+        assertThat(state.form!!.lockedProjectCurrency).isNull()
+    }
 }

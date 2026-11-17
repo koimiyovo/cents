@@ -263,6 +263,7 @@ class MainActivity : ComponentActivity() {
                     listRecurringTransactions = appContainer.listRecurringTransactions,
                     listProjects = appContainer.listProjects,
                     getProjectProgress = appContainer.getProjectProgress,
+                    listProjectTransactions = appContainer.listProjectTransactions,
                     formViewModel = formViewModel,
                     initialDepositFormViewModel = initialDepositFormViewModel,
                     accountFormViewModel = accountFormViewModel,

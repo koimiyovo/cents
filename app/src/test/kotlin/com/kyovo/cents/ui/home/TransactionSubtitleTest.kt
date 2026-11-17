@@ -27,8 +27,8 @@ private val CHECKING = Account(
     AccountId(UUID.randomUUID()), AccountName("Compte courant"), AccountType.CHECKING,
     AccountCurrency(Currency.getInstance("EUR")), Instant.parse("2026-01-01T00:00:00Z"),
 )
-private val JAPAN = Project(ProjectId(UUID.randomUUID()), ProjectName("Voyage au Japon"), Emoji("✈️"), null)
-private val KITCHEN = Project(ProjectId(UUID.randomUUID()), ProjectName("Travaux cuisine"), null, null)
+private val JAPAN = Project(ProjectId(UUID.randomUUID()), ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), null)
+private val KITCHEN = Project(ProjectId(UUID.randomUUID()), ProjectName("Travaux cuisine"), AccountCurrency.EUR, null, null)
 
 /**
  * The second line of a transaction row: its subcategory, its account and its project, in that order, with the
