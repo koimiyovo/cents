@@ -13,7 +13,25 @@ if (localFile.exists())
 {
     localFile.inputStream().use { localProperties.load(it) }
 }
-val supportEmail = localProperties.getProperty("supportEmail", "")
+val supportEmail = localProperties.getProperty("supportEmail", "").trim()
+
+// A release built without it would ship crash reports with no recipient, and nothing would show it: the release
+// build stops instead (a debug build does not need it). Easy to forget on a new machine, since local.properties
+// is not versioned.
+val checkSupportEmail = tasks.register("checkSupportEmail") {
+    description = "Check that the supportEmail property is set"
+    val email = supportEmail
+    doLast {
+        if (!email.contains("@"))
+        {
+            throw GradleException(
+                "supportEmail is missing from local.properties (or is not an e-mail address): " +
+                        "add `supportEmail=...` before building a release."
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkSupportEmail) }
 
 android {
     namespace = "com.kyovo.cents"
