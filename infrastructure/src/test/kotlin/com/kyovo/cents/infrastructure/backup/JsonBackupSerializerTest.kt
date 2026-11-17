@@ -48,6 +48,9 @@ import java.util.UUID
  */
 class JsonBackupSerializerTest
 {
+    // Most tests read files of the current format, where the main currency plays no part.
+    private fun JsonBackupSerializer.deserialize(text: String): BackupSnapshot = deserialize(text, AccountCurrency.EUR)
+
     private val serializer = JsonBackupSerializer()
 
     private fun uuid(n: Int) = UUID.fromString("00000000-0000-0000-0000-%012d".format(n))
@@ -85,7 +88,7 @@ class JsonBackupSerializerTest
         emoji = null
     )
 
-    private val japan = Project(ProjectId(uuid(20)), ProjectName("Voyage au Japon"), Emoji("✈️"), Money(300_000))
+    private val japan = Project(ProjectId(uuid(20)), ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), Money(300_000))
 
     private val expense = Transaction.recorded(
         id = TransactionId(uuid(30)),
@@ -166,7 +169,7 @@ class JsonBackupSerializerTest
             setOf(LocalDate.of(2026, 9, 28), LocalDate.of(2026, 11, 26))
         ),
         recurringTransactions = listOf(rent, pay),
-        projects = listOf(japan, Project(ProjectId(uuid(21)), ProjectName("Cadeaux"), emoji = null, target = null))
+        projects = listOf(japan, Project(ProjectId(uuid(21)), ProjectName("Cadeaux"), AccountCurrency.XOF, emoji = null, target = Money(50_000)))
     )
 
     private fun roundTrip(snapshot: BackupSnapshot): BackupSnapshot
@@ -323,7 +326,7 @@ class JsonBackupSerializerTest
     {
         val text = serializer.serialize(everything)
 
-        assertThat(text).containsPattern("\"formatVersion\"\\s*:\\s*1")
+        assertThat(text).containsPattern("\"formatVersion\"\\s*:\\s*2")
     }
 
     @Test
@@ -336,7 +339,7 @@ class JsonBackupSerializerTest
     fun `a file written by a newer version of the app is refused`()
     {
         val newer = serializer.serialize(everything)
-            .replace(Regex("\"formatVersion\"\\s*:\\s*1"), "\"formatVersion\": 2")
+            .replace(Regex("\"formatVersion\"\\s*:\\s*2"), "\"formatVersion\": 3")
 
         assertThatThrownBy { serializer.deserialize(newer) }.isInstanceOf(InvalidBackupException::class.java)
     }
@@ -345,7 +348,7 @@ class JsonBackupSerializerTest
     fun `a file without a format version is refused`()
     {
         val unversioned = serializer.serialize(everything)
-            .replace(Regex("\"formatVersion\"\\s*:\\s*1,?"), "")
+            .replace(Regex("\"formatVersion\"\\s*:\\s*2,?"), "")
 
         assertThatThrownBy { serializer.deserialize(unversioned) }
             .isInstanceOf(InvalidBackupException::class.java)
@@ -393,5 +396,48 @@ class JsonBackupSerializerTest
 
         assertThatThrownBy { serializer.deserialize(tampered) }
             .isInstanceOf(InvalidBackupException::class.java)
+    }
+
+    // ------------------------------------------------------------------ format 1: projects without a currency
+
+    /** [everything] as the app wrote it in format 1: the same, but no currency on the projects. */
+    private fun formatOneText(): String =
+        serializer.serialize(everything)
+            .replace(Regex("\"formatVersion\"\\s*:\\s*2"), "\"formatVersion\":1")
+            .replace(Regex("(\"alertPercent\":\\d+),\"currency\":\"[A-Z]{3}\""), "$1")
+
+    @Test
+    fun `each project keeps its own currency`()
+    {
+        assertThat(roundTrip(everything).projects.map { it.currency })
+            .containsExactly(AccountCurrency.EUR, AccountCurrency.XOF)
+    }
+
+    // Until format 2 a target was read in the main currency: the project keeps the value the user saw.
+    @Test
+    fun `a file of format 1 is still read, its projects in the main currency given`()
+    {
+        val read = serializer.deserialize(formatOneText(), AccountCurrency.GBP)
+
+        assertThat(read.projects.map { it.currency }).containsOnly(AccountCurrency.GBP)
+        assertThat(read.copy(projects = everything.projects)).isEqualTo(everything)
+    }
+
+    @Test
+    fun `a file of format 1 whose project has a currency is refused`()
+    {
+        val tampered = serializer.serialize(everything)
+            .replace(Regex("\"formatVersion\"\\s*:\\s*2"), "\"formatVersion\":1")
+
+        assertThatThrownBy { serializer.deserialize(tampered) }.isInstanceOf(InvalidBackupException::class.java)
+    }
+
+    @Test
+    fun `a file of format 2 whose project has no currency is refused`()
+    {
+        val tampered = serializer.serialize(everything)
+            .replace(Regex("(\"alertPercent\":\\d+),\"currency\":\"[A-Z]{3}\""), "$1")
+
+        assertThatThrownBy { serializer.deserialize(tampered) }.isInstanceOf(InvalidBackupException::class.java)
     }
 }

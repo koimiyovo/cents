@@ -4,18 +4,21 @@ import com.kyovo.cents.domain.exception.InvalidAlertThresholdException
 import com.kyovo.cents.domain.exception.InvalidProjectNameException
 import com.kyovo.cents.domain.exception.InvalidProjectTargetException
 import com.kyovo.cents.domain.exception.InvalidSubcategoryEmojiException
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
 import com.kyovo.cents.domain.model.Project
 import com.kyovo.cents.domain.model.ProjectId
 import com.kyovo.cents.domain.model.ProjectName
+import java.util.Currency
 
 fun Project.toEntity(): ProjectEntity
 {
     return ProjectEntity(
         id = id.value,
         name = name.value,
+        currency = currency.value.currencyCode,
         emoji = emoji?.value,
         targetCents = target?.value,
         alertPercent = alertThreshold.percent
@@ -29,6 +32,7 @@ fun ProjectEntity.toDomain(): Project
         Project(
             id = ProjectId(id),
             name = ProjectName(name),
+            currency = AccountCurrency(Currency.getInstance(currency)),
             emoji = emoji?.let { Emoji(it) },
             target = targetCents?.let { Money(it) },
             alertThreshold = AlertThreshold(alertPercent)

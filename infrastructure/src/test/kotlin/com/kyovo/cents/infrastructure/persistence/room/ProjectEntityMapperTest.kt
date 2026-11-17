@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
@@ -19,12 +20,12 @@ class ProjectEntityMapperTest
 {
     private val uuid = UUID.fromString("66666666-6666-6666-6666-666666666661")
 
-    private val japan = Project(ProjectId(uuid), ProjectName("Voyage au Japon"), Emoji("✈️"), Money(300_000))
+    private val japan = Project(ProjectId(uuid), ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), Money(300_000))
 
     @Test
     fun `a project becomes a row of plain values`()
     {
-        assertThat(japan.toEntity()).isEqualTo(ProjectEntity(uuid, "Voyage au Japon", "✈️", 300_000, 80))
+        assertThat(japan.toEntity()).isEqualTo(ProjectEntity(uuid, "Voyage au Japon", "EUR", "✈️", 300_000, 80))
     }
 
     @Test
@@ -36,6 +37,15 @@ class ProjectEntityMapperTest
         // THEN
         assertThat(entity.emoji).isNull()
         assertThat(entity.targetCents).isNull()
+    }
+
+    @Test
+    fun `the currency is stored as its ISO code, and read back`()
+    {
+        val francs = japan.copy(currency = AccountCurrency.XOF)
+
+        assertThat(francs.toEntity().currency).isEqualTo("XOF")
+        assertThat(francs.toEntity().toDomain()).isEqualTo(francs)
     }
 
     @Test
@@ -56,9 +66,9 @@ class ProjectEntityMapperTest
     @Test
     fun `a row with an alert threshold outside 1 to 100 is refused`()
     {
-        assertThatThrownBy { ProjectEntity(uuid, "Voyage", null, null, 0).toDomain() }
+        assertThatThrownBy { ProjectEntity(uuid, "Voyage", "EUR", null, null, 0).toDomain() }
             .isInstanceOf(IllegalStateException::class.java)
-        assertThatThrownBy { ProjectEntity(uuid, "Voyage", null, null, 101).toDomain() }
+        assertThatThrownBy { ProjectEntity(uuid, "Voyage", "EUR", null, null, 101).toDomain() }
             .isInstanceOf(IllegalStateException::class.java)
     }
 
@@ -74,14 +84,14 @@ class ProjectEntityMapperTest
     @Test
     fun `a row with a target of zero is refused`()
     {
-        assertThatThrownBy { ProjectEntity(uuid, "Voyage", null, 0, 80).toDomain() }
+        assertThatThrownBy { ProjectEntity(uuid, "Voyage", "EUR", null, 0, 80).toDomain() }
             .isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test
     fun `a row with a blank name is refused`()
     {
-        assertThatThrownBy { ProjectEntity(uuid, "   ", null, null, 80).toDomain() }
+        assertThatThrownBy { ProjectEntity(uuid, "   ", "EUR", null, null, 80).toDomain() }
             .isInstanceOf(IllegalStateException::class.java)
     }
 }

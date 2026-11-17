@@ -100,8 +100,8 @@ class RoomPersistenceTest
     fun `the projects share the database with the unit of work`() = realTime()
     {
         // GIVEN a project saved through the repository
-        val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
-        val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), null, null)
+        val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), AccountCurrency.EUR, null, null)
+        val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), AccountCurrency.EUR, null, null)
         persistence.projects.save(japan)
 
         // WHEN a unit of work adds another one through the same repository, and fails

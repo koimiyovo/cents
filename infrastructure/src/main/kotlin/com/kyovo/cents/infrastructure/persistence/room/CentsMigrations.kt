@@ -2,6 +2,7 @@ package com.kyovo.cents.infrastructure.persistence.room
 
 import androidx.room3.migration.Migration
 import androidx.sqlite.execSQL
+import com.kyovo.cents.domain.model.AccountCurrency
 
 /**
  * The migrations of [CentsDatabase], from one version to the next. Version 1 is installed on phones with
@@ -194,8 +195,28 @@ object CentsMigrations
         )
     }
 
-    val ALL: List<Migration> =
+    /**
+     * Version 9 gives each project the currency its target is set in. Until then a target was read in the main
+     * currency, whatever it was at the time, so the existing projects take the main currency of the moment the file
+     * is migrated ([mainCurrency], read from the preferences, outside this database): their targets keep the value
+     * the user saw. `ADD COLUMN ... NOT NULL` needs a default; the one given only serves this statement (the entity
+     * declares none, so Room does not compare it, and every row is written with its currency), and is overwritten
+     * right away, the code bound as a parameter rather than written into the SQL.
+     */
+    fun migration8To9(mainCurrency: suspend () -> AccountCurrency): Migration = Migration(8, 9)
+    { connection ->
+        connection.execSQL("ALTER TABLE `projects` ADD COLUMN `currency` TEXT NOT NULL DEFAULT 'EUR'")
+        val code = mainCurrency().value.currencyCode
+        connection.prepare("UPDATE `projects` SET `currency` = ?").use { statement ->
+            statement.bindText(1, code)
+            statement.step()
+        }
+    }
+
+    /** Every migration, in order; [mainCurrency] is the one the projects of a version 8 file were followed in. */
+    fun all(mainCurrency: suspend () -> AccountCurrency): List<Migration> =
         listOf(
-            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
+            migration8To9(mainCurrency),
         )
 }

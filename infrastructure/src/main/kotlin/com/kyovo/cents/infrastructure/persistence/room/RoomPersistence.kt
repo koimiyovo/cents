@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import android.content.Context
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
@@ -62,12 +63,18 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
          * megabytes more.) There is deliberately no "destructive migration" fallback: if the schema ever
          * changes, a migration has to be written — wiping the user's accounts is never the answer.
          */
-        fun open(context: Context, name: String = DATABASE_NAME): RoomPersistence
+        fun open(
+            context: Context,
+            // The main currency, kept outside the database: the projects of a version 8 file take it (see
+            // [CentsMigrations.migration8To9]). Only read if that migration runs.
+            mainCurrency: suspend () -> AccountCurrency,
+            name: String = DATABASE_NAME,
+        ): RoomPersistence
         {
             val database =
                 Room.databaseBuilder(context.applicationContext, CentsDatabase::class.java, name)
                     .setDriver(AndroidSQLiteDriver())
-                    .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                    .addMigrations(*CentsMigrations.all(mainCurrency).toTypedArray())
                     .addCallback(DefaultSubcategoriesCallback())
                     .build()
             return RoomPersistence(database)
@@ -78,11 +85,15 @@ class RoomPersistence private constructor(private val database: CentsDatabase)
          * migrations, no destructive fallback). Room 3 builds a database without a `Context`, so this is
          * what the tests use to check what opening a file does, on the computer's JVM.
          */
-        fun openFile(path: String, driver: SQLiteDriver): RoomPersistence
+        fun openFile(
+            path: String,
+            driver: SQLiteDriver,
+            mainCurrency: suspend () -> AccountCurrency = { AccountCurrency.EUR },
+        ): RoomPersistence
         {
             val database = Room.databaseBuilder<CentsDatabase>(path)
                 .setDriver(driver)
-                .addMigrations(*CentsMigrations.ALL.toTypedArray())
+                .addMigrations(*CentsMigrations.all(mainCurrency).toTypedArray())
                 .addCallback(DefaultSubcategoriesCallback())
                 .build()
             return RoomPersistence(database)

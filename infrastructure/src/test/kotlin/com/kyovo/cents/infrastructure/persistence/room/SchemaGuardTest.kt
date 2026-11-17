@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -46,7 +47,7 @@ class SchemaGuardTest
                 "The schema of version 1 changed, but version 1 is installed on real phones. Do not edit " +
                     "the entities of an installed version: restore schemas/.../1.json from git, undo the change, " +
                     "then make it as a new version — raise `version` in CentsDatabase and add a Migration " +
-                    "from the previous version to CentsMigrations.ALL."
+                    "from the previous version to CentsMigrations.all."
             )
             .isEqualTo(V1_IDENTITY_HASH)
     }
@@ -62,7 +63,7 @@ class SchemaGuardTest
                 "The schema of version 8 changed, but version 8 is installed on real phones. Do not edit " +
                     "the entities of an installed version: restore schemas/.../8.json from git, undo the change, " +
                     "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
-                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.all."
             )
             .isEqualTo(V8_IDENTITY_HASH)
     }
@@ -78,7 +79,7 @@ class SchemaGuardTest
                 "The schema of version 7 changed, but version 7 may be installed on a real phone. Do not edit " +
                     "the entities of an installed version: restore schemas/.../7.json from git, undo the change, " +
                     "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
-                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.all."
             )
             .isEqualTo(V7_IDENTITY_HASH)
     }
@@ -94,7 +95,7 @@ class SchemaGuardTest
                 "The schema of version 6 changed, but version 6 may be installed on a real phone. Do not edit " +
                     "the entities of an installed version: restore schemas/.../6.json from git, undo the change, " +
                     "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
-                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.all."
             )
             .isEqualTo(V6_IDENTITY_HASH)
     }
@@ -110,7 +111,7 @@ class SchemaGuardTest
                 "The schema of version 5 changed, but version 5 is installed on a real phone. Do not edit " +
                     "the entities of an installed version: restore schemas/.../5.json from git, undo the change, " +
                     "then make it as a new version - raise `version` in CentsDatabase FIRST (a build with the " +
-                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.ALL."
+                    "old version number rewrites the exported file) and add a Migration to CentsMigrations.all."
             )
             .isEqualTo(V5_IDENTITY_HASH)
     }
@@ -130,8 +131,8 @@ class SchemaGuardTest
 
         for (version in 2..latest)
         {
-            assertThat(CentsMigrations.ALL.any { it.startVersion == version - 1 && it.endVersion == version })
-                .describedAs("No Migration from version ${version - 1} to $version in CentsMigrations.ALL")
+            assertThat(CentsMigrations.all { AccountCurrency.EUR }.any { it.startVersion == version - 1 && it.endVersion == version })
+                .describedAs("No Migration from version ${version - 1} to $version in CentsMigrations.all")
                 .isTrue()
         }
     }
@@ -141,7 +142,7 @@ class SchemaGuardTest
     {
         val latest = schemaFiles.keys.max()
 
-        CentsMigrations.ALL.forEach {
+        CentsMigrations.all { AccountCurrency.EUR }.forEach {
             assertThat(it.startVersion).isLessThan(it.endVersion)
             assertThat(it.endVersion).isLessThanOrEqualTo(latest)
         }

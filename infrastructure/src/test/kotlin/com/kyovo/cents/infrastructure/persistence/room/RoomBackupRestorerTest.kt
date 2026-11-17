@@ -79,7 +79,7 @@ class RoomBackupRestorerTest
         Subcategory(SubcategoryId(uuid(10)), RecordableTransactionCategory.EXPENSE, SubcategoryName("Courses"), Emoji("🛒"))
     private val salary =
         Subcategory(SubcategoryId(uuid(11)), RecordableTransactionCategory.INCOME, SubcategoryName("Paie"), null)
-    private val japan = Project(ProjectId(uuid(20)), ProjectName("Japon"), null, Money(300_000), AlertThreshold(60))
+    private val japan = Project(ProjectId(uuid(20)), ProjectName("Japon"), AccountCurrency.EUR, null, Money(300_000), AlertThreshold(60))
 
     private val expense = Transaction.recorded(
         TransactionId(uuid(30)), courant.id, Money(1_250), TransactionTitle("Marché"),
@@ -169,7 +169,7 @@ class RoomBackupRestorerTest
         val before = account(7, "Avant")
         persistence.accounts.save(before)
         persistence.transactions.save(Transaction.openingDeposit(TransactionId(uuid(70)), before.id, Money(5), Instant.EPOCH))
-        persistence.projects.save(Project(ProjectId(uuid(71)), ProjectName("Ancien projet"), null, null))
+        persistence.projects.save(Project(ProjectId(uuid(71)), ProjectName("Ancien projet"), AccountCurrency.EUR, null, null))
         persistence.budgetCalendar.saveDefaultStartDay(BudgetStartDay(10))
         persistence.budgetCalendar.saveCycleStart(LocalDate.of(2025, 5, 3))
 

@@ -186,7 +186,7 @@ class CentsMigrationsTest
     }
 
     private val japanId = UUID.fromString("66666666-6666-6666-6666-666666666661")
-    private val japan = Project(ProjectId(japanId), ProjectName("Voyage au Japon"), Emoji("✈️"), Money(300_000))
+    private val japan = Project(ProjectId(japanId), ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), Money(300_000))
 
     /**
      * A version 5 file as the released app leaves it: the tables and indices of `5.json` (a frozen copy —
@@ -312,6 +312,26 @@ class CentsMigrationsTest
         }
     }
 
+    /**
+     * A version 8 file as the released app leaves it: version 7's tables and data (see [createVersion7File]), plus the
+     * `exchange_rates` table of `8.json` (a frozen copy; the production release is version 8), and Room's
+     * bookkeeping of version 8. Its project has a target and no currency: the target was read in the main currency.
+     */
+    private fun createVersion8File()
+    {
+        createVersion7File()
+        val connection = BundledSQLiteDriver().open(path)
+        try
+        {
+            connection.execSQL("CREATE TABLE IF NOT EXISTS `exchange_rates` (`id` INTEGER NOT NULL, `epochDay` INTEGER NOT NULL, `rates` TEXT NOT NULL, PRIMARY KEY(`id`))")
+            connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '51337eafddd5b0d8762b47c42af8c95f')")
+            connection.execSQL("PRAGMA user_version = 8")
+        } finally
+        {
+            connection.close()
+        }
+    }
+
     /** The courses of a version 5 file, as the domain sees them, in [projectId] (none by default). */
     private fun coursesIn(projectId: ProjectId?) = Transaction.recorded(
         TransactionId(expenseId), AccountId(accountId), Money(1_250), TransactionTitle("Courses"),
@@ -337,11 +357,14 @@ class CentsMigrationsTest
         }
     }
 
-    /** Opens the file with the real database class and the real migrations, like the app does. */
-    private fun openMigrated(): CentsDatabase =
+    /**
+     * Opens the file with the real database class and the real migrations, like the app does; [mainCurrency] is the
+     * one the preferences hold (what the projects of a version 8 file take).
+     */
+    private fun openMigrated(mainCurrency: AccountCurrency = AccountCurrency.EUR): CentsDatabase =
         Room.databaseBuilder<CentsDatabase>(path)
             .setDriver(BundledSQLiteDriver())
-            .addMigrations(*CentsMigrations.ALL.toTypedArray())
+            .addMigrations(*CentsMigrations.all { mainCurrency }.toTypedArray())
             .build()
 
     private fun userVersionOfTheFile(): Int
@@ -475,7 +498,7 @@ class CentsMigrationsTest
             {
                 first.close()
             }
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
 
             // WHEN it is opened again (the migrations must not run a second time, nor fail)
             val second = openMigrated()
@@ -658,7 +681,7 @@ class CentsMigrationsTest
                 assertThat(rent.startDate).isEqualTo(LocalDate.of(2026, 9, 5))
                 assertThat(rent.endDate).isNull()
                 assertThat(rent.lastGeneratedDate).isEqualTo(LocalDate.of(2026, 12, 5))
-                assertThat(userVersionOfTheFile()).isEqualTo(8)
+                assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
             } finally
             {
                 database.close()
@@ -759,7 +782,7 @@ class CentsMigrationsTest
                     .containsExactly(groceries)
                 assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
                     .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
-                assertThat(userVersionOfTheFile()).isEqualTo(8)
+                assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
             } finally
             {
                 database.close()
@@ -915,7 +938,7 @@ class CentsMigrationsTest
             // THEN
             assertThat(RoomProjectRepository(second.projectDao()).findAll()).containsExactly(japan)
             assertThat(RoomTransactionRepository(second.transactionDao()).findAll()).containsExactly(inTheProject)
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
         } finally
         {
             second.close()
@@ -941,7 +964,7 @@ class CentsMigrationsTest
             assertThat(RoomSubcategoryRepository(database.subcategoryDao()).findAll()).containsExactly(groceries)
             assertThat(RoomBudgetRepository(database.budgetDao()).observeAll().first())
                 .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
         } finally
         {
             database.close()
@@ -1010,7 +1033,7 @@ class CentsMigrationsTest
         {
             // THEN
             assertThat(RoomBudgetCalendarRepository(second.budgetCalendarDao()).observe().first()).isEqualTo(expected)
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
         } finally
         {
             second.close()
@@ -1040,7 +1063,7 @@ class CentsMigrationsTest
                 .containsExactly(Budget(groceries.id, september, Money(30_000), AlertThreshold(80)))
             assertThat(RoomBudgetCalendarRepository(database.budgetCalendarDao()).observe().first())
                 .isEqualTo(BudgetCalendar(BudgetStartDay(25)))
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
         } finally
         {
             database.close()
@@ -1108,10 +1131,71 @@ class CentsMigrationsTest
         {
             // THEN
             assertThat(RoomExchangeRateRepository(second.exchangeRateDao()).observe().first()).isEqualTo(tuesday)
-            assertThat(userVersionOfTheFile()).isEqualTo(8)
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
         } finally
         {
             second.close()
         }
+    }
+
+    // ------------------------------------------------------------------ 8 -> 9: the currency of the projects
+
+    // Until version 9 a target was read in the main currency: the project keeps the value the user saw.
+    @Test
+    fun `a project of a version 8 file takes the main currency, and keeps everything else`() = realTime()
+    {
+        // GIVEN a version 8 file with a project, on a phone whose main currency is the pound
+        createVersion8File()
+
+        // WHEN the app of version 9 opens it
+        val database = openMigrated(mainCurrency = AccountCurrency.GBP)
+        try
+        {
+            // THEN
+            assertThat(RoomProjectRepository(database.projectDao()).findAll())
+                .containsExactly(japan.copy(currency = AccountCurrency.GBP))
+            assertThat(RoomTransactionRepository(database.transactionDao()).findAll())
+                .containsExactly(coursesIn(japan.id))
+            assertThat(userVersionOfTheFile()).isEqualTo(LATEST_VERSION)
+        } finally
+        {
+            database.close()
+        }
+    }
+
+    @Test
+    fun `a project saved in another currency in a migrated file survives reopening it`() = realTime()
+    {
+        // GIVEN a version 8 file, migrated, and a new project in CFA francs
+        createVersion8File()
+        val savings = Project(
+            ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Parcelle"),
+            AccountCurrency.XOF, null, Money(5_000_000),
+        )
+        val first = openMigrated(mainCurrency = AccountCurrency.EUR)
+        try
+        {
+            RoomProjectRepository(first.projectDao()).save(savings)
+        } finally
+        {
+            first.close()
+        }
+
+        // WHEN it is opened again, the main currency changed meanwhile (the migration must not run a second time)
+        val second = openMigrated(mainCurrency = AccountCurrency.USD)
+        try
+        {
+            // THEN each project keeps its own currency
+            assertThat(RoomProjectRepository(second.projectDao()).findAll())
+                .containsExactlyInAnyOrder(japan, savings)
+        } finally
+        {
+            second.close()
+        }
+    }
+
+    private companion object
+    {
+        const val LATEST_VERSION = 9
     }
 }

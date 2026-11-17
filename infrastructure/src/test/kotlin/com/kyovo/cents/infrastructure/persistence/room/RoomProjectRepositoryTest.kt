@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence.room
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.kyovo.cents.domain.model.Emoji
@@ -32,11 +33,11 @@ class RoomProjectRepositoryTest
             // GIVEN projects saved, then the database closed (as when the app is killed)
             val japan = Project(
                 ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")),
-                ProjectName("Voyage au Japon"), Emoji("✈️"), Money(300_000),
+                ProjectName("Voyage au Japon"), AccountCurrency.EUR, Emoji("✈️"), Money(300_000),
             )
             val kitchen = Project(
                 ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")),
-                ProjectName("Travaux cuisine"), null, null,
+                ProjectName("Travaux cuisine"), AccountCurrency.EUR, null, null,
             )
             val first = open()
             RoomProjectRepository(first.projectDao()).also {

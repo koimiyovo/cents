@@ -62,8 +62,8 @@ abstract class TransactionRepositoryContract
     private val groceries = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555551")), RecordableTransactionCategory.EXPENSE, SubcategoryName("Alimentation"), null)
     private val salaryCategory = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555552")), RecordableTransactionCategory.INCOME, SubcategoryName("Salaire"), null)
 
-    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
-    private val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), null, null)
+    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), AccountCurrency.EUR, null, null)
+    private val kitchen = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666662")), ProjectName("Travaux cuisine"), AccountCurrency.EUR, null, null)
 
     @BeforeEach
     fun createTheStores()

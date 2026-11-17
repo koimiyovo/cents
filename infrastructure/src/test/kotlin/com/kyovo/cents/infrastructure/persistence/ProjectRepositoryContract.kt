@@ -1,5 +1,6 @@
 package com.kyovo.cents.infrastructure.persistence
 
+import com.kyovo.cents.domain.model.AccountCurrency
 import com.kyovo.cents.domain.model.AlertThreshold
 import com.kyovo.cents.domain.model.Emoji
 import com.kyovo.cents.domain.model.Money
@@ -44,7 +45,7 @@ abstract class ProjectRepositoryContract
     private fun aProject(suffix: Int, name: String, emoji: String?, targetCents: Long?) =
         Project(
             ProjectId(UUID.fromString("66666666-6666-6666-6666-66666666666$suffix")),
-            ProjectName(name),
+            ProjectName(name), AccountCurrency.EUR,
             emoji?.let { Emoji(it) },
             targetCents?.let { Money(it) },
         )
@@ -59,6 +60,21 @@ abstract class ProjectRepositoryContract
 
         // WHEN / THEN
         assertThat(repository.findById(japan.id)).isEqualTo(japan)
+    }
+
+    @Test
+    fun `keeps the currency of each project`() = realTime()
+    {
+        // GIVEN
+        val francs = aProject(4, "Parcelle", null, 5_000_000).copy(currency = AccountCurrency.XOF)
+
+        // WHEN
+        repository.save(francs)
+        repository.save(japan)
+
+        // THEN
+        assertThat(repository.findById(francs.id)?.currency).isEqualTo(AccountCurrency.XOF)
+        assertThat(repository.findById(japan.id)?.currency).isEqualTo(AccountCurrency.EUR)
     }
 
     @Test

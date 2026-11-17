@@ -58,7 +58,7 @@ abstract class UnitOfWorkContract
 
     private val groceries = Subcategory(SubcategoryId(UUID.fromString("55555555-5555-5555-5555-555555555551")), RecordableTransactionCategory.EXPENSE, SubcategoryName("Alimentation"), null)
 
-    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), null, null)
+    private val japan = Project(ProjectId(UUID.fromString("66666666-6666-6666-6666-666666666661")), ProjectName("Voyage au Japon"), AccountCurrency.EUR, null, null)
 
     private fun anExpense(suffix: Int, on: Account, subcategory: Subcategory? = null, project: Project? = null) = Transaction.recorded(
         TransactionId(UUID.fromString("33333333-3333-3333-3333-33333333333$suffix")), on.id, Money(1_250),

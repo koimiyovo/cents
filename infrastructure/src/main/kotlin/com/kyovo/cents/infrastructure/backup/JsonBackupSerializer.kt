@@ -50,6 +50,9 @@ import java.util.UUID
  * Reading goes back through the domain's own constructors, so a file holding what the domain would
  * refuse (a blank name, a limit of zero...) is refused whole with an [InvalidBackupException]. The one
  * exception is a transaction, rebuilt with [Transaction.restored] since a stored one may predate a rule.
+ *
+ * Format 2 gives each project its currency. A file of format 1 (written before projects had one) is still read:
+ * its projects take the main currency given, the one their targets were read in until then.
  */
 class JsonBackupSerializer : BackupSerializer
 {
@@ -58,13 +61,13 @@ class JsonBackupSerializer : BackupSerializer
         return json.encodeToString(BackupFile.serializer(), snapshot.toFile())
     }
 
-    override fun deserialize(text: String): BackupSnapshot
+    override fun deserialize(text: String, mainCurrency: AccountCurrency): BackupSnapshot
     {
         try
         {
             val file = json.decodeFromString(BackupFile.serializer(), text)
-            if (file.formatVersion != FORMAT_VERSION) throw InvalidBackupException()
-            return file.toSnapshot()
+            if (file.formatVersion !in READABLE_FORMAT_VERSIONS) throw InvalidBackupException()
+            return file.toSnapshot(mainCurrency)
         }
         catch (e: InvalidBackupException)
         {
@@ -88,7 +91,9 @@ class JsonBackupSerializer : BackupSerializer
 
     private companion object
     {
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
+        const val FORMAT_VERSION_WITHOUT_PROJECT_CURRENCY = 1
+        val READABLE_FORMAT_VERSIONS = setOf(FORMAT_VERSION_WITHOUT_PROJECT_CURRENCY, FORMAT_VERSION)
 
         // A file with a field this version does not know comes from another version: refused, not ignored.
         val json = Json
@@ -163,11 +168,13 @@ private class ProjectFile(
     val name: String,
     val emoji: String? = null,
     val targetCents: Long? = null,
-    val alertPercent: Int
+    val alertPercent: Int,
+    // Required from format 2 on, absent before: checked when read, against the file's format.
+    val currency: String? = null
 )
 
 private fun BackupSnapshot.toFile() = BackupFile(
-    formatVersion = 1,
+    formatVersion = 2,
     accounts = accounts.map {
         AccountFile(
             it.id.value.toString(), it.name.value, it.type.name, it.currency.value.currencyCode,
@@ -200,12 +207,13 @@ private fun BackupSnapshot.toFile() = BackupFile(
     },
     projects = projects.map {
         ProjectFile(
-            it.id.value.toString(), it.name.value, it.emoji?.value, it.target?.value, it.alertThreshold.percent
+            it.id.value.toString(), it.name.value, it.emoji?.value, it.target?.value, it.alertThreshold.percent,
+            it.currency.value.currencyCode
         )
     }
 )
 
-private fun BackupFile.toSnapshot() = BackupSnapshot(
+private fun BackupFile.toSnapshot(mainCurrency: AccountCurrency) = BackupSnapshot(
     accounts = accounts.map {
         Account(
             AccountId(UUID.fromString(it.id)),
@@ -270,9 +278,24 @@ private fun BackupFile.toSnapshot() = BackupSnapshot(
         Project(
             ProjectId(UUID.fromString(it.id)),
             ProjectName(it.name),
+            projectCurrency(it.currency, mainCurrency),
             it.emoji?.let { emoji -> Emoji(emoji) },
             it.targetCents?.let(::Money),
             AlertThreshold(it.alertPercent)
         )
     }
 )
+
+/**
+ * The currency of a project of this file: its own from format 2 on, where it is required; in a file of format 1,
+ * which could not hold one, the main currency. Either way, the other format's shape is refused.
+ */
+private fun BackupFile.projectCurrency(code: String?, mainCurrency: AccountCurrency): AccountCurrency =
+    if (formatVersion == 1)
+    {
+        if (code != null) throw InvalidBackupException()
+        mainCurrency
+    } else
+    {
+        AccountCurrency(Currency.getInstance(code ?: throw InvalidBackupException()))
+    }
