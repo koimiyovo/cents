@@ -1,5 +1,6 @@
 package com.kyovo.cents.ui.transaction
 
+import com.kyovo.cents.ui.settings.LocalMainCurrency
 import com.kyovo.cents.ui.settings.label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -114,8 +115,8 @@ fun TransactionFormSheet(
 {
     val palette = if (isSystemInDarkTheme()) DarkAccountsPalette else LightAccountsPalette
     val selectable = remember(accounts, form.originalAccountId) { form.accountChoices(accounts) }
-    // The amount is written in the chosen account's currency (the euro while none is chosen).
-    val currency = accounts.firstOrNull { it.id == form.accountId }?.currency ?: AccountCurrency.EUR
+    // The amount is written in the chosen account's currency (the main one while none is chosen).
+    val currency = accounts.firstOrNull { it.id == form.accountId }?.currency ?: LocalMainCurrency.current
     val sourceCurrency = accounts.firstOrNull { it.id == form.accountId }?.currency
     val destinationCurrency = accounts.firstOrNull { it.id == form.toAccountId }?.currency
     // A transfer between two currencies has an amount received of its own, in the destination's currency.
